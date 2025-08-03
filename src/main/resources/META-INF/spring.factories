@@ -1,0 +1,3 @@
+# Auto Configure
+org.springframework.boot.env.EnvironmentPostProcessor=\
+  xin.vanilla.banira.bootstrap.GlobalConfigEnvironmentPostProcessor

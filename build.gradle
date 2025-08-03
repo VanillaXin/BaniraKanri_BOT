@@ -1,0 +1,114 @@
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version '3.5.4'
+    id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'xin.vanilla'
+version = '1.0.0'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    maven { url "https://jitpack.io" }
+    mavenCentral()
+}
+
+dependencies {
+    // Spring & JDBC auto-config
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+
+    // MyBatis-Plus for Spring Boot 3
+    implementation 'com.baomidou:mybatis-plus-spring-boot3-starter:3.5.12'
+
+    // SQLite JDBC driver
+    implementation 'org.xerial:sqlite-jdbc:3.46.1.3'
+
+    // Shiro
+    implementation 'com.mikuac:shiro:2.4.6'
+
+    // YAML config via Jackson
+    implementation 'com.fasterxml.jackson.dataformat:jackson-dataformat-yaml'
+
+    // Validation
+    implementation 'jakarta.validation:jakarta.validation-api:3.1.1'
+    implementation 'org.hibernate.validator:hibernate-validator'
+
+    // Lombok
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    // Tests
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+    enabled = false
+}
+
+tasks.named('bootJar') {
+    manifest {
+        attributes(
+                'Implementation-Title': project.name,
+                'Implementation-Version': project.version,
+                'Built-By': System.getProperty('user.name'),
+                'Created-By': "Gradle ${gradle.gradleVersion}"
+        )
+    }
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+// tasks.named('test') {
+//     enabled(false)
+//     // useJUnitPlatform()
+// }
+//
+// tasks.withType(Jar).configureEach {
+//     // 处理JAR中的重复文件，INCLUDE策略表示保留所有重复项
+//     duplicatesStrategy = DuplicatesStrategy.INCLUDE
+//
+//     // 将主源集的所有编译输出加入JAR包
+//     from sourceSets.main.output
+//
+//     manifest {
+//         // 添加基本信息到 MANIFEST.MF
+//         attributes(
+//                 'Implementation-Title': project.name,
+//                 'Implementation-Version': project.version,
+//                 'Built-By': System.getProperty('user.name'),
+//                 'Created-By': "Gradle ${gradle.gradleVersion}"
+//         )
+//
+//         // 生成并添加依赖清单
+//         def dependenciesString = configurations.runtimeClasspath.resolvedConfiguration.resolvedArtifacts
+//                 .collect { artifact ->
+//                     "${artifact.moduleVersion.id.group}:${artifact.moduleVersion.id.name}:${artifact.moduleVersion.id.version}"
+//                 }
+//                 .unique()
+//                 .findAll { coordinates ->
+//                     !(
+//                             coordinates.startsWith('org.springframework') ||
+//                                     coordinates.startsWith('com.mikuac:shiro') ||
+//                                     coordinates.startsWith('org.slf4j') ||
+//                                     coordinates.startsWith('ch.qos.logback')
+//                     )
+//                 }
+//                 .join(', ')
+//
+//         // 添加依赖列表到 manifest 中，Shiro 将解析此属性来下载所需依赖
+//         attributes 'Dependencies': dependenciesString
+//     }
+// }

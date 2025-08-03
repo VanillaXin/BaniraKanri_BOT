@@ -1,0 +1,28 @@
+spring:
+  application:
+    name: BaniraKanri
+  datasource:
+    url: jdbc:sqlite:./data/banira_data.db
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      minimum-idle: 10
+      maximum-pool-size: 30
+      idle-timeout: 30000
+      pool-name: BaniraHikari
+      max-lifetime: 1800000
+      connection-timeout: 30000
+  sql:
+    init:
+      mode: never
+
+shiro:
+  ws:
+    access-token:
+    client:
+      enable: true
+      url: ws://127.0.0.1:8080
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  global-config:
+    banner: false

@@ -1,0 +1,6 @@
+logging:
+  level:
+    root: INFO
+    xin.vanilla.banira: INFO
+  file:
+    path: ./logs
