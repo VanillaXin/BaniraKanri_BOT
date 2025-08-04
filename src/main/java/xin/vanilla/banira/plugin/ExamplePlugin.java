@@ -12,10 +12,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class ExamplePlugin {
 
+    /**
+     * 被AT时触发回复
+     *
+     * @param bot   机器人实例
+     * @param event 消息事件
+     * @return 是否拦截事件传递
+     */
     @AnyMessageHandler
     @MessageHandlerFilter(at = AtEnum.NEED)
-    public void hello(Bot bot, AnyMessageEvent event) {
+    public boolean hello(Bot bot, AnyMessageEvent event) {
         bot.sendMsg(event, "Hello Excel!", false);
+        return false;
     }
 
 }

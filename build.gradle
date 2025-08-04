@@ -26,9 +26,10 @@ repositories {
 }
 
 dependencies {
-    // Spring & JDBC auto-config
+    // Spring & JDBC auto-config & aop
     implementation 'org.springframework.boot:spring-boot-starter'
     implementation 'org.springframework.boot:spring-boot-starter-jdbc'
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
 
     // MyBatis-Plus for Spring Boot 3
     implementation 'com.baomidou:mybatis-plus-spring-boot3-starter:3.5.12'
@@ -59,10 +60,14 @@ tasks.named('test') {
     enabled = false
 }
 
+def activeProfile = gradle.startParameter.taskNames.any {
+    it.contains("bootJar") || it.contains("build")
+} ? "prod" : "dev"
+
 tasks.named('processResources') {
     filesMatching('application.yml') {
         filter { line ->
-            line.replaceAll('active:\\s*dev', 'active: prod')
+            line.replaceAll('active:\\s*\\w+', "active: ${activeProfile}")
         }
     }
 }

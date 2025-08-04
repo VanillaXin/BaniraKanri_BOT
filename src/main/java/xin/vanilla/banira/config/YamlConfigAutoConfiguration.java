@@ -8,6 +8,7 @@ import xin.vanilla.banira.config.entity.GroupConfig;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.function.Supplier;
 
 @Configuration
 public class YamlConfigAutoConfiguration {
@@ -22,8 +23,8 @@ public class YamlConfigAutoConfiguration {
     }
 
     @Bean
-    public GlobalConfig globalConfig(YamlConfigManager<GlobalConfig> manager) {
-        return manager.getCurrent();
+    public Supplier<GlobalConfig> globalConfig(YamlConfigManager<GlobalConfig> manager) {
+        return manager::getCurrent;
     }
 
     @Bean
@@ -36,7 +37,7 @@ public class YamlConfigAutoConfiguration {
     }
 
     @Bean
-    public GroupConfig groupConfig(YamlConfigManager<GroupConfig> manager) {
-        return manager.getCurrent();
+    public Supplier<GroupConfig> groupConfig(YamlConfigManager<GroupConfig> manager) {
+        return manager::getCurrent;
     }
 }
