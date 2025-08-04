@@ -1,4 +1,4 @@
-package xin.vanilla.banira.starter;
+package xin.vanilla.banira.start;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.boot.web.context.WebServerApplicationContext;

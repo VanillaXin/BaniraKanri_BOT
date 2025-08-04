@@ -59,6 +59,14 @@ tasks.named('test') {
     enabled = false
 }
 
+tasks.named('processResources') {
+    filesMatching('application.yml') {
+        filter { line ->
+            line.replaceAll('active:\\s*dev', 'active: prod')
+        }
+    }
+}
+
 tasks.named('bootJar') {
     manifest {
         attributes(

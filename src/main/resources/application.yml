@@ -1,9 +1,13 @@
 spring:
+  profiles:
+    active: dev
   application:
     name: BaniraKanri
   datasource:
-    url: jdbc:sqlite:./data/banira_data.db
     driver-class-name: org.sqlite.JDBC
+    url: jdbc:sqlite:./data/banira_data.db
+    username:
+    password:
     hikari:
       minimum-idle: 10
       maximum-pool-size: 30
@@ -23,6 +27,8 @@ shiro:
       url: ws://127.0.0.1:8080
 
 mybatis-plus:
-  mapper-locations: classpath*:/mapper/**/*.xml
   global-config:
     banner: false
+  config-location: classpath:mybatis/mybatis-config.xml
+  mapper-locations: classpath*:xin.vanilla/**/mybatis-*.xml
+  type-aliases-package: xin.vanilla.**.domain,xin.vanilla.**.entity,xin.vanilla.**.po
