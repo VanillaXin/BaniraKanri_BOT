@@ -16,7 +16,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
- * 通过GlobalConfig.base.capability配置检查插件是否启用
+ * 通过GlobalConfig.base.capability配置检查插件是否启用，并判断事件是否需要传递
  */
 @Slf4j
 @Aspect
@@ -27,10 +27,6 @@ public class ShiroAnnotationInterceptor {
 
     private final Supplier<GlobalConfig> globalConfig;
 
-    private static final ThreadLocal<Boolean> BLOCKED = ThreadLocal.withInitial(() -> false);
-    private static final ThreadLocal<Object> BLOCK_RESULT = new ThreadLocal<>();
-    private static final ThreadLocal<Integer> DEPTH = ThreadLocal.withInitial(() -> 0);
-
     private final Map<Method, Boolean> hasTargetAnnotationCache = new ConcurrentHashMap<>();
 
     public ShiroAnnotationInterceptor(Supplier<GlobalConfig> globalConfig) {
@@ -39,55 +35,27 @@ public class ShiroAnnotationInterceptor {
 
     @Around("@within(com.mikuac.shiro.annotation.common.Shiro)")
     public Object aroundShiroClassMethods(ProceedingJoinPoint pjp) throws Throwable {
-        // 增加深度计数（用于根调用清理）
-        DEPTH.set(DEPTH.get() + 1);
-        boolean isRoot = DEPTH.get() == 1;
+        MethodSignature sig = (MethodSignature) pjp.getSignature();
+        Method method = sig.getMethod();
+        Method actualMethod = resolveActualMethod(pjp, method);
+        String className = pjp.getTarget().getClass().getName();
+        String methodName = actualMethod.getName();
 
-        try {
-            // 如果已经短路，直接返回同一个结果（不再执行任何逻辑）
-            if (Boolean.TRUE.equals(BLOCKED.get())) {
-                return BLOCK_RESULT.get();
-            }
+        // 若方法上没有来自目标包的注解，则直接放行
+        if (!hasTargetAnnotation(actualMethod)) return pjp.proceed();
 
-            MethodSignature sig = (MethodSignature) pjp.getSignature();
-            Method declaredMethod = sig.getMethod();
-            Method actualMethod = resolveActualMethod(pjp, declaredMethod);
-            String className = pjp.getTarget().getClass().getName();
-            String methodName = actualMethod.getName();
-
-            // 如果方法上没有来自目标包的注解，则直接放行（不影响短路逻辑）
-            if (!hasTargetAnnotation(actualMethod)) {
-                return pjp.proceed();
-            }
-
-            // 判断是否允许执行
-            boolean allowed = shouldProceed(className);
-            Object result;
-            if (!allowed) {
-                LOGGER.debug("Plugin {}#{} is disabled", className, methodName);
-                result = defaultReturnValue(actualMethod);
-            } else {
-                // 正常执行前置逻辑
-                result = pjp.proceed();
-            }
-
-            // 统一判断是否触发短路条件：true 或 BotPlugin.MESSAGE_BLOCK
-            if (isBlockingResult(result)) {
-                BLOCKED.set(true);
-                BLOCK_RESULT.set(result);
-                LOGGER.debug("Method {}#{} triggered blocking, result={}, further calls in the same thread are skipped", className, methodName, result);
-            }
-
-            return result;
-        } finally {
-            DEPTH.set(DEPTH.get() - 1);
-            // 根调用结束时清理线程上下文，避免污染后续独立调用链
-            if (isRoot) {
-                BLOCKED.remove();
-                BLOCK_RESULT.remove();
-                DEPTH.remove();
-            }
+        if (ShiroCallContextHolder.isBlocked()) {
+            LOGGER.debug("Method {}#{} is blocked, further calls in the same thread are skipped", className, methodName);
+            return blockingResult(actualMethod);
         }
+
+        Object result = pjp.proceed();
+        if (isBlockingResult(result)) {
+            ShiroCallContextHolder.markBlocked();
+            LOGGER.debug("Method {}#{} triggered blocking, result={}, further calls in the same thread are skipped", className, methodName, result);
+        }
+
+        return result;
     }
 
     private boolean hasTargetAnnotation(Method method) {
@@ -126,14 +94,14 @@ public class ShiroAnnotationInterceptor {
         return false;
     }
 
-    private Object defaultReturnValue(Method method) {
+    private Object blockingResult(Method method) {
         Class<?> returnType = method.getReturnType();
         if (returnType.equals(void.class) || returnType.equals(Void.class)) return null;
         if (Number.class.isAssignableFrom(returnType) || isPrimitiveNumeric(returnType)) {
-            return BotPlugin.MESSAGE_IGNORE;
+            return BotPlugin.MESSAGE_BLOCK;
         }
         if (returnType.equals(boolean.class) || returnType.equals(Boolean.class)) {
-            return Boolean.FALSE;
+            return Boolean.TRUE;
         }
         return null;
     }
