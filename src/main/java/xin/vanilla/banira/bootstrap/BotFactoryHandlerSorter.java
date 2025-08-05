@@ -1,5 +1,6 @@
 package xin.vanilla.banira.bootstrap;
 
+import com.mikuac.shiro.core.BotFactory;
 import com.mikuac.shiro.model.HandlerMethod;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationListener;
@@ -12,6 +13,7 @@ import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.basic.BaseConfig;
 import xin.vanilla.banira.util.ReflectionUtils;
 
+import java.lang.annotation.Annotation;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
@@ -44,46 +46,48 @@ public class BotFactoryHandlerSorter implements ApplicationListener<ContextRefre
     private void sortHandlers(String reason) {
         try {
             // 获取 annotationMethodContainer 字段
-            Object container = ReflectionUtils.getFieldValue(botFactory, "annotationMethodContainer", Object.class);
+            BotFactory.AnnotationMethodContainer container = ReflectionUtils.getFieldValue(botFactory
+                    , "annotationMethodContainer"
+                    , BotFactory.AnnotationMethodContainer.class
+            );
             if (container == null) {
                 LOGGER.warn("[{}] annotationMethodContainer is null", reason);
                 return;
             }
 
-            // 获取 annotationHandler 字段
-            @SuppressWarnings("unchecked")
             MultiValueMap<Class<? extends java.lang.annotation.Annotation>, HandlerMethod> annotationHandler =
-                    ReflectionUtils.getFieldValue(container, "annotationHandler", MultiValueMap.class);
-            if (annotationHandler == null) {
-                LOGGER.warn("[{}] annotationHandler is null or type mismatch", reason);
-                return;
-            }
+                    container.getAnnotationHandler();
 
+            this.sort(annotationHandler, reason);
+        } catch (Exception e) {
+            LOGGER.error("Fail to sort handlers", e);
+        }
+    }
+
+    private void sort(MultiValueMap<Class<? extends Annotation>, HandlerMethod> annotationHandler, String reason) {
+        if (annotationHandler.isEmpty()) {
+            LOGGER.debug("No handlers to sort");
+        } else {
             Map<String, Integer> capabilityMap = Optional.ofNullable(globalConfig)
                     .map(Supplier::get)
                     .map(GlobalConfig::baseConfig)
                     .map(BaseConfig::capability)
                     .orElse(Collections.emptyMap());
 
-            for (Class<? extends java.lang.annotation.Annotation> annotation : new ArrayList<>(annotationHandler.keySet())) {
-                List<HandlerMethod> original = new ArrayList<>(annotationHandler.get(annotation));
-                List<HandlerMethod> sorted = original.stream()
-                        .sorted(Comparator
-                                .comparingInt((HandlerMethod hm) -> {
-                                    String className = hm.getType().getName();
-                                    return capabilityMap.getOrDefault(className, 0);
-                                })
-                                .reversed()
-                        )
-                        .collect(Collectors.toList());
-
-                annotationHandler.remove(annotation);
-                annotationHandler.addAll(annotation, sorted);
-            }
-
+            LOGGER.debug("Starting to sort handlers by capability");
+            annotationHandler.keySet().forEach((annotation) -> {
+                LOGGER.debug("Sorting handlers for annotation: {}", annotation.getSimpleName());
+                List<HandlerMethod> handlers = annotationHandler.get(annotation);
+                handlers = handlers.stream().distinct().sorted(Comparator.comparing((handlerMethod) -> {
+                    int orderValue = capabilityMap.getOrDefault(handlerMethod.getType().getName(), 0);
+                    LOGGER.debug("Method: {}#{} has order value: {}", handlerMethod.getType().getName(), handlerMethod.getMethod().getName(), orderValue);
+                    return orderValue;
+                })).collect(Collectors.toCollection(ArrayList::new));
+                LOGGER.debug("Sorted {} handlers for annotation: {}", handlers.size(), annotation.getSimpleName());
+                annotationHandler.put(annotation, handlers);
+                LOGGER.debug("Handler sorting completed");
+            });
             LOGGER.info("[{}] re-sorted by capability (capability={})", reason, capabilityMap);
-        } catch (Exception e) {
-            LOGGER.error("Fail to sort handlers", e);
         }
     }
 }
