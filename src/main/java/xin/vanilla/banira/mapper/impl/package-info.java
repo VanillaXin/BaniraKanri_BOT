@@ -1,1 +1,0 @@
-package xin.vanilla.banira.mapper.impl;

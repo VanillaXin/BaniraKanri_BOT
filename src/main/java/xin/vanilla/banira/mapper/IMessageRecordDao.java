@@ -1,7 +1,9 @@
 package xin.vanilla.banira.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import org.apache.ibatis.annotations.Mapper;
 import xin.vanilla.banira.domain.MessageRecord;
+import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 
-public interface IMessageRecordDao extends BaseMapper<MessageRecord> {
+@Mapper
+public interface IMessageRecordDao extends IBaniraMapper<MessageRecord, MessageRecordQueryParam> {
 }

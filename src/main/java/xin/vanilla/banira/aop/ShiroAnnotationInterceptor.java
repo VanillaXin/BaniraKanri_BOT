@@ -8,6 +8,7 @@ import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.GlobalConfig;
+import xin.vanilla.banira.plugin.RecorderPlugin;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -49,7 +50,22 @@ public class ShiroAnnotationInterceptor {
             return blockingResult(actualMethod);
         }
 
-        Object result = pjp.proceed();
+        // 判断是否允许执行
+        boolean allowed = shouldProceed(className);
+        Object result;
+        if (!allowed) {
+            LOGGER.debug("Plugin {}#{} is disabled", className, methodName);
+            result = defaultReturnValue(actualMethod);
+        } else {
+            // 正常执行前置逻辑
+            try {
+                result = pjp.proceed();
+            } catch (Throwable e) {
+                LOGGER.error("Plugin {}#{} throws an exception", className, methodName, e);
+                result = defaultReturnValue(actualMethod);
+            }
+        }
+
         if (isBlockingResult(result)) {
             ShiroCallContextHolder.markBlocked();
             LOGGER.debug("Method {}#{} triggered blocking, result={}, further calls in the same thread are skipped", className, methodName, result);
@@ -71,7 +87,11 @@ public class ShiroAnnotationInterceptor {
     }
 
     private boolean shouldProceed(String className) {
-        if (globalConfig.get() == null || globalConfig.get().baseConfig() == null || globalConfig.get().baseConfig().capability() == null) {
+        if (RecorderPlugin.class.getName().equalsIgnoreCase(className)) return true;
+        if (globalConfig.get() == null
+                || globalConfig.get().baseConfig() == null
+                || globalConfig.get().baseConfig().capability() == null
+        ) {
             return false;
         }
         Integer cap = globalConfig.get().baseConfig().capability().get(className);
@@ -92,6 +112,18 @@ public class ShiroAnnotationInterceptor {
         if (result instanceof Boolean && Boolean.TRUE.equals(result)) return true;
         if (result != null && result.equals(BotPlugin.MESSAGE_BLOCK)) return true;
         return false;
+    }
+
+    private Object defaultReturnValue(Method method) {
+        Class<?> returnType = method.getReturnType();
+        if (returnType.equals(void.class) || returnType.equals(Void.class)) return null;
+        if (Number.class.isAssignableFrom(returnType) || isPrimitiveNumeric(returnType)) {
+            return BotPlugin.MESSAGE_IGNORE;
+        }
+        if (returnType.equals(boolean.class) || returnType.equals(Boolean.class)) {
+            return Boolean.FALSE;
+        }
+        return null;
     }
 
     private Object blockingResult(Method method) {

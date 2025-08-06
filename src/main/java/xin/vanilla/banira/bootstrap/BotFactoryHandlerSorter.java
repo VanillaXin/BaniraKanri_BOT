@@ -11,6 +11,7 @@ import org.springframework.util.MultiValueMap;
 import xin.vanilla.banira.config.ConfigReloadedEvent;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.basic.BaseConfig;
+import xin.vanilla.banira.plugin.RecorderPlugin;
 import xin.vanilla.banira.util.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
@@ -79,6 +80,7 @@ public class BotFactoryHandlerSorter implements ApplicationListener<ContextRefre
                 LOGGER.debug("Sorting handlers for annotation: {}", annotation.getSimpleName());
                 List<HandlerMethod> handlers = annotationHandler.get(annotation);
                 handlers = handlers.stream().distinct().sorted(Comparator.comparing((handlerMethod) -> {
+                    if (handlerMethod.getType().equals(RecorderPlugin.class)) return -1;
                     int orderValue = capabilityMap.getOrDefault(handlerMethod.getType().getName(), 0);
                     LOGGER.debug("Method: {}#{} has order value: {}", handlerMethod.getType().getName(), handlerMethod.getMethod().getName(), orderValue);
                     return orderValue;

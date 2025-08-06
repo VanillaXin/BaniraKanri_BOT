@@ -6,8 +6,10 @@ import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.enums.AtEnum;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Shiro
 @Component
 public class ExamplePlugin {
@@ -22,6 +24,7 @@ public class ExamplePlugin {
     @AnyMessageHandler
     @MessageHandlerFilter(at = AtEnum.NEED)
     public boolean hello(Bot bot, AnyMessageEvent event) {
+        // LOGGER.debug(event.getMessage());
         bot.sendMsg(event, "Hello Excel!", false);
         return false;
     }
