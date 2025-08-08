@@ -1,0 +1,392 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="xin.vanilla.banira.mapper.IMessageRecordDao">
+
+    <resultMap id="resultMap" type="xin.vanilla.banira.domain.MessageRecord">
+        <id property="id" column="id"/>
+        <result property="nos" column="nos"/>
+        <result property="bot" column="bot"/>
+        <result property="sender" column="sender"/>
+        <result property="target" column="target"/>
+        <result property="time" column="time"/>
+        <result property="msgRaw" column="msg_raw"/>
+        <result property="msgType" column="msg_type"/>
+        <result property="msgRecode" column="msg_recode"/>
+    </resultMap>
+
+    <sql id="allColumn">
+        t.id, t.nos, t.bot, t.sender, t.target, t.time, t.msg_raw, t.msg_type, t.msg_recode
+    </sql>
+
+    <sql id="baseColumn">
+        t.id, t.nos, t.bot, t.sender, t.target, t.time, t.msg_raw, t.msg_type
+    </sql>
+
+    <sql id="whereSql">
+        <trim prefix="WHERE" prefixOverrides="AND | OR ">
+            <include refid="whereSqlInner"/>
+        </trim>
+    </sql>
+
+    <sql id="whereSqlInner">
+        <if test="id_null != null">
+            AND t.id IS NULL
+        </if>
+        <if test="id != null">
+            AND t.id = #{id}
+        </if>
+        <if test="id_array != null">
+            AND t.id IN
+            <foreach collection="id_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="id_list != null">
+            AND t.id IN
+            <foreach collection="id_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="id_array_or != null">
+            AND
+            <foreach collection="id_array_or" item="item" open="(" separator="OR" close=")">
+                (t.id = #{item})
+            </foreach>
+        </if>
+        <if test="id_list_or != null">
+            AND
+            <foreach collection="id_list_or" item="item" open="(" separator="OR" close=")">
+                (t.id = #{item})
+            </foreach>
+        </if>
+        <if test="id_lt != null">
+            <![CDATA[ AND t.id < #{id} ]]>
+        </if>
+        <if test="id_lt_eq != null">
+            <![CDATA[ AND t.id <= #{id} ]]>
+        </if>
+        <if test="id_gt != null">
+            <![CDATA[ AND t.id > #{id} ]]>
+        </if>
+        <if test="id_gt_eq != null">
+            <![CDATA[ AND t.id >= #{id} ]]>
+        </if>
+
+        <if test="nos_null != null">
+            AND t.nos IS NULL
+        </if>
+        <if test="nos != null">
+            AND t.nos LIKE #{nos}
+        </if>
+        <if test="nos_array != null">
+            AND t.nos IN
+            <foreach collection="nos_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="nos_list != null">
+            AND t.nos IN
+            <foreach collection="nos_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="nos_array_or != null">
+            AND
+            <foreach collection="nos_array_or" item="item" open="(" separator="OR" close=")">
+                (t.nos LIKE #{item})
+            </foreach>
+        </if>
+        <if test="nos_list_or != null">
+            AND
+            <foreach collection="nos_list_or" item="item" open="(" separator="OR" close=")">
+                (t.nos LIKE #{item})
+            </foreach>
+        </if>
+
+        <if test="bot_null != null">
+            AND t.bot IS NULL
+        </if>
+        <if test="bot != null">
+            AND t.bot = #{bot}
+        </if>
+        <if test="bot_array != null">
+            AND t.bot IN
+            <foreach collection="bot_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="bot_list != null">
+            AND t.bot IN
+            <foreach collection="bot_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="bot_array_or != null">
+            AND
+            <foreach collection="bot_array_or" item="item" open="(" separator="OR" close=")">
+                (t.bot = #{item})
+            </foreach>
+        </if>
+        <if test="bot_list_or != null">
+            AND
+            <foreach collection="bot_list_or" item="item" open="(" separator="OR" close=")">
+                (t.bot = #{item})
+            </foreach>
+        </if>
+        <if test="bot_lt != null">
+            <![CDATA[ AND t.bot < #{bot} ]]>
+        </if>
+        <if test="bot_lt_eq != null">
+            <![CDATA[ AND t.bot <= #{bot} ]]>
+        </if>
+        <if test="bot_gt != null">
+            <![CDATA[ AND t.bot > #{bot} ]]>
+        </if>
+        <if test="bot_gt_eq != null">
+            <![CDATA[ AND t.bot >= #{bot} ]]>
+        </if>
+
+        <if test="sender_null != null">
+            AND t.sender IS NULL
+        </if>
+        <if test="sender != null">
+            AND t.sender = #{sender}
+        </if>
+        <if test="sender_array != null">
+            AND t.sender IN
+            <foreach collection="sender_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="sender_list != null">
+            AND t.sender IN
+            <foreach collection="sender_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="sender_array_or != null">
+            AND
+            <foreach collection="sender_array_or" item="item" open="(" separator="OR" close=")">
+                (t.sender = #{item})
+            </foreach>
+        </if>
+        <if test="sender_list_or != null">
+            AND
+            <foreach collection="sender_list_or" item="item" open="(" separator="OR" close=")">
+                (t.sender = #{item})
+            </foreach>
+        </if>
+        <if test="sender_lt != null">
+            <![CDATA[ AND t.sender < #{sender} ]]>
+        </if>
+        <if test="sender_lt_eq != null">
+            <![CDATA[ AND t.sender <= #{sender} ]]>
+        </if>
+        <if test="sender_gt != null">
+            <![CDATA[ AND t.sender > #{sender} ]]>
+        </if>
+        <if test="sender_gt_eq != null">
+            <![CDATA[ AND t.sender >= #{sender} ]]>
+        </if>
+
+        <if test="target_null != null">
+            AND t.target IS NULL
+        </if>
+        <if test="target != null">
+            AND t.target = #{target}
+        </if>
+        <if test="target_array != null">
+            AND t.target IN
+            <foreach collection="target_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="target_list != null">
+            AND t.target IN
+            <foreach collection="target_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="target_array_or != null">
+            AND
+            <foreach collection="target_array_or" item="item" open="(" separator="OR" close=")">
+                (t.target = #{item})
+            </foreach>
+        </if>
+        <if test="target_list_or != null">
+            AND
+            <foreach collection="target_list_or" item="item" open="(" separator="OR" close=")">
+                (t.target = #{item})
+            </foreach>
+        </if>
+        <if test="target_lt != null">
+            <![CDATA[ AND t.target < #{target} ]]>
+        </if>
+        <if test="target_lt_eq != null">
+            <![CDATA[ AND t.target <= #{target} ]]>
+        </if>
+        <if test="target_gt != null">
+            <![CDATA[ AND t.target > #{target} ]]>
+        </if>
+        <if test="target_gt_eq != null">
+            <![CDATA[ AND t.target >= #{target} ]]>
+        </if>
+
+        <if test="time_null != null">
+            AND t.time IS NULL
+        </if>
+        <if test="time != null">
+            AND t.time = #{time}
+        </if>
+        <if test="time_array != null">
+            AND t.time IN
+            <foreach collection="time_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="time_list != null">
+            AND t.time IN
+            <foreach collection="time_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="time_array_or != null">
+            AND
+            <foreach collection="time_array_or" item="item" open="(" separator="OR" close=")">
+                (t.time = #{item})
+            </foreach>
+        </if>
+        <if test="time_list_or != null">
+            AND
+            <foreach collection="time_list_or" item="item" open="(" separator="OR" close=")">
+                (t.time = #{item})
+            </foreach>
+        </if>
+        <if test="time_lt != null">
+            <![CDATA[ AND t.time < #{time} ]]>
+        </if>
+        <if test="time_lt_eq != null">
+            <![CDATA[ AND t.time <= #{time} ]]>
+        </if>
+        <if test="time_gt != null">
+            <![CDATA[ AND t.time > #{time} ]]>
+        </if>
+        <if test="time_gt_eq != null">
+            <![CDATA[ AND t.time >= #{time} ]]>
+        </if>
+
+        <if test="msgRaw_null != null">
+            AND t.msg_raw IS NULL
+        </if>
+        <if test="msgRaw != null">
+            AND t.msg_raw LIKE #{msgRaw}
+        </if>
+        <if test="msgRaw_array != null">
+            AND t.msg_raw IN
+            <foreach collection="msgRaw_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="msgRaw_list != null">
+            AND t.msg_raw IN
+            <foreach collection="msgRaw_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="msgRaw_array_or != null">
+            AND
+            <foreach collection="msgRaw_array_or" item="item" open="(" separator="OR" close=")">
+                (t.msg_raw LIKE #{item})
+            </foreach>
+        </if>
+        <if test="msgRaw_list_or != null">
+            AND
+            <foreach collection="msgRaw_list_or" item="item" open="(" separator="OR" close=")">
+                (t.msg_raw LIKE #{item})
+            </foreach>
+        </if>
+
+        <if test="msgType_null != null">
+            AND t.msg_type IS NULL
+        </if>
+        <if test="msgType != null">
+            AND t.msg_type LIKE #{msgType}
+        </if>
+        <if test="msgType_array != null">
+            AND t.msg_type IN
+            <foreach collection="msgType_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="msgType_list != null">
+            AND t.msg_type IN
+            <foreach collection="msgType_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="msgType_array_or != null">
+            AND
+            <foreach collection="msgType_array_or" item="item" open="(" separator="OR" close=")">
+                (t.msg_type LIKE #{item})
+            </foreach>
+        </if>
+        <if test="msgType_list_or != null">
+            AND
+            <foreach collection="msgType_list_or" item="item" open="(" separator="OR" close=")">
+                (t.msg_type LIKE #{item})
+            </foreach>
+        </if>
+
+        <if test="msgRecode_null != null">
+            AND t.msg_recode IS NULL
+        </if>
+        <if test="msgRecode != null">
+            AND t.msg_recode LIKE #{msgRecode}
+        </if>
+        <if test="msgRecode_array != null">
+            AND t.msg_recode IN
+            <foreach collection="msgRecode_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="msgRecode_list != null">
+            AND t.msg_recode IN
+            <foreach collection="msgRecode_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="msgRecode_array_or != null">
+            AND
+            <foreach collection="msgRecode_array_or" item="item" open="(" separator="OR" close=")">
+                (t.msg_recode LIKE #{item})
+            </foreach>
+        </if>
+        <if test="msgRecode_list_or != null">
+            AND
+            <foreach collection="msgRecode_list_or" item="item" open="(" separator="OR" close=")">
+                (t.msg_recode LIKE #{item})
+            </foreach>
+        </if>
+
+    </sql>
+
+    <sql id="orderSql">
+        <trim prefix="ORDER BY" suffixOverrides=",">
+            <if test="_ORDER_ != null">
+                <foreach collection="_ORDER_" item="item" open="" separator="," close="">
+                    <include refid="orderSqlInner"/>
+                </foreach>
+            </if>
+        </trim>
+    </sql>
+
+    <sql id="orderSqlInner">
+        <if test="item == 'id_asc'">t.id ASC</if>
+        <if test="item == 'id_desc'">t.id DESC</if>
+        <if test="item == 'nos_asc'">t.nos ASC</if>
+        <if test="item == 'nos_desc'">t.nos DESC</if>
+        <if test="item == 'bot_asc'">t.bot ASC</if>
+        <if test="item == 'bot_desc'">t.bot DESC</if>
+        <if test="item == 'sender_asc'">t.sender ASC</if>
+        <if test="item == 'sender_desc'">t.sender DESC</if>
+        <if test="item == 'target_asc'">t.target ASC</if>
+        <if test="item == 'target_desc'">t.target DESC</if>
+        <if test="item == 'time_asc'">t.time ASC</if>
+        <if test="item == 'time_desc'">t.time DESC</if>
+        <if test="item == 'msgRaw_asc'">t.msg_raw ASC</if>
+        <if test="item == 'msgRaw_desc'">t.msg_raw DESC</if>
+        <if test="item == 'msgType_asc'">t.msg_type ASC</if>
+        <if test="item == 'msgType_desc'">t.msg_type DESC</if>
+        <if test="item == 'msgRecode_asc'">t.msg_recode ASC</if>
+        <if test="item == 'msgRecode_desc'">t.msg_recode DESC</if>
+    </sql>
+
+    <delete id="deleteByParam" parameterType="java.util.Map">
+        DELETE FROM message_record t
+        <include refid="whereSql"/>
+    </delete>
+
+    <select id="selectCountByParam" parameterType="java.util.Map" resultType="int">
+        SELECT COUNT(*) FROM message_record t
+        <include refid="whereSql"/>
+    </select>
+
+    <select id="selectByParam" parameterType="java.util.Map" resultMap="resultMap">
+        SELECT
+        <if test="_ALL_FIELDS_ == true">
+            <include refid="allColumn"/>
+        </if>
+        <if test="_ALL_FIELDS_ != true">
+            <include refid="baseColumn"/>
+        </if>
+        FROM message_record t
+        <include refid="whereSql"/>
+        <include refid="orderSql"/>
+    </select>
+
+</mapper>

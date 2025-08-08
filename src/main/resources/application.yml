@@ -30,5 +30,5 @@ mybatis-plus:
   global-config:
     banner: false
   config-location: classpath:mybatis/mybatis-config.xml
-  mapper-locations: classpath*:xin.vanilla/**/mybatis-*.xml
+  mapper-locations: classpath*:xin/vanilla/**/mybatis-*.xml
   type-aliases-package: xin.vanilla.**.domain,xin.vanilla.**.entity,xin.vanilla.**.po

@@ -70,6 +70,9 @@ tasks.named('processResources') {
             line.replaceAll('active:\\s*\\w+', "active: ${activeProfile}")
         }
     }
+    from('src/main/java') {
+        include 'xin/vanilla/banira/mapper/mybatis/mybatis-*.xml'
+    }
 }
 
 tasks.named('bootJar') {

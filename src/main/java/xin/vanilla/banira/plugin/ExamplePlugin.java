@@ -8,11 +8,12 @@ import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.enums.AtEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.plugin.common.BasePlugin;
 
 @Slf4j
 @Shiro
 @Component
-public class ExamplePlugin {
+public class ExamplePlugin extends BasePlugin {
 
     /**
      * 被AT时触发回复

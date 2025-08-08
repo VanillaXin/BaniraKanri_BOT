@@ -2,6 +2,7 @@ package xin.vanilla.banira.mapper.param;
 
 
 import xin.vanilla.banira.domain.MessageRecord;
+import xin.vanilla.banira.mapper.common.BaniraQueryParam;
 import xin.vanilla.banira.util.lambda.LambdaUtils;
 
 import java.util.Collection;

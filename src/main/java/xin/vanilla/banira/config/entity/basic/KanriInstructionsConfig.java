@@ -41,7 +41,7 @@ public record KanriInstructionsConfig(
 
     public static KanriInstructionsConfig preset() {
         return new KanriInstructionsConfig(
-                BaniraUtils.mutableSetOf(""),
+                BaniraUtils.mutableSetOf(),
                 BaniraUtils.mutableSetOf("状态", "status"),
                 BaniraUtils.mutableSetOf("头衔", "tag"),
                 BaniraUtils.mutableSetOf("群名片", "card"),

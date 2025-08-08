@@ -1,4 +1,4 @@
-package xin.vanilla.banira.mapper.param;
+package xin.vanilla.banira.mapper.common;
 
 import xin.vanilla.banira.util.StringUtils;
 
@@ -38,7 +38,8 @@ public class BaniraQueryParam extends HashMap<String, Object> {
     }
 
     public BaniraQueryParam addParamAllowEmpty(String key, Object value) {
-        this.put(key, value);
+        if (value == null) this.put(key + "_null", null);
+        else this.put(key, value);
         return this;
     }
 
@@ -80,7 +81,8 @@ public class BaniraQueryParam extends HashMap<String, Object> {
     }
 
     public BaniraQueryParam addParamAllowEmpty(String key, String value) {
-        this.put(key, value);
+        if (value == null) this.put(key + "_null", null);
+        else this.put(key, value);
         return this;
     }
 

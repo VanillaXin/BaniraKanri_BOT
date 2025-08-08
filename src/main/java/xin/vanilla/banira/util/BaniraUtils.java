@@ -1,9 +1,21 @@
 package xin.vanilla.banira.util;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
+import com.mikuac.shiro.common.utils.MessageConverser;
+import com.mikuac.shiro.common.utils.MsgUtils;
+import com.mikuac.shiro.common.utils.ShiroUtils;
+import com.mikuac.shiro.core.Bot;
+import com.mikuac.shiro.enums.MsgTypeEnum;
+import com.mikuac.shiro.model.ArrayMsg;
+import org.springframework.core.ResolvableType;
+import xin.vanilla.banira.config.entity.GlobalConfig;
+import xin.vanilla.banira.domain.MessageRecord;
+import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
+import xin.vanilla.banira.service.IMessageRecordManager;
+import xin.vanilla.banira.start.SpringContextHolder;
+
+import java.util.*;
+import java.util.function.Supplier;
+import java.util.regex.Pattern;
 
 public class BaniraUtils {
 
@@ -59,5 +71,139 @@ public class BaniraUtils {
     }
 
     // endregion mutableSetOf
+
+    // region 消息处理
+
+    public static final Pattern QQ_PATTERN = Pattern.compile(",\\s*qq=(?<qq>\\d+)\\s*[,\\]]");
+    public static final Pattern ID_PATTERN = Pattern.compile(",\\s*id=(?<id>\\d+)\\s*[,\\]]");
+
+    // region 回复
+
+    public static final Pattern REPLAY_PATTERN = Pattern.compile(
+            StringUtils.escapeExprSpecialWord(
+                    MsgUtils.builder().reply(233).build()
+            ).replace("233", "[^\\[\\]]*?")
+    );
+
+    public static boolean hasReplay(List<ArrayMsg> arrayMsg) {
+        return arrayMsg.stream().anyMatch(e -> e.getType() == MsgTypeEnum.reply);
+    }
+
+    public static String getReplayId(List<ArrayMsg> arrayMsg) {
+        return arrayMsg.stream()
+                .filter(e -> e.getType() == MsgTypeEnum.reply)
+                .findFirst()
+                .map(e -> e.getStringData("id"))
+                .orElse(null);
+    }
+
+    public static long getReplayQQ(Bot bot, Long groupId, List<ArrayMsg> arrayMsg) {
+        long qq = arrayMsg.stream()
+                .filter(e -> e.getType() == MsgTypeEnum.reply)
+                .findFirst()
+                .map(e -> e.getLongData("qq"))
+                .orElse(0L);
+        if (qq == 0) {
+            IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
+            List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
+                    .setNos(getReplayId(arrayMsg))
+                    .setBot(bot.getSelfId())
+                    .setTarget(groupId)
+            );
+            qq = records.stream()
+                    .findFirst()
+                    .map(MessageRecord::getSender)
+                    .orElse(0L);
+        }
+        return qq;
+    }
+
+    public static boolean hasReplay(String msg) {
+        return StringUtils.isNotNullOrEmpty(msg) && REPLAY_PATTERN.matcher(msg).find();
+    }
+
+    public static String getReplayId(String msg) {
+        return hasReplay(msg) ?
+                ID_PATTERN.matcher(msg).results()
+                        .map(m -> m.group("id"))
+                        .findFirst().orElse(null) :
+                null;
+    }
+
+    public static long getReplayQQ(Bot bot, Long groupId, String msg) {
+        long qq = 0;
+        if (hasReplay(msg)) {
+            qq = QQ_PATTERN.matcher(msg).results()
+                    .map(m -> m.group("qq"))
+                    .map(Long::parseLong)
+                    .findFirst().orElse(0L);
+            if (qq == 0) {
+                IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
+                List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
+                        .setNos(getReplayId(msg))
+                        .setBot(bot.getSelfId())
+                        .setTarget(groupId)
+                );
+                return records.stream()
+                        .findFirst()
+                        .map(MessageRecord::getSender)
+                        .orElse(0L);
+            }
+        }
+        return qq;
+    }
+
+    public static String replaceReplay(String msg) {
+        return hasReplay(msg) ? REPLAY_PATTERN.matcher(msg).replaceAll("") : msg;
+    }
+
+    // endregion 回复
+
+    // region 艾特
+
+    public static boolean hasAt(List<ArrayMsg> arrayMsg) {
+        return arrayMsg.stream().anyMatch(e -> e.getType() == MsgTypeEnum.at);
+    }
+
+    public static long getAtQQ(List<ArrayMsg> arrayMsg) {
+        return arrayMsg.stream()
+                .filter(e -> e.getType() == MsgTypeEnum.at)
+                .findFirst()
+                .map(e -> e.getLongData("qq"))
+                .orElse(0L);
+    }
+
+    public static boolean hasAt(String msg) {
+        return StringUtils.isNotNullOrEmpty(msg) && msg.contains("[CQ:at,");
+    }
+
+    public static long getAtQQ(String msg) {
+        return hasAt(msg) ?
+                QQ_PATTERN.matcher(msg).results()
+                        .map(m -> m.group("qq"))
+                        .map(Long::parseLong)
+                        .map(qq -> qq == 0 ? 233L : qq)
+                        .findFirst().orElse(0L) :
+                0L;
+    }
+
+    public static boolean hasAtAll(List<ArrayMsg> arrayMsg) {
+        return ShiroUtils.isAtAll(arrayMsg) || hasAtAll(MessageConverser.arraysToString(arrayMsg));
+    }
+
+    public static boolean hasAtAll(String msg) {
+        Supplier<GlobalConfig> globalConfig = SpringContextHolder.getBean(
+                ResolvableType.forClassWithGenerics(Supplier.class, GlobalConfig.class)
+        );
+        return hasAt(msg)
+                && (ShiroUtils.isAtAll(msg)
+                || msg.contains("[CQ:at,qq=0]")
+                || msg.contains("[CQ:at,qq=233]"))
+                || globalConfig.get().instConfig().base().atAll().stream().anyMatch(msg::contains);
+    }
+
+    // endregion 艾特
+
+    // endregion 消息处理
 
 }

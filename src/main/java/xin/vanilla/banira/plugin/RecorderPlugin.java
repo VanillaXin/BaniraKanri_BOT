@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumMessageType;
+import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.service.IMessageRecordManager;
 
 /**
@@ -17,7 +18,7 @@ import xin.vanilla.banira.service.IMessageRecordManager;
 @Slf4j
 @Shiro
 @Component
-public class RecorderPlugin {
+public class RecorderPlugin extends BasePlugin {
 
     @Resource
     private IMessageRecordManager messageRecordManager;

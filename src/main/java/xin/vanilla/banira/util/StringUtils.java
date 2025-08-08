@@ -18,6 +18,30 @@ import java.util.regex.Pattern;
 public class StringUtils {
 
     public static final String FORMAT_REGEX = "%(\\d+\\$)?([-#+ 0,(<]*)?(\\d+)?(\\.\\d+)?([tT])?([a-zA-Z%])";
+    public static final String COMMON_MARK = ",<.>/?;:'\"[{]}\\|`~!@#$%^&*()-_=+，《。》、？；：‘“【】·~！￥…（）—";
+
+    /**
+     * 字符串是否为常用标点符号
+     */
+    public static boolean isCommonMark(String s) {
+        if (s.length() != 1) return false;
+        return COMMON_MARK.contains(s);
+    }
+
+    /**
+     * 转义正则特殊字符  $()*+.[]?\^{},|
+     */
+    public static String escapeExprSpecialWord(String keyword) {
+        if (!StringUtils.isNullOrEmpty(keyword)) {
+            String[] fbsArr = {"\\", "$", "(", ")", "*", "+", ".", "[", "]", "?", "^", "{", "}", "|"};
+            for (String key : fbsArr) {
+                if (keyword.contains(key)) {
+                    keyword = keyword.replace(key, "\\" + key);
+                }
+            }
+        }
+        return keyword;
+    }
 
     /**
      * 将字符串转为逻辑真假
