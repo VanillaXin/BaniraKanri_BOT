@@ -1,5 +1,6 @@
 package xin.vanilla.banira.config.entity;
 
+import jakarta.annotation.Nonnull;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.config.entity.basic.BaseConfig;
 import xin.vanilla.banira.config.entity.basic.InstructionsConfig;
@@ -20,20 +21,20 @@ import java.util.Set;
  */
 @Accessors(chain = true)
 public record GlobalConfig(
-        String token,
-        String wsUrl,
-        Long owner,
-        Set<PermissionConfig> butler,
-        BaseConfig baseConfig,
-        InstructionsConfig instConfig,
-        OtherConfig otherConfig
+        @Nonnull String token,
+        @Nonnull String wsUrl,
+        @Nonnull Long owner,
+        @Nonnull Set<PermissionConfig> butler,
+        @Nonnull BaseConfig baseConfig,
+        @Nonnull InstructionsConfig instConfig,
+        @Nonnull OtherConfig otherConfig
 ) {
 
     public static GlobalConfig preset() {
         return new GlobalConfig(
                 "",
                 "ws://127.0.0.1:8080",
-                null,
+                0L,
                 BaniraUtils.mutableSetOf(PermissionConfig.preset()),
                 BaseConfig.preset(),
                 InstructionsConfig.preset(),

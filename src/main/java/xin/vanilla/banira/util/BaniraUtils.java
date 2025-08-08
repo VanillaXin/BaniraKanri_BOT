@@ -4,11 +4,18 @@ import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.core.Bot;
+import com.mikuac.shiro.dto.action.common.ActionData;
+import com.mikuac.shiro.dto.action.response.GroupMemberInfoResp;
 import com.mikuac.shiro.enums.MsgTypeEnum;
 import com.mikuac.shiro.model.ArrayMsg;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import org.springframework.core.ResolvableType;
 import xin.vanilla.banira.config.entity.GlobalConfig;
+import xin.vanilla.banira.config.entity.GroupConfig;
+import xin.vanilla.banira.config.entity.basic.PermissionConfig;
 import xin.vanilla.banira.domain.MessageRecord;
+import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.start.SpringContextHolder;
@@ -18,6 +25,24 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 public class BaniraUtils {
+
+    // region private
+
+    private static GlobalConfig getGlobalConfig() {
+        Supplier<GlobalConfig> globalConfig = SpringContextHolder.getBean(
+                ResolvableType.forClassWithGenerics(Supplier.class, GlobalConfig.class)
+        );
+        return globalConfig.get();
+    }
+
+    private static GroupConfig getGroupConfig() {
+        Supplier<GroupConfig> groupConfig = SpringContextHolder.getBean(
+                ResolvableType.forClassWithGenerics(Supplier.class, GroupConfig.class)
+        );
+        return groupConfig.get();
+    }
+
+    // endregion private
 
     // region mutableSetOf
 
@@ -205,5 +230,141 @@ public class BaniraUtils {
     // endregion 艾特
 
     // endregion 消息处理
+
+    // region 权限判断
+
+    /**
+     * 判断是否主人
+     */
+    @SuppressWarnings("ConstantConditions")
+    public static boolean isOwner(@Nonnull Long qq) {
+        Long owner = getGlobalConfig().owner();
+        return owner != null && owner > 0 && Objects.equals(owner, qq);
+    }
+
+    /**
+     * 判断是否管家
+     */
+    public static boolean isButler(@Nonnull Long qq) {
+        Set<PermissionConfig> butler = getGlobalConfig().butler();
+        return CollectionUtils.isNotNullOrEmpty(butler) && butler.stream().anyMatch(p -> qq.equals(p.id()));
+    }
+
+    /**
+     * 判断是否仆人
+     */
+    public static boolean isServant(@Nullable Long groupId, @Nonnull Long qq) {
+        if (groupId == null || groupId <= 0L) return false;
+        Set<PermissionConfig> servant = getGroupConfig().servant().get(groupId);
+        return CollectionUtils.isNotNullOrEmpty(servant) && servant.stream().anyMatch(e -> qq.equals(e.id()));
+    }
+
+    /**
+     * 判断是否群主
+     */
+    public static boolean isGroupOwner(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq) {
+        if (bot == null || groupId == null || groupId <= 0L) return false;
+        ActionData<GroupMemberInfoResp> groupMemberInfo = bot.getGroupMemberInfo(groupId, qq, false);
+        return groupMemberInfo != null && "owner".equalsIgnoreCase(groupMemberInfo.getData().getRole());
+    }
+
+    /**
+     * 判断是否群管理
+     */
+    public static boolean isGroupAdmin(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq) {
+        if (bot == null || groupId == null || groupId <= 0L) return false;
+        ActionData<GroupMemberInfoResp> groupMemberInfo = bot.getGroupMemberInfo(groupId, qq, false);
+        return groupMemberInfo != null && "admin".equalsIgnoreCase(groupMemberInfo.getData().getRole());
+    }
+
+    /**
+     * 判断a是否b的上属
+     */
+    public static boolean isUpper(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long a, @Nonnull Long b) {
+        if (isOwner(a))
+            return !isGroupOwner(bot, groupId, b);
+        if (isButler(a))
+            return !isGroupOwner(bot, groupId, b)
+                    && !isOwner(b)
+                    && !isButler(b);
+        if (isServant(groupId, a))
+            return !isGroupOwner(bot, groupId, b)
+                    && !isOwner(b)
+                    && !isButler(b)
+                    && !isServant(groupId, b);
+        if (isGroupOwner(bot, groupId, a))
+            return !isOwner(b);
+        if (isGroupAdmin(bot, groupId, a))
+            return !isGroupOwner(bot, groupId, b)
+                    && !isOwner(b)
+                    && !isButler(b)
+                    && !isServant(groupId, b);
+        return false;
+    }
+
+    /**
+     * 获取所有拥有的权限
+     */
+    @Nonnull
+    public static Set<EnumPermission> getPermission(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq) {
+        if (isOwner(qq)) return EnumPermission.getAll();
+        Set<EnumPermission> permissions = mutableSetOf();
+        if (isGroupOwner(bot, groupId, qq))
+            permissions.addAll(EnumPermission.getGroupOwner());
+        if (isGroupAdmin(bot, groupId, qq))
+            permissions.addAll(EnumPermission.getGroupAdmin());
+        Set<PermissionConfig> butler = getGlobalConfig().butler();
+        if (CollectionUtils.isNotNullOrEmpty(butler)) {
+            butler.stream()
+                    .filter(p -> qq.equals(p.id()))
+                    .findFirst()
+                    .ifPresent(p -> permissions.addAll(p.permissions()));
+        }
+        if (groupId != null && groupId > 0L) {
+            Set<PermissionConfig> servant = getGroupConfig().servant().getOrDefault(groupId, new HashSet<>());
+            servant.stream()
+                    .filter(p -> qq.equals(p.id()))
+                    .findFirst()
+                    .ifPresent(p -> permissions.addAll(p.permissions()));
+        }
+        return permissions;
+    }
+
+    /**
+     * 判断是否拥有某个权限
+     */
+    public static boolean hasPermission(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull EnumPermission permission) {
+        return getPermission(bot, groupId, qq).contains(permission);
+    }
+
+    /**
+     * 判断是否拥有全部权限
+     */
+    public static boolean hasAllPermissions(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull EnumPermission... permissions) {
+        return hasAllPermissions(bot, groupId, qq, Arrays.asList(permissions));
+    }
+
+    /**
+     * 判断是否拥有全部权限
+     */
+    public static boolean hasAllPermissions(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull Collection<EnumPermission> permissions) {
+        return getPermission(bot, groupId, qq).containsAll(permissions);
+    }
+
+    /**
+     * 判断是否拥有任意一个权限
+     */
+    public static boolean hasAnyPermissions(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull EnumPermission... permission) {
+        return hasAnyPermissions(bot, groupId, qq, Arrays.asList(permission));
+    }
+
+    /**
+     * 判断是否拥有任意一个权限
+     */
+    public static boolean hasAnyPermissions(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull Collection<EnumPermission> permissions) {
+        return getPermission(bot, groupId, qq).stream().anyMatch(permissions::contains);
+    }
+
+    // endregion 权限判断
 
 }

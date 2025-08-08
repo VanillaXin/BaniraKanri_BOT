@@ -1,6 +1,7 @@
 package xin.vanilla.banira.config.entity;
 
 
+import jakarta.annotation.Nonnull;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.config.entity.basic.BaseConfig;
 import xin.vanilla.banira.config.entity.basic.OtherConfig;
@@ -19,9 +20,9 @@ import java.util.Set;
  */
 @Accessors(chain = true)
 public record GroupConfig(
-        Map<Long, Set<PermissionConfig>> servant,
-        Map<Long, BaseConfig> baseConfig,
-        Map<Long, OtherConfig> otherConfig
+        @Nonnull Map<Long, Set<PermissionConfig>> servant,
+        @Nonnull Map<Long, BaseConfig> baseConfig,
+        @Nonnull Map<Long, OtherConfig> otherConfig
 ) {
 
     public static GroupConfig preset() {

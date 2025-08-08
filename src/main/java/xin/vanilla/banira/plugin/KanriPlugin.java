@@ -2,6 +2,7 @@ package xin.vanilla.banira.plugin;
 
 import com.mikuac.shiro.annotation.GroupMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
+import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import jakarta.annotation.Resource;
@@ -31,22 +32,29 @@ public class KanriPlugin extends BasePlugin {
         String[] parts = message.split("\\s+");
         String kanriAction = parts[0].trim();
 
+        KanriContext context = new KanriContext(event, bot, event.getGroupId(), event.getSender().getUserId());
+
         boolean result = false;
         Optional<KanriHandler> handler = handlers.stream()
                 .filter(h -> h.getAction().contains(kanriAction))
                 .findFirst();
         if (handler.isPresent()) {
-            String[] args = Arrays.copyOfRange(parts, 1, parts.length);
-            try {
-                KanriContext context = new KanriContext(event
-                        , bot
-                        , event.getGroupId()
-                        , event.getSender().getUserId()
+            if (handler.get().hasPermission(context)) {
+                String[] args = Arrays.copyOfRange(parts, 1, parts.length);
+                try {
+                    result = handler.get().execute(context, args);
+                } catch (Exception e) {
+                    LOGGER.error("Kanri command parsing failed", e);
+                    bot.sendGroupMsg(event.getGroupId(), "指令解析失败", false);
+                }
+            } else {
+                bot.sendGroupMsg(event.getGroupId()
+                        , MsgUtils.builder()
+                                .reply(event.getMessageId())
+                                .text("你没有权限执行该操作")
+                                .build()
+                        , false
                 );
-                result = handler.get().execute(context, args);
-            } catch (Exception e) {
-                LOGGER.error("Kanri command parsing failed", e);
-                bot.sendGroupMsg(event.getGroupId(), "指令解析失败", false);
             }
         }
         return result;

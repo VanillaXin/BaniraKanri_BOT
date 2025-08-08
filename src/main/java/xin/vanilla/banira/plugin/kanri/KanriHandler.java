@@ -10,6 +10,13 @@ import java.util.Set;
 public interface KanriHandler {
 
     /**
+     * 是否有权限执行
+     *
+     * @param context 上下文
+     */
+    boolean hasPermission(@Nonnull KanriContext context);
+
+    /**
      * 动作，如 "ban"
      */
     @Nonnull
