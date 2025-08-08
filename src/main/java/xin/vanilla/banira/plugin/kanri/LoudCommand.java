@@ -12,36 +12,32 @@ import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.domain.kanri.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.StringUtils;
 
-import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Supplier;
 
 @Component
-public class MuteCommand implements KanriHandler {
+public class LoudCommand implements KanriHandler {
 
     @Resource
     private Supplier<GlobalConfig> globalConfig;
 
     @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
-        return BaniraUtils.hasPermission(context.bot(), context.group(), context.sender(), EnumPermission.MUTE);
+        return BaniraUtils.hasPermission(context.bot(), context.group(), context.sender(), EnumPermission.LOUD);
     }
 
     @Nonnull
     @Override
     public Set<String> getAction() {
-        return globalConfig.get().instConfig().kanri().mute();
+        return globalConfig.get().instConfig().kanri().loud();
     }
 
     @Override
     public boolean execute(@Nonnull KanriContext context, @Nonnull String[] args) {
-        if (args.length < 1) return false;
-
         // 解析目标
         Set<Object> targets = BaniraUtils.mutableSetOf();
-        if (args.length == 1) {
+        if (args.length == 0) {
             if (BaniraUtils.hasReplay(context.event().getArrayMsg())) {
                 targets.add(BaniraUtils.getReplayQQ(context.bot(), context.group(), context.event().getArrayMsg()));
             } else if (BaniraUtils.hasAtAll(context.event().getArrayMsg())) {
@@ -49,29 +45,25 @@ public class MuteCommand implements KanriHandler {
             } else return false;
         }
         targets.addAll(ShiroUtils.getAtList(context.event().getArrayMsg()));
-        targets.addAll(getQQs(Arrays.copyOf(args, args.length - 1)));
+        targets.addAll(getQQs(args));
 
-        // 解析时长
-        int duration = (int) (StringUtils.toDouble(args[args.length - 1]) * 60);
-
-        // 全体禁言
+        // 全体解禁
         if (targets.contains(233L)) {
-            context.bot().setGroupWholeBan(context.group(), true);
+            context.bot().setGroupWholeBan(context.group(), false);
         }
-        // 群员禁言
+        // 群员解禁
         else {
-            if (duration <= 0) return false;
             Set<Long> fail = BaniraUtils.mutableSetOf();
             for (Object target : targets) {
                 if (target instanceof Number) {
                     long targetId = ((Number) target).longValue();
                     if (BaniraUtils.isUpper(context.bot(), context.group(), context.sender(), targetId)) {
-                        context.bot().setGroupBan(context.group(), targetId, duration);
+                        context.bot().setGroupBan(context.group(), targetId, 0);
                     } else {
                         fail.add(targetId);
                     }
                 } else if (target instanceof String) {
-                    context.bot().setGroupAnonymousBan(context.group(), target.toString(), duration);
+                    context.bot().setGroupAnonymousBan(context.group(), target.toString(), 1);
                 }
             }
             if (!fail.isEmpty()) {
