@@ -5,15 +5,17 @@ import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.ActionRaw;
 import com.mikuac.shiro.dto.action.common.MsgId;
+import com.mikuac.shiro.dto.action.response.GetMsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.model.ArrayMsg;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
-import jakarta.annotation.Resource;
 import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.service.IMessageRecordManager;
+import xin.vanilla.banira.start.SpringContextHolder;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.Collection;
 import java.util.List;
@@ -26,9 +28,6 @@ import java.util.Set;
 @SuppressWarnings("unused")
 public class BaniraBot extends Bot {
 
-    @Resource
-    private IMessageRecordManager messageRecordManager;
-
     public BaniraBot(Bot bot) {
         super(bot.getSelfId()
                 , bot.getSession()
@@ -40,60 +39,6 @@ public class BaniraBot extends Bot {
     }
 
     // region override
-
-    /**
-     * 发送消息
-     *
-     * @param event      {@link AnyMessageEvent}
-     * @param msg        要发送的内容
-     * @param autoEscape 消息内容是否作为纯文本发送 ( 即不解析 CQ 码 ) , 只在 message 字段是字符串时有效
-     * @return result {@link ActionData} of {@link MsgId}
-     */
-    public ActionData<MsgId> sendMsg(AnyMessageEvent event, String msg, boolean autoEscape) {
-        ActionData<MsgId> msgId = super.sendMsg(event, msg, autoEscape);
-        if (isActionDataMsgIdNotEmpty(msgId)) {
-            MessageRecord record = new MessageRecord()
-                    .setMsgId(getActionDataMsgId(msgId))
-                    .setBotId(super.getSelfId())
-                    .setSenderId(super.getSelfId())
-                    .setGroupId(event.getGroupId())
-                    .setTime(System.currentTimeMillis())
-                    .setMsgRaw(msg)
-                    .setMsgType(EnumMessageType.getType(event));
-            if (record.getMsgType() != EnumMessageType.GROUP) {
-                record.setTargetId(event.getUserId());
-            }
-            messageRecordManager.addMessageRecord(record);
-        }
-        return msgId;
-    }
-
-    /**
-     * 发送消息
-     *
-     * @param event      {@link AnyMessageEvent}
-     * @param msg        消息链
-     * @param autoEscape 消息内容是否作为纯文本发送 ( 即不解析 CQ 码 ) , 只在 message 字段是字符串时有效
-     * @return result {@link ActionData} of {@link MsgId}
-     */
-    public ActionData<MsgId> sendMsg(AnyMessageEvent event, List<ArrayMsg> msg, boolean autoEscape) {
-        ActionData<MsgId> msgId = super.sendMsg(event, msg, autoEscape);
-        if (isActionDataMsgIdNotEmpty(msgId)) {
-            MessageRecord record = new MessageRecord()
-                    .setMsgId(getActionDataMsgId(msgId))
-                    .setBotId(super.getSelfId())
-                    .setSenderId(super.getSelfId())
-                    .setGroupId(event.getGroupId())
-                    .setTime(System.currentTimeMillis())
-                    .setMsgRaw(MessageConverser.arraysToString(msg))
-                    .setMsgType(EnumMessageType.getType(event));
-            if (record.getMsgType() != EnumMessageType.GROUP) {
-                record.setTargetId(event.getUserId());
-            }
-            messageRecordManager.addMessageRecord(record);
-        }
-        return msgId;
-    }
 
     /**
      * 发送私聊消息
@@ -111,10 +56,10 @@ public class BaniraBot extends Bot {
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setTargetId(userId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(msg)
                     .setMsgType(EnumMessageType.FRIEND);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -135,10 +80,10 @@ public class BaniraBot extends Bot {
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setTargetId(userId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(MessageConverser.arraysToString(msg))
                     .setMsgType(EnumMessageType.FRIEND);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -161,10 +106,10 @@ public class BaniraBot extends Bot {
                     .setSenderId(super.getSelfId())
                     .setGroupId(groupId)
                     .setTargetId(userId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(msg)
                     .setMsgType(EnumMessageType.MEMBER);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -187,10 +132,10 @@ public class BaniraBot extends Bot {
                     .setSenderId(super.getSelfId())
                     .setGroupId(groupId)
                     .setTargetId(userId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(MessageConverser.arraysToString(msg))
                     .setMsgType(EnumMessageType.MEMBER);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -211,10 +156,10 @@ public class BaniraBot extends Bot {
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setGroupId(groupId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(msg)
                     .setMsgType(EnumMessageType.GROUP);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -235,10 +180,10 @@ public class BaniraBot extends Bot {
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setGroupId(groupId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(MessageConverser.arraysToString(msg))
                     .setMsgType(EnumMessageType.GROUP);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -260,10 +205,10 @@ public class BaniraBot extends Bot {
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setGroupId(groupId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(msg)
                     .setMsgType(EnumMessageType.GROUP);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -285,10 +230,10 @@ public class BaniraBot extends Bot {
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setGroupId(groupId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(MessageConverser.arraysToString(msg))
                     .setMsgType(EnumMessageType.GROUP);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -309,10 +254,10 @@ public class BaniraBot extends Bot {
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setGroupId(groupId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(String.format("[CQ:forward,id=%s]", getActionDataMsgId(msgId)))
                     .setMsgType(EnumMessageType.GROUP);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -333,10 +278,10 @@ public class BaniraBot extends Bot {
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setTargetId(userId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(String.format("[CQ:forward,id=%s]", getActionDataMsgId(msgId)))
                     .setMsgType(EnumMessageType.FRIEND);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -357,13 +302,13 @@ public class BaniraBot extends Bot {
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setGroupId(event.getGroupId())
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(String.format("[CQ:forward,id=%s]", getActionDataMsgId(msgId)))
                     .setMsgType(EnumMessageType.getType(event));
             if (record.getMsgType() != EnumMessageType.GROUP) {
                 record.setTargetId(event.getUserId());
             }
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -387,10 +332,10 @@ public class BaniraBot extends Bot {
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setGroupId(groupId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(String.format("[CQ:forward,id=%s]", getActionDataMsgId(msgId)))
                     .setMsgType(EnumMessageType.GROUP);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -414,10 +359,10 @@ public class BaniraBot extends Bot {
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setTargetId(userId)
-                    .setTime(System.currentTimeMillis())
+                    .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(String.format("[CQ:forward,id=%s]", getActionDataMsgId(msgId)))
                     .setMsgType(EnumMessageType.FRIEND);
-            messageRecordManager.addMessageRecord(record);
+            getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgId;
     }
@@ -436,6 +381,26 @@ public class BaniraBot extends Bot {
 
     private Integer getActionDataMsgId(ActionData<MsgId> msgId) {
         return msgId.getData().getMessageId();
+    }
+
+    private IMessageRecordManager getMessageRecordManager() {
+        return SpringContextHolder.getBean(IMessageRecordManager.class);
+    }
+
+    private MessageRecord setMsgRecordTime(MessageRecord record) {
+        if (StringUtils.isNotNullOrEmpty(record.getMsgId())) {
+            try {
+                ActionData<GetMsgResp> msg = super.getMsg(StringUtils.toInt(record.getMsgId()));
+                if (isActionDataNotEmpty(msg)) {
+                    Integer time = msg.getData().getTime();
+                    if (time != null) {
+                        record.setTime(Long.valueOf(time));
+                    }
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return record;
     }
 
     // endregion private
