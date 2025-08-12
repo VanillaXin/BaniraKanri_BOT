@@ -5,10 +5,11 @@
 
     <resultMap id="resultMap" type="xin.vanilla.banira.domain.MessageRecord">
         <id property="id" column="id"/>
-        <result property="nos" column="nos"/>
-        <result property="bot" column="bot"/>
-        <result property="sender" column="sender"/>
-        <result property="target" column="target"/>
+        <result property="msgId" column="msg_id"/>
+        <result property="botId" column="bot_id"/>
+        <result property="senderId" column="sender_id"/>
+        <result property="targetId" column="target_id"/>
+        <result property="groupId" column="group_id"/>
         <result property="time" column="time"/>
         <result property="msgRaw" column="msg_raw"/>
         <result property="msgType" column="msg_type"/>
@@ -16,11 +17,11 @@
     </resultMap>
 
     <sql id="allColumn">
-        t.id, t.nos, t.bot, t.sender, t.target, t.time, t.msg_raw, t.msg_type, t.msg_recode
+        t.id, t.msg_id, t.bot_id, t.sender_id, t.target_id, t.group_id, t.time, t.msg_raw, t.msg_type, t.msg_recode
     </sql>
 
     <sql id="baseColumn">
-        t.id, t.nos, t.bot, t.sender, t.target, t.time, t.msg_raw, t.msg_type
+        t.id, t.msg_id, t.bot_id, t.sender_id, t.target_id, t.group_id, t.time, t.msg_raw, t.msg_type
     </sql>
 
     <sql id="whereSql">
@@ -69,148 +70,187 @@
             <![CDATA[ AND t.id >= #{id} ]]>
         </if>
 
-        <if test="nos_null != null">
-            AND t.nos IS NULL
+        <if test="msgId_null != null">
+            AND t.msg_id IS NULL
         </if>
-        <if test="nos != null">
-            AND t.nos LIKE #{nos}
+        <if test="msgId != null">
+            AND t.msg_id LIKE #{msgId}
         </if>
-        <if test="nos_array != null">
-            AND t.nos IN
-            <foreach collection="nos_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        <if test="msgId_array != null">
+            AND t.msg_id IN
+            <foreach collection="msgId_array" item="item" open="(" separator="," close=")">#{item}</foreach>
         </if>
-        <if test="nos_list != null">
-            AND t.nos IN
-            <foreach collection="nos_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        <if test="msgId_list != null">
+            AND t.msg_id IN
+            <foreach collection="msgId_list" item="item" open="(" separator="," close=")">#{item}</foreach>
         </if>
-        <if test="nos_array_or != null">
+        <if test="msgId_array_or != null">
             AND
-            <foreach collection="nos_array_or" item="item" open="(" separator="OR" close=")">
-                (t.nos LIKE #{item})
+            <foreach collection="msgId_array_or" item="item" open="(" separator="OR" close=")">
+                (t.msg_id LIKE #{item})
             </foreach>
         </if>
-        <if test="nos_list_or != null">
+        <if test="msgId_list_or != null">
             AND
-            <foreach collection="nos_list_or" item="item" open="(" separator="OR" close=")">
-                (t.nos LIKE #{item})
+            <foreach collection="msgId_list_or" item="item" open="(" separator="OR" close=")">
+                (t.msg_id LIKE #{item})
             </foreach>
         </if>
 
-        <if test="bot_null != null">
-            AND t.bot IS NULL
+        <if test="botId_null != null">
+            AND t.bot_id IS NULL
         </if>
-        <if test="bot != null">
-            AND t.bot = #{bot}
+        <if test="botId != null">
+            AND t.bot_id = #{botId}
         </if>
-        <if test="bot_array != null">
-            AND t.bot IN
-            <foreach collection="bot_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        <if test="botId_array != null">
+            AND t.bot_id IN
+            <foreach collection="botId_array" item="item" open="(" separator="," close=")">#{item}</foreach>
         </if>
-        <if test="bot_list != null">
-            AND t.bot IN
-            <foreach collection="bot_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        <if test="botId_list != null">
+            AND t.bot_id IN
+            <foreach collection="botId_list" item="item" open="(" separator="," close=")">#{item}</foreach>
         </if>
-        <if test="bot_array_or != null">
+        <if test="botId_array_or != null">
             AND
-            <foreach collection="bot_array_or" item="item" open="(" separator="OR" close=")">
-                (t.bot = #{item})
+            <foreach collection="botId_array_or" item="item" open="(" separator="OR" close=")">
+                (t.bot_id = #{item})
             </foreach>
         </if>
-        <if test="bot_list_or != null">
+        <if test="botId_list_or != null">
             AND
-            <foreach collection="bot_list_or" item="item" open="(" separator="OR" close=")">
-                (t.bot = #{item})
+            <foreach collection="botId_list_or" item="item" open="(" separator="OR" close=")">
+                (t.bot_id = #{item})
             </foreach>
         </if>
-        <if test="bot_lt != null">
-            <![CDATA[ AND t.bot < #{bot} ]]>
+        <if test="botId_lt != null">
+            <![CDATA[ AND t.bot_id < #{botId} ]]>
         </if>
-        <if test="bot_lt_eq != null">
-            <![CDATA[ AND t.bot <= #{bot} ]]>
+        <if test="botId_lt_eq != null">
+            <![CDATA[ AND t.bot_id <= #{botId} ]]>
         </if>
-        <if test="bot_gt != null">
-            <![CDATA[ AND t.bot > #{bot} ]]>
+        <if test="botId_gt != null">
+            <![CDATA[ AND t.bot_id > #{botId} ]]>
         </if>
-        <if test="bot_gt_eq != null">
-            <![CDATA[ AND t.bot >= #{bot} ]]>
+        <if test="botId_gt_eq != null">
+            <![CDATA[ AND t.bot_id >= #{botId} ]]>
         </if>
 
-        <if test="sender_null != null">
-            AND t.sender IS NULL
+        <if test="senderId_null != null">
+            AND t.sender_id IS NULL
         </if>
-        <if test="sender != null">
-            AND t.sender = #{sender}
+        <if test="senderId != null">
+            AND t.sender_id = #{senderId}
         </if>
-        <if test="sender_array != null">
-            AND t.sender IN
-            <foreach collection="sender_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        <if test="senderId_array != null">
+            AND t.sender_id IN
+            <foreach collection="senderId_array" item="item" open="(" separator="," close=")">#{item}</foreach>
         </if>
-        <if test="sender_list != null">
-            AND t.sender IN
-            <foreach collection="sender_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        <if test="senderId_list != null">
+            AND t.sender_id IN
+            <foreach collection="senderId_list" item="item" open="(" separator="," close=")">#{item}</foreach>
         </if>
-        <if test="sender_array_or != null">
+        <if test="senderId_array_or != null">
             AND
-            <foreach collection="sender_array_or" item="item" open="(" separator="OR" close=")">
-                (t.sender = #{item})
+            <foreach collection="senderId_array_or" item="item" open="(" separator="OR" close=")">
+                (t.sender_id = #{item})
             </foreach>
         </if>
-        <if test="sender_list_or != null">
+        <if test="senderId_list_or != null">
             AND
-            <foreach collection="sender_list_or" item="item" open="(" separator="OR" close=")">
-                (t.sender = #{item})
+            <foreach collection="senderId_list_or" item="item" open="(" separator="OR" close=")">
+                (t.sender_id = #{item})
             </foreach>
         </if>
-        <if test="sender_lt != null">
-            <![CDATA[ AND t.sender < #{sender} ]]>
+        <if test="senderId_lt != null">
+            <![CDATA[ AND t.sender_id < #{senderId} ]]>
         </if>
-        <if test="sender_lt_eq != null">
-            <![CDATA[ AND t.sender <= #{sender} ]]>
+        <if test="senderId_lt_eq != null">
+            <![CDATA[ AND t.sender_id <= #{senderId} ]]>
         </if>
-        <if test="sender_gt != null">
-            <![CDATA[ AND t.sender > #{sender} ]]>
+        <if test="senderId_gt != null">
+            <![CDATA[ AND t.sender_id > #{senderId} ]]>
         </if>
-        <if test="sender_gt_eq != null">
-            <![CDATA[ AND t.sender >= #{sender} ]]>
+        <if test="senderId_gt_eq != null">
+            <![CDATA[ AND t.sender_id >= #{senderId} ]]>
         </if>
 
-        <if test="target_null != null">
-            AND t.target IS NULL
+        <if test="targetId_null != null">
+            AND t.target_id IS NULL
         </if>
-        <if test="target != null">
-            AND t.target = #{target}
+        <if test="targetId != null">
+            AND t.target_id = #{targetId}
         </if>
-        <if test="target_array != null">
-            AND t.target IN
-            <foreach collection="target_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        <if test="targetId_array != null">
+            AND t.target_id IN
+            <foreach collection="targetId_array" item="item" open="(" separator="," close=")">#{item}</foreach>
         </if>
-        <if test="target_list != null">
-            AND t.target IN
-            <foreach collection="target_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        <if test="targetId_list != null">
+            AND t.target_id IN
+            <foreach collection="targetId_list" item="item" open="(" separator="," close=")">#{item}</foreach>
         </if>
-        <if test="target_array_or != null">
+        <if test="targetId_array_or != null">
             AND
-            <foreach collection="target_array_or" item="item" open="(" separator="OR" close=")">
-                (t.target = #{item})
+            <foreach collection="targetId_array_or" item="item" open="(" separator="OR" close=")">
+                (t.target_id = #{item})
             </foreach>
         </if>
-        <if test="target_list_or != null">
+        <if test="targetId_list_or != null">
             AND
-            <foreach collection="target_list_or" item="item" open="(" separator="OR" close=")">
-                (t.target = #{item})
+            <foreach collection="targetId_list_or" item="item" open="(" separator="OR" close=")">
+                (t.target_id = #{item})
             </foreach>
         </if>
-        <if test="target_lt != null">
-            <![CDATA[ AND t.target < #{target} ]]>
+        <if test="targetId_lt != null">
+            <![CDATA[ AND t.target_id < #{targetId} ]]>
         </if>
-        <if test="target_lt_eq != null">
-            <![CDATA[ AND t.target <= #{target} ]]>
+        <if test="targetId_lt_eq != null">
+            <![CDATA[ AND t.target_id <= #{targetId} ]]>
         </if>
-        <if test="target_gt != null">
-            <![CDATA[ AND t.target > #{target} ]]>
+        <if test="targetId_gt != null">
+            <![CDATA[ AND t.target_id > #{targetId} ]]>
         </if>
-        <if test="target_gt_eq != null">
-            <![CDATA[ AND t.target >= #{target} ]]>
+        <if test="targetId_gt_eq != null">
+            <![CDATA[ AND t.target_id >= #{targetId} ]]>
+        </if>
+
+        <if test="groupId_null != null">
+            AND t.group_id IS NULL
+        </if>
+        <if test="groupId != null">
+            AND t.group_id = #{groupId}
+        </if>
+        <if test="groupId_array != null">
+            AND t.group_id IN
+            <foreach collection="groupId_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="groupId_list != null">
+            AND t.group_id IN
+            <foreach collection="groupId_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="groupId_array_or != null">
+            AND
+            <foreach collection="groupId_array_or" item="item" open="(" separator="OR" close=")">
+                (t.group_id = #{item})
+            </foreach>
+        </if>
+        <if test="groupId_list_or != null">
+            AND
+            <foreach collection="groupId_list_or" item="item" open="(" separator="OR" close=")">
+                (t.group_id = #{item})
+            </foreach>
+        </if>
+        <if test="groupId_lt != null">
+            <![CDATA[ AND t.group_id < #{groupId} ]]>
+        </if>
+        <if test="groupId_lt_eq != null">
+            <![CDATA[ AND t.group_id <= #{groupId} ]]>
+        </if>
+        <if test="groupId_gt != null">
+            <![CDATA[ AND t.group_id > #{groupId} ]]>
+        </if>
+        <if test="groupId_gt_eq != null">
+            <![CDATA[ AND t.group_id >= #{groupId} ]]>
         </if>
 
         <if test="time_null != null">
@@ -348,14 +388,16 @@
     <sql id="orderSqlInner">
         <if test="item == 'id_asc'">t.id ASC</if>
         <if test="item == 'id_desc'">t.id DESC</if>
-        <if test="item == 'nos_asc'">t.nos ASC</if>
-        <if test="item == 'nos_desc'">t.nos DESC</if>
-        <if test="item == 'bot_asc'">t.bot ASC</if>
-        <if test="item == 'bot_desc'">t.bot DESC</if>
-        <if test="item == 'sender_asc'">t.sender ASC</if>
-        <if test="item == 'sender_desc'">t.sender DESC</if>
-        <if test="item == 'target_asc'">t.target ASC</if>
-        <if test="item == 'target_desc'">t.target DESC</if>
+        <if test="item == 'msgId_asc'">t.msg_id ASC</if>
+        <if test="item == 'msgId_desc'">t.msg_id DESC</if>
+        <if test="item == 'botId_asc'">t.bot_id ASC</if>
+        <if test="item == 'botId_desc'">t.bot_id DESC</if>
+        <if test="item == 'senderId_asc'">t.sender_id ASC</if>
+        <if test="item == 'senderId_desc'">t.sender_id DESC</if>
+        <if test="item == 'targetId_asc'">t.target_id ASC</if>
+        <if test="item == 'targetId_desc'">t.target_id DESC</if>
+        <if test="item == 'groupId_asc'">t.group_id ASC</if>
+        <if test="item == 'groupId_desc'">t.group_id DESC</if>
         <if test="item == 'time_asc'">t.time ASC</if>
         <if test="item == 'time_desc'">t.time DESC</if>
         <if test="item == 'msgRaw_asc'">t.msg_raw ASC</if>

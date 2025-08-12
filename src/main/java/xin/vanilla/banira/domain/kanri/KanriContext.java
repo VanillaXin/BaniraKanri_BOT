@@ -1,11 +1,11 @@
 package xin.vanilla.banira.domain.kanri;
 
-import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.MessageEvent;
+import xin.vanilla.banira.domain.BaniraBot;
 
 public record KanriContext(
         MessageEvent event,
-        Bot bot,
+        BaniraBot bot,
         long group,
         long sender
 ) {

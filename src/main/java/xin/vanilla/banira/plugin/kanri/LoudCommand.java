@@ -24,7 +24,7 @@ public class LoudCommand implements KanriHandler {
 
     @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
-        return BaniraUtils.hasPermission(context.bot(), context.group(), context.sender(), EnumPermission.LOUD);
+        return context.bot().hasPermission(context.group(), context.sender(), EnumPermission.LOUD);
     }
 
     @Nonnull
@@ -34,7 +34,7 @@ public class LoudCommand implements KanriHandler {
     }
 
     @Override
-    public boolean execute(@Nonnull KanriContext context, @Nonnull String[] args) {
+    public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
         // 解析目标
         Set<Object> targets = BaniraUtils.mutableSetOf();
         if (args.length == 0) {
@@ -42,22 +42,30 @@ public class LoudCommand implements KanriHandler {
                 targets.add(BaniraUtils.getReplayQQ(context.bot(), context.group(), context.event().getArrayMsg()));
             } else if (BaniraUtils.hasAtAll(context.event().getArrayMsg())) {
                 targets.add(233L);
-            } else return false;
+            } else return FAIL;
         }
         targets.addAll(ShiroUtils.getAtList(context.event().getArrayMsg()));
         targets.addAll(getQQs(args));
 
         // 全体解禁
         if (targets.contains(233L)) {
-            context.bot().setGroupWholeBan(context.group(), false);
+            if (context.bot().hasPermission(context.group(), context.sender(), EnumPermission.MALL)) {
+                context.bot().setGroupWholeBan(context.group(), false);
+            } else {
+                return NO_PERMISSION;
+            }
         }
         // 群员解禁
         else {
+            if (context.bot().hasPermission(context.group(), context.sender(), EnumPermission.MUTE)) {
+                return NO_PERMISSION;
+            }
+
             Set<Long> fail = BaniraUtils.mutableSetOf();
             for (Object target : targets) {
                 if (target instanceof Number) {
                     long targetId = ((Number) target).longValue();
-                    if (BaniraUtils.isUpper(context.bot(), context.group(), context.sender(), targetId)) {
+                    if (context.bot().isUpper(context.group(), context.sender(), targetId)) {
                         context.bot().setGroupBan(context.group(), targetId, 0);
                     } else {
                         fail.add(targetId);
@@ -81,7 +89,7 @@ public class LoudCommand implements KanriHandler {
                 );
             }
         }
-        return !targets.isEmpty();
+        return targets.isEmpty() ? FAIL : SUCCESS;
     }
 
 }

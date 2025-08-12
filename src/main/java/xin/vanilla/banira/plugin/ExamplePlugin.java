@@ -8,6 +8,7 @@ import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.enums.AtEnum;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.domain.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 
 @Slf4j
@@ -18,13 +19,14 @@ public class ExamplePlugin extends BasePlugin {
     /**
      * 被AT时触发回复
      *
-     * @param bot   机器人实例
+     * @param tob   机器人实例
      * @param event 消息事件
      * @return 是否拦截事件传递
      */
     @AnyMessageHandler
     @MessageHandlerFilter(at = AtEnum.NEED)
-    public boolean hello(Bot bot, AnyMessageEvent event) {
+    public boolean hello(Bot tob, AnyMessageEvent event) {
+        BaniraBot bot = new BaniraBot(tob);
         // LOGGER.debug(event.getMessage());
         bot.sendMsg(event, "Hello Excel!", false);
         return false;

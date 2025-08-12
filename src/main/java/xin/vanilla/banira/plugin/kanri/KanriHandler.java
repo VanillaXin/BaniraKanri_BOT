@@ -9,6 +9,10 @@ import java.util.Set;
 
 public interface KanriHandler {
 
+    int SUCCESS = 1;
+    int FAIL = 0;
+    int NO_PERMISSION = -1;
+
     /**
      * 是否有权限执行
      *
@@ -29,7 +33,7 @@ public interface KanriHandler {
      * @param args    参数数组（已剔除前缀）
      * @return 命令执行结果
      */
-    boolean execute(@Nonnull KanriContext context, @Nonnull String[] args);
+    int execute(@Nonnull KanriContext context, @Nonnull String[] args);
 
     @Nonnull
     default Set<Long> getQQs(String[] args) {

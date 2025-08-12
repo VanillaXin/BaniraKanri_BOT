@@ -8,6 +8,7 @@ import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.domain.BaniraBot;
 import xin.vanilla.banira.domain.kanri.KanriContext;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.kanri.KanriHandler;
@@ -24,7 +25,9 @@ public class KanriPlugin extends BasePlugin {
     private List<KanriHandler> handlers;
 
     @GroupMessageHandler
-    public boolean kanri(Bot bot, GroupMessageEvent event) {
+    public boolean kanri(Bot tob, GroupMessageEvent event) {
+        BaniraBot bot = new BaniraBot(tob);
+
         String message = event.getMessage();
         if (!super.isKanriCommand(message)) return false;
         message = super.replaceKanriCommand(message);
@@ -34,7 +37,7 @@ public class KanriPlugin extends BasePlugin {
 
         KanriContext context = new KanriContext(event, bot, event.getGroupId(), event.getSender().getUserId());
 
-        boolean result = false;
+        int result = KanriHandler.FAIL;
         Optional<KanriHandler> handler = handlers.stream()
                 .filter(h -> h.getAction().contains(kanriAction))
                 .findFirst();
@@ -48,16 +51,19 @@ public class KanriPlugin extends BasePlugin {
                     bot.sendGroupMsg(event.getGroupId(), "指令解析失败", false);
                 }
             } else {
-                bot.sendGroupMsg(event.getGroupId()
-                        , MsgUtils.builder()
-                                .reply(event.getMessageId())
-                                .text("你没有权限执行该操作")
-                                .build()
-                        , false
-                );
+                result = KanriHandler.NO_PERMISSION;
             }
         }
-        return result;
+        if (result == KanriHandler.NO_PERMISSION) {
+            bot.sendGroupMsg(event.getGroupId()
+                    , MsgUtils.builder()
+                            .reply(event.getMessageId())
+                            .text("你没有权限执行该操作")
+                            .build()
+                    , false
+            );
+        }
+        return result == KanriHandler.SUCCESS;
     }
 
 }

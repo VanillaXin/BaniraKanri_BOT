@@ -16,10 +16,11 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
     // region 查询常量
 
     public static final String QUERY_ATTR_ID = LambdaUtils.getFiledName(MessageRecord::getId);
-    public static final String QUERY_ATTR_NOS = LambdaUtils.getFiledName(MessageRecord::getNos);
-    public static final String QUERY_ATTR_BOT = LambdaUtils.getFiledName(MessageRecord::getBot);
-    public static final String QUERY_ATTR_SENDER = LambdaUtils.getFiledName(MessageRecord::getSender);
-    public static final String QUERY_ATTR_TARGET = LambdaUtils.getFiledName(MessageRecord::getTarget);
+    public static final String QUERY_ATTR_MSG_ID = LambdaUtils.getFiledName(MessageRecord::getMsgId);
+    public static final String QUERY_ATTR_BOT_ID = LambdaUtils.getFiledName(MessageRecord::getBotId);
+    public static final String QUERY_ATTR_SENDER_ID = LambdaUtils.getFiledName(MessageRecord::getSenderId);
+    public static final String QUERY_ATTR_TARGET_ID = LambdaUtils.getFiledName(MessageRecord::getTargetId);
+    public static final String QUERY_ATTR_GROUP_ID = LambdaUtils.getFiledName(MessageRecord::getGroupId);
     public static final String QUERY_ATTR_TIME = LambdaUtils.getFiledName(MessageRecord::getTime);
     public static final String QUERY_ATTR_MSG_RAW = LambdaUtils.getFiledName(MessageRecord::getMsgRaw);
     public static final String QUERY_ATTR_MSG_TYPE = LambdaUtils.getFiledName(MessageRecord::getMsgType);
@@ -30,10 +31,11 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
     // region 排序常量
 
     public static final String ORDER_ATTR_ID = LambdaUtils.getFiledName(MessageRecord::getId);
-    public static final String ORDER_ATTR_NOS = LambdaUtils.getFiledName(MessageRecord::getNos);
-    public static final String ORDER_ATTR_BOT = LambdaUtils.getFiledName(MessageRecord::getBot);
-    public static final String ORDER_ATTR_SENDER = LambdaUtils.getFiledName(MessageRecord::getSender);
-    public static final String ORDER_ATTR_TARGET = LambdaUtils.getFiledName(MessageRecord::getTarget);
+    public static final String ORDER_ATTR_MSG_ID = LambdaUtils.getFiledName(MessageRecord::getMsgId);
+    public static final String ORDER_ATTR_BOT_ID = LambdaUtils.getFiledName(MessageRecord::getBotId);
+    public static final String ORDER_ATTR_SENDER_ID = LambdaUtils.getFiledName(MessageRecord::getSenderId);
+    public static final String ORDER_ATTR_TARGET_ID = LambdaUtils.getFiledName(MessageRecord::getTargetId);
+    public static final String ORDER_ATTR_GROUP_ID = LambdaUtils.getFiledName(MessageRecord::getGroupId);
     public static final String ORDER_ATTR_TIME = LambdaUtils.getFiledName(MessageRecord::getTime);
     public static final String ORDER_ATTR_MSG_RAW = LambdaUtils.getFiledName(MessageRecord::getMsgRaw);
     public static final String ORDER_ATTR_MSG_TYPE = LambdaUtils.getFiledName(MessageRecord::getMsgType);
@@ -57,10 +59,11 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
     public MessageRecordQueryParam(MessageRecord data) {
         if (data != null) {
             setId(data.getId());
-            setNos(data.getNos());
-            setBot(data.getBot());
-            setSender(data.getSender());
-            setTarget(data.getTarget());
+            setMsgId(data.getMsgId());
+            setBotId(data.getBotId());
+            setSenderId(data.getSenderId());
+            setTargetId(data.getTargetId());
+            setGroupId(data.getGroupId());
             setTime(data.getTime());
             setMsgRecode(data.getMsgRecode());
             setMsgRaw(data.getMsgRaw());
@@ -99,93 +102,118 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
         return this;
     }
 
-    public MessageRecordQueryParam setNos(String nos) {
-        addParam(QUERY_ATTR_NOS, nos);
+    public MessageRecordQueryParam setMsgId(String msgId) {
+        addParam(QUERY_ATTR_MSG_ID, msgId);
         return this;
     }
 
-    public MessageRecordQueryParam seNosAllowEmpty(String nos) {
-        addParamAllowEmpty(QUERY_ATTR_NOS, nos);
+    public MessageRecordQueryParam seMsgIdAllowEmpty(String msgId) {
+        addParamAllowEmpty(QUERY_ATTR_MSG_ID, msgId);
         return this;
     }
 
-    public MessageRecordQueryParam setNos(String... noss) {
-        addParamByArray(QUERY_ATTR_NOS, noss);
+    public MessageRecordQueryParam setMsgId(String... msgIds) {
+        addParamByArray(QUERY_ATTR_MSG_ID, msgIds);
         return this;
     }
 
-    public MessageRecordQueryParam setBot(Long bot) {
-        addParam(QUERY_ATTR_BOT, bot);
+    public MessageRecordQueryParam setBotId(Long botId) {
+        addParam(QUERY_ATTR_BOT_ID, botId);
         return this;
     }
 
-    public MessageRecordQueryParam setBot(Long... bots) {
-        addParamByArray(QUERY_ATTR_BOT, bots);
+    public MessageRecordQueryParam setBotId(Long... botIds) {
+        addParamByArray(QUERY_ATTR_BOT_ID, botIds);
         return this;
     }
 
-    public MessageRecordQueryParam setBotByLt(Long max) {
-        addParamByLt(QUERY_ATTR_BOT, max);
+    public MessageRecordQueryParam setBotIdByLt(Long max) {
+        addParamByLt(QUERY_ATTR_BOT_ID, max);
         return this;
     }
 
-    public MessageRecordQueryParam setBotByGt(Long min) {
-        addParamByGt(QUERY_ATTR_BOT, min);
+    public MessageRecordQueryParam setBotIdByGt(Long min) {
+        addParamByGt(QUERY_ATTR_BOT_ID, min);
         return this;
     }
 
-    public MessageRecordQueryParam setBotByRange(Long min, Long max) {
-        addParamByRangeOpen(QUERY_ATTR_BOT, min, max);
+    public MessageRecordQueryParam setBotIdByRange(Long min, Long max) {
+        addParamByRangeOpen(QUERY_ATTR_BOT_ID, min, max);
         return this;
     }
 
-    public MessageRecordQueryParam setSender(Long sender) {
-        addParam(QUERY_ATTR_SENDER, sender);
+    public MessageRecordQueryParam setSenderId(Long senderId) {
+        addParam(QUERY_ATTR_SENDER_ID, senderId);
         return this;
     }
 
-    public MessageRecordQueryParam setSender(Long... senders) {
-        addParamByArray(QUERY_ATTR_SENDER, senders);
+    public MessageRecordQueryParam setSenderId(Long... senderIds) {
+        addParamByArray(QUERY_ATTR_SENDER_ID, senderIds);
         return this;
     }
 
-    public MessageRecordQueryParam setSenderByLt(Long max) {
-        addParamByLt(QUERY_ATTR_SENDER, max);
+    public MessageRecordQueryParam setSenderIdByLt(Long max) {
+        addParamByLt(QUERY_ATTR_SENDER_ID, max);
         return this;
     }
 
-    public MessageRecordQueryParam setSenderByGt(Long min) {
-        addParamByGt(QUERY_ATTR_SENDER, min);
+    public MessageRecordQueryParam setSenderIdByGt(Long min) {
+        addParamByGt(QUERY_ATTR_SENDER_ID, min);
         return this;
     }
 
-    public MessageRecordQueryParam setSenderByRange(Long min, Long max) {
-        addParamByRangeOpen(QUERY_ATTR_SENDER, min, max);
+    public MessageRecordQueryParam setSenderIdByRange(Long min, Long max) {
+        addParamByRangeOpen(QUERY_ATTR_SENDER_ID, min, max);
         return this;
     }
 
-    public MessageRecordQueryParam setTarget(Long target) {
-        addParam(QUERY_ATTR_TARGET, target);
+    public MessageRecordQueryParam setTargetId(Long targetId) {
+        addParam(QUERY_ATTR_TARGET_ID, targetId);
         return this;
     }
 
-    public MessageRecordQueryParam setTarget(Long... targets) {
-        addParamByArray(QUERY_ATTR_TARGET, targets);
+    public MessageRecordQueryParam setTargetId(Long... targetIds) {
+        addParamByArray(QUERY_ATTR_TARGET_ID, targetIds);
         return this;
     }
 
-    public MessageRecordQueryParam setTargetByLt(Long max) {
-        addParamByLt(QUERY_ATTR_TARGET, max);
+    public MessageRecordQueryParam setTargetIdByLt(Long max) {
+        addParamByLt(QUERY_ATTR_TARGET_ID, max);
         return this;
     }
 
-    public MessageRecordQueryParam setTargetByGt(Long min) {
-        addParamByGt(QUERY_ATTR_TARGET, min);
+    public MessageRecordQueryParam setTargetIdByGt(Long min) {
+        addParamByGt(QUERY_ATTR_TARGET_ID, min);
         return this;
     }
 
-    public MessageRecordQueryParam setTargetByRange(Long min, Long max) {
-        addParamByRangeOpen(QUERY_ATTR_TARGET, min, max);
+    public MessageRecordQueryParam setTargetIdByRange(Long min, Long max) {
+        addParamByRangeOpen(QUERY_ATTR_TARGET_ID, min, max);
+        return this;
+    }
+
+    public MessageRecordQueryParam setGroupId(Long groupId) {
+        addParam(QUERY_ATTR_GROUP_ID, groupId);
+        return this;
+    }
+
+    public MessageRecordQueryParam setGroupId(Long... groupIds) {
+        addParamByArray(QUERY_ATTR_GROUP_ID, groupIds);
+        return this;
+    }
+
+    public MessageRecordQueryParam setGroupIdByLt(Long max) {
+        addParamByLt(QUERY_ATTR_GROUP_ID, max);
+        return this;
+    }
+
+    public MessageRecordQueryParam setGroupIdByGt(Long min) {
+        addParamByGt(QUERY_ATTR_GROUP_ID, min);
+        return this;
+    }
+
+    public MessageRecordQueryParam setGroupIdByRange(Long min, Long max) {
+        addParamByRangeOpen(QUERY_ATTR_GROUP_ID, min, max);
         return this;
     }
 

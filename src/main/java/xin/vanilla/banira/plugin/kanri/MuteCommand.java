@@ -26,7 +26,7 @@ public class MuteCommand implements KanriHandler {
 
     @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
-        return BaniraUtils.hasPermission(context.bot(), context.group(), context.sender(), EnumPermission.MUTE);
+        return context.bot().hasAnyPermissions(context.group(), context.sender(), EnumPermission.MUTE, EnumPermission.MALL);
     }
 
     @Nonnull
@@ -36,8 +36,8 @@ public class MuteCommand implements KanriHandler {
     }
 
     @Override
-    public boolean execute(@Nonnull KanriContext context, @Nonnull String[] args) {
-        if (args.length < 1) return false;
+    public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
+        if (args.length < 1) return FAIL;
 
         // 解析目标
         Set<Object> targets = BaniraUtils.mutableSetOf();
@@ -46,7 +46,7 @@ public class MuteCommand implements KanriHandler {
                 targets.add(BaniraUtils.getReplayQQ(context.bot(), context.group(), context.event().getArrayMsg()));
             } else if (BaniraUtils.hasAtAll(context.event().getArrayMsg())) {
                 targets.add(233L);
-            } else return false;
+            } else return FAIL;
         }
         targets.addAll(ShiroUtils.getAtList(context.event().getArrayMsg()));
         targets.addAll(getQQs(Arrays.copyOf(args, args.length - 1)));
@@ -56,16 +56,24 @@ public class MuteCommand implements KanriHandler {
 
         // 全体禁言
         if (targets.contains(233L)) {
-            context.bot().setGroupWholeBan(context.group(), true);
+            if (context.bot().hasPermission(context.group(), context.sender(), EnumPermission.MALL)) {
+                context.bot().setGroupWholeBan(context.group(), true);
+            } else {
+                return NO_PERMISSION;
+            }
         }
         // 群员禁言
         else {
-            if (duration <= 0) return false;
+            if (duration <= 0) return FAIL;
+            if (context.bot().hasPermission(context.group(), context.sender(), EnumPermission.MUTE)) {
+                return NO_PERMISSION;
+            }
+
             Set<Long> fail = BaniraUtils.mutableSetOf();
             for (Object target : targets) {
                 if (target instanceof Number) {
                     long targetId = ((Number) target).longValue();
-                    if (BaniraUtils.isUpper(context.bot(), context.group(), context.sender(), targetId)) {
+                    if (context.bot().isUpper(context.group(), context.sender(), targetId)) {
                         context.bot().setGroupBan(context.group(), targetId, duration);
                     } else {
                         fail.add(targetId);
@@ -89,7 +97,7 @@ public class MuteCommand implements KanriHandler {
                 );
             }
         }
-        return !targets.isEmpty();
+        return targets.isEmpty() ? FAIL : SUCCESS;
     }
 
 }

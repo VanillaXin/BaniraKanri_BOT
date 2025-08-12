@@ -1,6 +1,5 @@
 package xin.vanilla.banira.config.entity.basic;
 
-import com.mikuac.shiro.common.utils.MsgUtils;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.util.BaniraUtils;
 
@@ -33,7 +32,7 @@ public record BaseInstructionsConfig(
                 BaniraUtils.mutableSetOf("查询", "list", "ls", "sel"),
                 BaniraUtils.mutableSetOf("全局", "all", "global"),
                 BaniraUtils.mutableSetOf("当前", "that", "this", "here"),
-                BaniraUtils.mutableSetOf("@全体成员", "@全体", "@所有人", "@all", MsgUtils.builder().atAll().build())
+                BaniraUtils.mutableSetOf("@全体成员", "@全体", "@所有人", "@all", "@All", "@ALL")
         );
     }
 

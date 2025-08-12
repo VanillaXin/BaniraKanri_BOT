@@ -3,7 +3,6 @@ package xin.vanilla.banira.util;
 import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
-import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.response.GroupMemberInfoResp;
 import com.mikuac.shiro.enums.MsgTypeEnum;
@@ -14,6 +13,7 @@ import org.springframework.core.ResolvableType;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.basic.PermissionConfig;
+import xin.vanilla.banira.domain.BaniraBot;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
@@ -122,7 +122,7 @@ public class BaniraUtils {
                 .orElse(null);
     }
 
-    public static long getReplayQQ(Bot bot, Long groupId, List<ArrayMsg> arrayMsg) {
+    public static long getReplayQQ(BaniraBot bot, Long groupId, List<ArrayMsg> arrayMsg) {
         long qq = arrayMsg.stream()
                 .filter(e -> e.getType() == MsgTypeEnum.reply)
                 .findFirst()
@@ -131,13 +131,13 @@ public class BaniraUtils {
         if (qq == 0) {
             IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
             List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
-                    .setNos(getReplayId(arrayMsg))
-                    .setBot(bot.getSelfId())
-                    .setTarget(groupId)
+                    .setMsgId(getReplayId(arrayMsg))
+                    .setBotId(bot.getSelfId())
+                    .setTargetId(groupId)
             );
             qq = records.stream()
                     .findFirst()
-                    .map(MessageRecord::getSender)
+                    .map(MessageRecord::getSenderId)
                     .orElse(0L);
         }
         return qq;
@@ -155,7 +155,7 @@ public class BaniraUtils {
                 null;
     }
 
-    public static long getReplayQQ(Bot bot, Long groupId, String msg) {
+    public static long getReplayQQ(BaniraBot bot, Long groupId, String msg) {
         long qq = 0;
         if (hasReplay(msg)) {
             qq = QQ_PATTERN.matcher(msg).results()
@@ -165,13 +165,13 @@ public class BaniraUtils {
             if (qq == 0) {
                 IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
                 List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
-                        .setNos(getReplayId(msg))
-                        .setBot(bot.getSelfId())
-                        .setTarget(groupId)
+                        .setMsgId(getReplayId(msg))
+                        .setBotId(bot.getSelfId())
+                        .setTargetId(groupId)
                 );
                 return records.stream()
                         .findFirst()
-                        .map(MessageRecord::getSender)
+                        .map(MessageRecord::getSenderId)
                         .orElse(0L);
             }
         }
@@ -262,7 +262,7 @@ public class BaniraUtils {
     /**
      * 判断是否群主
      */
-    public static boolean isGroupOwner(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq) {
+    public static boolean isGroupOwner(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq) {
         if (bot == null || groupId == null || groupId <= 0L) return false;
         ActionData<GroupMemberInfoResp> groupMemberInfo = bot.getGroupMemberInfo(groupId, qq, false);
         return groupMemberInfo != null && "owner".equalsIgnoreCase(groupMemberInfo.getData().getRole());
@@ -271,7 +271,7 @@ public class BaniraUtils {
     /**
      * 判断是否群管理
      */
-    public static boolean isGroupAdmin(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq) {
+    public static boolean isGroupAdmin(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq) {
         if (bot == null || groupId == null || groupId <= 0L) return false;
         ActionData<GroupMemberInfoResp> groupMemberInfo = bot.getGroupMemberInfo(groupId, qq, false);
         return groupMemberInfo != null && "admin".equalsIgnoreCase(groupMemberInfo.getData().getRole());
@@ -280,7 +280,7 @@ public class BaniraUtils {
     /**
      * 判断a是否b的上属
      */
-    public static boolean isUpper(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long a, @Nonnull Long b) {
+    public static boolean isUpper(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long a, @Nonnull Long b) {
         if (isOwner(a))
             return !isGroupOwner(bot, groupId, b);
         if (isButler(a))
@@ -306,7 +306,7 @@ public class BaniraUtils {
      * 获取所有拥有的权限
      */
     @Nonnull
-    public static Set<EnumPermission> getPermission(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq) {
+    public static Set<EnumPermission> getPermission(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq) {
         if (isOwner(qq)) return EnumPermission.getAll();
         Set<EnumPermission> permissions = mutableSetOf();
         if (isGroupOwner(bot, groupId, qq))
@@ -333,35 +333,35 @@ public class BaniraUtils {
     /**
      * 判断是否拥有某个权限
      */
-    public static boolean hasPermission(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull EnumPermission permission) {
+    public static boolean hasPermission(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull EnumPermission permission) {
         return getPermission(bot, groupId, qq).contains(permission);
     }
 
     /**
      * 判断是否拥有全部权限
      */
-    public static boolean hasAllPermissions(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull EnumPermission... permissions) {
+    public static boolean hasAllPermissions(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull EnumPermission... permissions) {
         return hasAllPermissions(bot, groupId, qq, Arrays.asList(permissions));
     }
 
     /**
      * 判断是否拥有全部权限
      */
-    public static boolean hasAllPermissions(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull Collection<EnumPermission> permissions) {
+    public static boolean hasAllPermissions(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull Collection<EnumPermission> permissions) {
         return getPermission(bot, groupId, qq).containsAll(permissions);
     }
 
     /**
      * 判断是否拥有任意一个权限
      */
-    public static boolean hasAnyPermissions(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull EnumPermission... permission) {
+    public static boolean hasAnyPermissions(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull EnumPermission... permission) {
         return hasAnyPermissions(bot, groupId, qq, Arrays.asList(permission));
     }
 
     /**
      * 判断是否拥有任意一个权限
      */
-    public static boolean hasAnyPermissions(@Nullable Bot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull Collection<EnumPermission> permissions) {
+    public static boolean hasAnyPermissions(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull Collection<EnumPermission> permissions) {
         return getPermission(bot, groupId, qq).stream().anyMatch(permissions::contains);
     }
 

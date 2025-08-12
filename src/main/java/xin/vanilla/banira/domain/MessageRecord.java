@@ -18,21 +18,25 @@ public class MessageRecord {
     @TableId(type = IdType.AUTO)
     private Long id;
     /**
-     * 消息记录NOS
+     * 消息ID
      */
-    private String nos;
+    private String msgId;
     /**
      * 机器人ID
      */
-    private Long bot;
+    private Long botId;
     /**
      * 发送者ID
      */
-    private Long sender;
+    private Long senderId;
+    /**
+     * 好友ID (仅私聊消息)
+     */
+    private Long targetId = 0L;
     /**
      * 群组ID
      */
-    private Long target;
+    private Long groupId = 0L;
     /**
      * 发送时间
      */
@@ -49,4 +53,16 @@ public class MessageRecord {
      * 消息内容
      */
     private String msgRecode = "";
+
+
+    public MessageRecord setMsgId(String msgId) {
+        this.msgId = msgId;
+        return this;
+    }
+
+    public MessageRecord setMsgId(Number msgId) {
+        this.msgId = String.valueOf(msgId.longValue());
+        return this;
+    }
+
 }
