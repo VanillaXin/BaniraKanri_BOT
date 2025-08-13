@@ -45,11 +45,6 @@ public class ShiroAnnotationInterceptor {
         // 若方法上没有来自目标包的注解，则直接放行
         if (!hasTargetAnnotation(actualMethod)) return pjp.proceed();
 
-        if (ShiroCallContextHolder.isBlocked()) {
-            LOGGER.debug("Method {}#{} is blocked, further calls in the same thread are skipped", className, methodName);
-            return blockingResult(actualMethod);
-        }
-
         // 判断是否允许执行
         boolean allowed = shouldProceed(className);
         Object result;
@@ -64,11 +59,6 @@ public class ShiroAnnotationInterceptor {
                 LOGGER.error("Plugin {}#{} throws an exception", className, methodName, e);
                 result = defaultReturnValue(actualMethod);
             }
-        }
-
-        if (isBlockingResult(result)) {
-            ShiroCallContextHolder.markBlocked();
-            LOGGER.debug("Method {}#{} triggered blocking, result={}, further calls in the same thread are skipped", className, methodName, result);
         }
 
         return result;
@@ -107,13 +97,6 @@ public class ShiroAnnotationInterceptor {
         }
     }
 
-    private boolean isBlockingResult(Object result) {
-        if (result == null) return false;
-        if (result instanceof Boolean && Boolean.TRUE.equals(result)) return true;
-        if (result != null && result.equals(BotPlugin.MESSAGE_BLOCK)) return true;
-        return false;
-    }
-
     private Object defaultReturnValue(Method method) {
         Class<?> returnType = method.getReturnType();
         if (returnType.equals(void.class) || returnType.equals(Void.class)) return null;
@@ -122,18 +105,6 @@ public class ShiroAnnotationInterceptor {
         }
         if (returnType.equals(boolean.class) || returnType.equals(Boolean.class)) {
             return Boolean.FALSE;
-        }
-        return null;
-    }
-
-    private Object blockingResult(Method method) {
-        Class<?> returnType = method.getReturnType();
-        if (returnType.equals(void.class) || returnType.equals(Void.class)) return null;
-        if (Number.class.isAssignableFrom(returnType) || isPrimitiveNumeric(returnType)) {
-            return BotPlugin.MESSAGE_BLOCK;
-        }
-        if (returnType.equals(boolean.class) || returnType.equals(Boolean.class)) {
-            return Boolean.TRUE;
         }
         return null;
     }
