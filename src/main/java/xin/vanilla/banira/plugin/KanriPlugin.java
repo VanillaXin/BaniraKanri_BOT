@@ -71,6 +71,8 @@ public class KanriPlugin extends BasePlugin {
             //         , false
             // );
             bot.setMsgEmojiLike(event.getMessageId(), String.valueOf(FaceUtils.get(123)), true);
+        } else if (result == KanriHandler.FAIL) {
+            bot.setMsgEmojiLike(event.getMessageId(), String.valueOf(FaceUtils.get(67)), true);
         }
         return result == KanriHandler.SUCCESS;
     }
