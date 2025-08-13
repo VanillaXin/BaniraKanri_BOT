@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS "message_record"
 (
     `id`         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    `msg_id`     TEXT    NOT NULL UNIQUE,
+    `msg_id`     TEXT    NOT NULL,
     `bot_id`     INTEGER NOT NULL,
     `sender_id`  INTEGER NOT NULL,
     `target_id`  INTEGER NOT NULL,

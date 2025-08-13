@@ -1,13 +1,11 @@
 package xin.vanilla.banira.plugin.kanri;
 
 import com.mikuac.shiro.common.utils.MsgUtils;
-import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
-import com.mikuac.shiro.dto.event.message.PrivateMessageEvent;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.GlobalConfig;
-import xin.vanilla.banira.domain.kanri.KanriContext;
+import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
@@ -39,12 +37,7 @@ public class AtAllCommand implements KanriHandler {
             replayId = StringUtils.toInt(BaniraUtils.getReplayId(context.event().getArrayMsg()), -1);
         }
         if (replayId < 0) {
-            switch (context.event()) {
-                case GroupMessageEvent event -> replayId = event.getMessageId();
-                case PrivateMessageEvent event -> replayId = event.getMessageId();
-                default -> {
-                }
-            }
+            replayId = context.msgId();
         }
         if (replayId < 0) {
             return FAIL;

@@ -1,7 +1,8 @@
 package xin.vanilla.banira.plugin.kanri;
 
+import com.mikuac.shiro.common.utils.MsgUtils;
 import jakarta.annotation.Nonnull;
-import xin.vanilla.banira.domain.kanri.KanriContext;
+import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
 
@@ -12,6 +13,11 @@ public interface KanriHandler {
     int SUCCESS = 1;
     int FAIL = 0;
     int NO_PERMISSION = -1;
+
+    /**
+     * 没有权限操作的QQ
+     */
+    Set<Long> fail = BaniraUtils.mutableSetOf();
 
     /**
      * 是否有权限执行
@@ -47,6 +53,29 @@ public interface KanriHandler {
             }
         }
         return qqs;
+    }
+
+    default void clearFail() {
+        fail.clear();
+    }
+
+    /**
+     * 提示没有权限
+     */
+    default void executeFail(@Nonnull KanriContext context) {
+        if (!fail.isEmpty()) {
+            MsgUtils builder = MsgUtils.builder();
+            if (context.msgId() > 0) {
+                builder.reply(context.msgId());
+            } else {
+                builder.reply(context.guildMsgId());
+            }
+            context.bot().sendGroupMsg(context.group()
+                    , builder.text(String.format("你没有权限对%s执行该操作", fail)).build()
+                    , false
+            );
+            clearFail();
+        }
     }
 
 }

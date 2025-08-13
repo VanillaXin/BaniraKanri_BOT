@@ -7,7 +7,7 @@ import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.domain.BaniraBot;
+import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.plugin.common.BasePlugin;

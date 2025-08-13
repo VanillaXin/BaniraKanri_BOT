@@ -5,6 +5,10 @@ import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.response.GroupMemberInfoResp;
+import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
+import com.mikuac.shiro.dto.event.message.GuildMessageEvent;
+import com.mikuac.shiro.dto.event.message.MessageEvent;
+import com.mikuac.shiro.dto.event.message.PrivateMessageEvent;
 import com.mikuac.shiro.enums.MsgTypeEnum;
 import com.mikuac.shiro.model.ArrayMsg;
 import jakarta.annotation.Nonnull;
@@ -13,10 +17,10 @@ import org.springframework.core.ResolvableType;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.basic.PermissionConfig;
-import xin.vanilla.banira.domain.BaniraBot;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
+import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.start.SpringContextHolder;
 
@@ -228,6 +232,32 @@ public class BaniraUtils {
     }
 
     // endregion 艾特
+
+    // region 消息ID
+
+    public static int getMsgId(MessageEvent event) {
+        switch (event) {
+            case GroupMessageEvent groupMessageEvent -> {
+                return groupMessageEvent.getMessageId();
+            }
+            case PrivateMessageEvent privateMessageEvent -> {
+                return privateMessageEvent.getMessageId();
+            }
+            default -> {
+                return 0;
+            }
+        }
+    }
+
+    public static String getGuildMsgId(MessageEvent event) {
+        if (event instanceof GuildMessageEvent guildMessageEvent) {
+            return guildMessageEvent.getMessageId();
+        } else {
+            return "";
+        }
+    }
+
+    // endregion 消息ID
 
     // endregion 消息处理
 

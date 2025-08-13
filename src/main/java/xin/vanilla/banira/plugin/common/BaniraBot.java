@@ -1,15 +1,16 @@
-package xin.vanilla.banira.domain;
+package xin.vanilla.banira.plugin.common;
 
 import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.ActionRaw;
 import com.mikuac.shiro.dto.action.common.MsgId;
-import com.mikuac.shiro.dto.action.response.GetMsgResp;
+import com.mikuac.shiro.dto.action.response.MsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.model.ArrayMsg;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.service.IMessageRecordManager;
@@ -390,11 +391,11 @@ public class BaniraBot extends Bot {
     private MessageRecord setMsgRecordTime(MessageRecord record) {
         if (StringUtils.isNotNullOrEmpty(record.getMsgId())) {
             try {
-                ActionData<GetMsgResp> msg = super.getMsg(StringUtils.toInt(record.getMsgId()));
+                ActionData<MsgResp> msg = super.getMsg(StringUtils.toInt(record.getMsgId()));
                 if (isActionDataNotEmpty(msg)) {
-                    Integer time = msg.getData().getTime();
+                    Long time = msg.getData().getTime();
                     if (time != null) {
-                        record.setTime(Long.valueOf(time));
+                        record.setTime(time);
                     }
                 }
             } catch (Exception ignored) {
