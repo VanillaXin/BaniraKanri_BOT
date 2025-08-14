@@ -16,6 +16,9 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Supplier;
 
+/**
+ * 设置群头衔
+ */
 @Component
 public class TagCommand implements KanriHandler {
 

@@ -431,4 +431,18 @@
         <include refid="orderSql"/>
     </select>
 
+    <select id="selectByParamLimit" resultType="xin.vanilla.banira.domain.MessageRecord">
+        SELECT
+        <if test="_ALL_FIELDS_ == true">
+            <include refid="allColumn"/>
+        </if>
+        <if test="_ALL_FIELDS_ != true">
+            <include refid="baseColumn"/>
+        </if>
+        FROM message_record t
+        <include refid="whereSql"/>
+        <include refid="orderSql"/>
+        LIMIT #{offset}, #{limit}
+    </select>
+
 </mapper>

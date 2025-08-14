@@ -36,6 +36,7 @@ dependencies {
 
     // MyBatis-Plus for Spring Boot 3
     implementation 'com.baomidou:mybatis-plus-spring-boot3-starter:3.5.12'
+    implementation 'com.baomidou:mybatis-plus-jsqlparser:3.5.12'
 
     // SQLite JDBC driver
     implementation 'org.xerial:sqlite-jdbc:3.46.1.3'

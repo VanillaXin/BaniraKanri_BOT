@@ -13,6 +13,9 @@ import xin.vanilla.banira.util.StringUtils;
 import java.util.Set;
 import java.util.function.Supplier;
 
+/**
+ * AT全体成员
+ */
 @Component
 public class AtAllCommand implements KanriHandler {
 
@@ -34,7 +37,7 @@ public class AtAllCommand implements KanriHandler {
     public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
         int replayId = -1;
         if (BaniraUtils.hasReplay(context.event().getArrayMsg())) {
-            replayId = StringUtils.toInt(BaniraUtils.getReplayId(context.event().getArrayMsg()), -1);
+            replayId = BaniraUtils.getReplayId(context.event().getArrayMsg()).intValue();
         }
         if (replayId < 0) {
             replayId = context.msgId();

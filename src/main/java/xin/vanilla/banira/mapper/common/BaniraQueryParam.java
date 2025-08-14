@@ -1,5 +1,7 @@
 package xin.vanilla.banira.mapper.common;
 
+import lombok.Getter;
+import lombok.Setter;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
@@ -7,6 +9,8 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 
+@Getter
+@Setter
 @SuppressWarnings({"unused"})
 public class BaniraQueryParam extends HashMap<String, Object> {
     public static final String QUERY_ATTR_KEY_WORD = "_KEY_WORD_";
@@ -14,12 +18,36 @@ public class BaniraQueryParam extends HashMap<String, Object> {
     public static final String ALL_FIELDS = "_ALL_FIELDS_";
     public static final String ORDER = "_ORDER_";
 
+    private long startIndex = 0;
+    private long pageSize = -1;
+
+    /**
+     * 指定返回的记录数量
+     */
+    private long limit;
+    /**
+     * 指定跳过的记录数量
+     */
+    private long offset;
+
     public BaniraQueryParam() {
         this(false);
     }
 
     public BaniraQueryParam(boolean all) {
         this.put(ALL_FIELDS, all);
+    }
+
+    public BaniraQueryParam(long startIndex, long pageSize) {
+        this(false);
+        this.startIndex = startIndex;
+        this.pageSize = pageSize;
+    }
+
+    public BaniraQueryParam(boolean all, long startIndex, long pageSize) {
+        this(all);
+        this.startIndex = startIndex;
+        this.pageSize = pageSize;
     }
 
     public BaniraQueryParam addParam(String key, Object value) {

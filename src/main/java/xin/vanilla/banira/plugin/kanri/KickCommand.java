@@ -15,6 +15,9 @@ import xin.vanilla.banira.util.StringUtils;
 import java.util.Set;
 import java.util.function.Supplier;
 
+/**
+ * 踢出群员
+ */
 @Component
 public class KickCommand implements KanriHandler {
 

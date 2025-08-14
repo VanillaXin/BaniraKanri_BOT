@@ -118,11 +118,11 @@ public class BaniraUtils {
         return arrayMsg.stream().anyMatch(e -> e.getType() == MsgTypeEnum.reply);
     }
 
-    public static String getReplayId(List<ArrayMsg> arrayMsg) {
+    public static Long getReplayId(List<ArrayMsg> arrayMsg) {
         return arrayMsg.stream()
                 .filter(e -> e.getType() == MsgTypeEnum.reply)
                 .findFirst()
-                .map(e -> e.getStringData("id"))
+                .map(e -> e.getLongData("id"))
                 .orElse(null);
     }
 
@@ -135,7 +135,7 @@ public class BaniraUtils {
         if (qq == 0) {
             IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
             List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
-                    .setMsgId(getReplayId(arrayMsg))
+                    .setMsgId(String.valueOf(getReplayId(arrayMsg)))
                     .setBotId(bot.getSelfId())
                     .setTargetId(groupId)
             );
@@ -151,11 +151,11 @@ public class BaniraUtils {
         return StringUtils.isNotNullOrEmpty(msg) && REPLAY_PATTERN.matcher(msg).find();
     }
 
-    public static String getReplayId(String msg) {
+    public static Long getReplayId(String msg) {
         return hasReplay(msg) ?
-                ID_PATTERN.matcher(msg).results()
+                StringUtils.toLong(ID_PATTERN.matcher(msg).results()
                         .map(m -> m.group("id"))
-                        .findFirst().orElse(null) :
+                        .findFirst().orElse(null)) :
                 null;
     }
 
@@ -169,7 +169,7 @@ public class BaniraUtils {
             if (qq == 0) {
                 IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
                 List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
-                        .setMsgId(getReplayId(msg))
+                        .setMsgId(String.valueOf(getReplayId(msg)))
                         .setBotId(bot.getSelfId())
                         .setTargetId(groupId)
                 );

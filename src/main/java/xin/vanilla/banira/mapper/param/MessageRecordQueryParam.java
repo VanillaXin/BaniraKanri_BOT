@@ -87,7 +87,7 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
         return this;
     }
 
-    public MessageRecordQueryParam setIdLt(Long max) {
+    public MessageRecordQueryParam setIdByLt(Long max) {
         addParamByLt(QUERY_ATTR_ID, max);
         return this;
     }

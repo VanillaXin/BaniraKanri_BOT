@@ -13,6 +13,9 @@ import xin.vanilla.banira.util.BaniraUtils;
 import java.util.Set;
 import java.util.function.Supplier;
 
+/**
+ * 解除禁言
+ */
 @Component
 public class LoudCommand implements KanriHandler {
 

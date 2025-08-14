@@ -15,6 +15,9 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.function.Supplier;
 
+/**
+ * 禁言群员
+ */
 @Component
 public class MuteCommand implements KanriHandler {
 
