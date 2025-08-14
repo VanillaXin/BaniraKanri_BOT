@@ -10,6 +10,7 @@ import java.util.Set;
 
 public interface KanriHandler {
 
+    int NIL = -2;
     int SUCCESS = 1;
     int FAIL = 0;
     int NO_PERMISSION = -1;

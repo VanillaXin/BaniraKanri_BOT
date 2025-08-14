@@ -45,6 +45,7 @@ public class RecallCommand implements KanriHandler {
         int start;
         if (BaniraUtils.hasReplay(context.event().getArrayMsg())) {
             start = BaniraUtils.getReplayId(context.event().getArrayMsg()).intValue();
+            if (args.length == 0) targets.add(start);
         } else if (args.length > 0) {
             start = context.msgId();
         } else {
@@ -54,29 +55,44 @@ public class RecallCommand implements KanriHandler {
         MessageRecord startMessage = messageRecordManager.getMessageRecord(context.group(), start);
 
         for (String arg : args) {
-            String[] split = arg.replace("-", ":")
-                    .replace("：", ":")
+            String[] split = arg.replaceAll("[-：_~+]", ":")
+                    .replaceAll("[`,，.。、/\\\\]", "")
                     .split(":");
             if (split.length > 2) return FAIL;
             MessageRecordQueryParam param = new MessageRecordQueryParam();
             param.setGroupId(context.group());
             param.setIdByLt(startMessage.getId());
+            // 撤回指定第几条
             if (split.length == 1) {
-                if (StringUtils.toLong(split[0]) == 0) {
+                long index = StringUtils.toLong(split[0], -1);
+                if (index == 0) {
                     targets.add(start);
                     continue;
-                } else {
+                } else if (index > 0) {
                     param.setLimit(1);
-                    param.setOffset(StringUtils.toLong(split[0]) - 1);
+                    param.setOffset(index - 1);
+                } else {
+                    return FAIL;
                 }
-            } else {
-                long startIndex = Math.max(0, StringUtils.toLong(split[0]) - 1);
-                long endIndex = Math.max(0, StringUtils.toLong(split[1]) - 1);
+            }
+            // 撤回指定消息第 l 条后的 r 条消息
+            else if (arg.contains("+")) {
+                long startIndex = StringUtils.toLong(split[0], -1);
+                long limit = StringUtils.toLong(split[1], -1);
+                if (startIndex < 0 || limit < 0) return FAIL;
+                param.setLimit(limit);
+                param.setOffset(Math.max(0, startIndex - 1));
+            }
+            // 撤回指定范围第 l 至 r 条消息
+            else {
+                long startIndex = StringUtils.toLong(split[0], -1);
+                long endIndex = StringUtils.toLong(split[1], -1);
+                if (startIndex < 0 || endIndex < 0 || endIndex < startIndex) return FAIL;
                 param.setLimit(endIndex - startIndex + 1);
-                param.setOffset(startIndex);
+                param.setOffset(Math.max(0, startIndex - 1));
             }
             param.addOrderBy(MessageRecordQueryParam.ORDER_ATTR_ID, false);
-            messageRecordManager.getMessageRecordLimitList(param).stream()
+            messageRecordManager.getMessageRecordList(param).stream()
                     .map(data -> StringUtils.toInt(data.getMsgId()))
                     .filter(data -> data > 0)
                     .forEach(targets::add);

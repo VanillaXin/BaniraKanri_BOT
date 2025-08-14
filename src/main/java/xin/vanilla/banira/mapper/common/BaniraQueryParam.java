@@ -18,17 +18,11 @@ public class BaniraQueryParam extends HashMap<String, Object> {
     public static final String ALL_FIELDS = "_ALL_FIELDS_";
     public static final String ORDER = "_ORDER_";
 
-    private long startIndex = 0;
-    private long pageSize = -1;
+    public static final String PAGE = "_PAGE_";
+    public static final String SIZE = "_SIZE_";
 
-    /**
-     * 指定返回的记录数量
-     */
-    private long limit;
-    /**
-     * 指定跳过的记录数量
-     */
-    private long offset;
+    public static final String LIMIT = "_LIMIT_";
+    public static final String OFFSET = "_OFFSET_";
 
     public BaniraQueryParam() {
         this(false);
@@ -40,14 +34,24 @@ public class BaniraQueryParam extends HashMap<String, Object> {
 
     public BaniraQueryParam(long startIndex, long pageSize) {
         this(false);
-        this.startIndex = startIndex;
-        this.pageSize = pageSize;
+        this.put(PAGE, startIndex);
+        this.put(SIZE, pageSize);
     }
 
     public BaniraQueryParam(boolean all, long startIndex, long pageSize) {
         this(all);
-        this.startIndex = startIndex;
-        this.pageSize = pageSize;
+        this.put(PAGE, startIndex);
+        this.put(SIZE, pageSize);
+    }
+
+    public BaniraQueryParam setLimit(long limit) {
+        this.put(LIMIT, limit);
+        return this;
+    }
+
+    public BaniraQueryParam setOffset(long offset) {
+        this.put(OFFSET, offset);
+        return this;
     }
 
     public BaniraQueryParam addParam(String key, Object value) {

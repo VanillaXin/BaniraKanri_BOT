@@ -2,7 +2,6 @@ package xin.vanilla.banira.plugin;
 
 import com.mikuac.shiro.annotation.GroupMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
-import com.mikuac.shiro.common.utils.FaceUtils;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +43,7 @@ public class KanriPlugin extends BasePlugin {
                 , KanriContext.getGuildMsgId(event)
         );
 
-        int result = KanriHandler.FAIL;
+        int result = KanriHandler.NIL;
         Optional<KanriHandler> handler = handlers.stream()
                 .filter(h -> h.getAction().contains(kanriAction))
                 .findFirst();
@@ -56,7 +55,7 @@ public class KanriPlugin extends BasePlugin {
                 } catch (Exception e) {
                     LOGGER.error("Kanri command parsing failed", e);
                     // bot.sendGroupMsg(event.getGroupId(), "指令解析失败", false);
-                    bot.setMsgEmojiLike(event.getMessageId(), String.valueOf(FaceUtils.get(67)), true);
+                    bot.setMsgEmojiLike(event.getMessageId(), String.valueOf(67), true);
                 }
             } else {
                 result = KanriHandler.NO_PERMISSION;
@@ -70,9 +69,9 @@ public class KanriPlugin extends BasePlugin {
             //                 .build()
             //         , false
             // );
-            bot.setMsgEmojiLike(event.getMessageId(), String.valueOf(FaceUtils.get(123)), true);
+            bot.setMsgEmojiLike(event.getMessageId(), String.valueOf(123), true);
         } else if (result == KanriHandler.FAIL) {
-            bot.setMsgEmojiLike(event.getMessageId(), String.valueOf(FaceUtils.get(67)), true);
+            bot.setMsgEmojiLike(event.getMessageId(), String.valueOf(67), true);
         }
         return result == KanriHandler.SUCCESS;
     }

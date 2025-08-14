@@ -1,6 +1,5 @@
 package xin.vanilla.banira.plugin.kanri;
 
-import com.mikuac.shiro.common.utils.FaceUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
@@ -77,7 +76,7 @@ public class LoudCommand implements KanriHandler {
         }
 
         if (context.msgId() > 0) {
-            context.bot().setMsgEmojiLike(context.msgId(), String.valueOf(FaceUtils.get(124)), true);
+            context.bot().setMsgEmojiLike(context.msgId(), String.valueOf(124), true);
         }
 
         return targets.isEmpty() ? FAIL : SUCCESS;

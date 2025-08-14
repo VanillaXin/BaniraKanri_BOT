@@ -58,16 +58,16 @@
             </foreach>
         </if>
         <if test="id_lt != null">
-            <![CDATA[ AND t.id < #{id} ]]>
+            <![CDATA[ AND t.id < #{id_lt} ]]>
         </if>
         <if test="id_lt_eq != null">
-            <![CDATA[ AND t.id <= #{id} ]]>
+            <![CDATA[ AND t.id <= #{id_lt_eq} ]]>
         </if>
         <if test="id_gt != null">
-            <![CDATA[ AND t.id > #{id} ]]>
+            <![CDATA[ AND t.id > #{id_gt} ]]>
         </if>
         <if test="id_gt_eq != null">
-            <![CDATA[ AND t.id >= #{id} ]]>
+            <![CDATA[ AND t.id >= #{id_gt_eq} ]]>
         </if>
 
         <if test="msgId_null != null">
@@ -124,16 +124,16 @@
             </foreach>
         </if>
         <if test="botId_lt != null">
-            <![CDATA[ AND t.bot_id < #{botId} ]]>
+            <![CDATA[ AND t.bot_id < #{botId_lt} ]]>
         </if>
         <if test="botId_lt_eq != null">
-            <![CDATA[ AND t.bot_id <= #{botId} ]]>
+            <![CDATA[ AND t.bot_id <= #{botId_lt_eq} ]]>
         </if>
         <if test="botId_gt != null">
-            <![CDATA[ AND t.bot_id > #{botId} ]]>
+            <![CDATA[ AND t.bot_id > #{botId_gt} ]]>
         </if>
         <if test="botId_gt_eq != null">
-            <![CDATA[ AND t.bot_id >= #{botId} ]]>
+            <![CDATA[ AND t.bot_id >= #{botId_gt_eq} ]]>
         </if>
 
         <if test="senderId_null != null">
@@ -163,16 +163,16 @@
             </foreach>
         </if>
         <if test="senderId_lt != null">
-            <![CDATA[ AND t.sender_id < #{senderId} ]]>
+            <![CDATA[ AND t.sender_id < #{senderId_lt} ]]>
         </if>
         <if test="senderId_lt_eq != null">
-            <![CDATA[ AND t.sender_id <= #{senderId} ]]>
+            <![CDATA[ AND t.sender_id <= #{senderId_lt_eq} ]]>
         </if>
         <if test="senderId_gt != null">
-            <![CDATA[ AND t.sender_id > #{senderId} ]]>
+            <![CDATA[ AND t.sender_id > #{senderId_gt} ]]>
         </if>
         <if test="senderId_gt_eq != null">
-            <![CDATA[ AND t.sender_id >= #{senderId} ]]>
+            <![CDATA[ AND t.sender_id >= #{senderId_gt_eq} ]]>
         </if>
 
         <if test="targetId_null != null">
@@ -202,16 +202,16 @@
             </foreach>
         </if>
         <if test="targetId_lt != null">
-            <![CDATA[ AND t.target_id < #{targetId} ]]>
+            <![CDATA[ AND t.target_id < #{targetId_lt} ]]>
         </if>
         <if test="targetId_lt_eq != null">
-            <![CDATA[ AND t.target_id <= #{targetId} ]]>
+            <![CDATA[ AND t.target_id <= #{targetId_lt_eq} ]]>
         </if>
         <if test="targetId_gt != null">
-            <![CDATA[ AND t.target_id > #{targetId} ]]>
+            <![CDATA[ AND t.target_id > #{targetId_gt} ]]>
         </if>
         <if test="targetId_gt_eq != null">
-            <![CDATA[ AND t.target_id >= #{targetId} ]]>
+            <![CDATA[ AND t.target_id >= #{targetId_gt_eq} ]]>
         </if>
 
         <if test="groupId_null != null">
@@ -241,16 +241,16 @@
             </foreach>
         </if>
         <if test="groupId_lt != null">
-            <![CDATA[ AND t.group_id < #{groupId} ]]>
+            <![CDATA[ AND t.group_id < #{groupId_lt} ]]>
         </if>
         <if test="groupId_lt_eq != null">
-            <![CDATA[ AND t.group_id <= #{groupId} ]]>
+            <![CDATA[ AND t.group_id <= #{groupId_lt_eq} ]]>
         </if>
         <if test="groupId_gt != null">
-            <![CDATA[ AND t.group_id > #{groupId} ]]>
+            <![CDATA[ AND t.group_id > #{groupId_gt} ]]>
         </if>
         <if test="groupId_gt_eq != null">
-            <![CDATA[ AND t.group_id >= #{groupId} ]]>
+            <![CDATA[ AND t.group_id >= #{groupId_gt_eq} ]]>
         </if>
 
         <if test="time_null != null">
@@ -280,16 +280,16 @@
             </foreach>
         </if>
         <if test="time_lt != null">
-            <![CDATA[ AND t.time < #{time} ]]>
+            <![CDATA[ AND t.time < #{time_lt} ]]>
         </if>
         <if test="time_lt_eq != null">
-            <![CDATA[ AND t.time <= #{time} ]]>
+            <![CDATA[ AND t.time <= #{time_lt_eq} ]]>
         </if>
         <if test="time_gt != null">
-            <![CDATA[ AND t.time > #{time} ]]>
+            <![CDATA[ AND t.time > #{time_gt} ]]>
         </if>
         <if test="time_gt_eq != null">
-            <![CDATA[ AND t.time >= #{time} ]]>
+            <![CDATA[ AND t.time >= #{time_gt_eq} ]]>
         </if>
 
         <if test="msgRaw_null != null">
@@ -420,10 +420,10 @@
 
     <select id="selectByParam" parameterType="java.util.Map" resultMap="resultMap">
         SELECT
-        <if test="_ALL_FIELDS_ == true">
+        <if test="_ALL_FIELDS_">
             <include refid="allColumn"/>
         </if>
-        <if test="_ALL_FIELDS_ != true">
+        <if test="!_ALL_FIELDS_">
             <include refid="baseColumn"/>
         </if>
         FROM message_record t
@@ -433,16 +433,16 @@
 
     <select id="selectByParamLimit" resultType="xin.vanilla.banira.domain.MessageRecord">
         SELECT
-        <if test="_ALL_FIELDS_ == true">
+        <if test="_ALL_FIELDS_">
             <include refid="allColumn"/>
         </if>
-        <if test="_ALL_FIELDS_ != true">
+        <if test="!_ALL_FIELDS_">
             <include refid="baseColumn"/>
         </if>
         FROM message_record t
         <include refid="whereSql"/>
         <include refid="orderSql"/>
-        LIMIT #{offset}, #{limit}
+        LIMIT #{limit} OFFSET #{offset}
     </select>
 
 </mapper>
