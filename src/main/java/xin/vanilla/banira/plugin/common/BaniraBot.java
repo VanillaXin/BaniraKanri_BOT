@@ -370,25 +370,26 @@ public class BaniraBot extends Bot {
 
     // endregion override
 
-    // region private
 
-    private boolean isActionDataNotEmpty(ActionData<?> actionData) {
+    // region util
+
+    public boolean isActionDataNotEmpty(ActionData<?> actionData) {
         return actionData != null && actionData.getData() != null;
     }
 
-    private boolean isActionDataMsgIdNotEmpty(ActionData<MsgId> msgId) {
+    public boolean isActionDataMsgIdNotEmpty(ActionData<MsgId> msgId) {
         return isActionDataNotEmpty(msgId) && msgId.getData().getMessageId() != null;
     }
 
-    private Integer getActionDataMsgId(ActionData<MsgId> msgId) {
+    public Integer getActionDataMsgId(ActionData<MsgId> msgId) {
         return msgId.getData().getMessageId();
     }
 
-    private IMessageRecordManager getMessageRecordManager() {
+    public IMessageRecordManager getMessageRecordManager() {
         return SpringContextHolder.getBean(IMessageRecordManager.class);
     }
 
-    private MessageRecord setMsgRecordTime(MessageRecord record) {
+    public MessageRecord setMsgRecordTime(MessageRecord record) {
         if (StringUtils.isNotNullOrEmpty(record.getMsgId())) {
             try {
                 ActionData<MsgResp> msg = super.getMsg(StringUtils.toInt(record.getMsgId()));
@@ -403,10 +404,6 @@ public class BaniraBot extends Bot {
         }
         return record;
     }
-
-    // endregion private
-
-    // region util
 
     /**
      * 判断是否群主
@@ -423,10 +420,52 @@ public class BaniraBot extends Bot {
     }
 
     /**
+     * 判断是否群主或管理
+     */
+    public boolean isGroupOwnerOrAdmin(@Nullable Long groupId, @Nonnull Long qq) {
+        return this.isGroupOwner(groupId, qq) || this.isGroupAdmin(groupId, qq);
+    }
+
+    /**
+     * 判断机器人是否群主
+     */
+    public boolean isGroupOwner(@Nullable Long groupId) {
+        return BaniraUtils.isGroupOwner(this, groupId, this.getSelfId());
+    }
+
+    /**
+     * 判断机器人是否群管理
+     */
+    public boolean isGroupAdmin(@Nullable Long groupId) {
+        return BaniraUtils.isGroupAdmin(this, groupId, this.getSelfId());
+    }
+
+    /**
+     * 判断机器人是否群主或管理
+     */
+    public boolean isGroupOwnerOrAdmin(@Nullable Long groupId) {
+        return this.isGroupOwner(groupId) || this.isGroupAdmin(groupId);
+    }
+
+    /**
      * 判断a是否b的上属
      */
     public boolean isUpper(@Nullable Long groupId, @Nonnull Long a, @Nonnull Long b) {
         return BaniraUtils.isUpper(this, groupId, a, b);
+    }
+
+    /**
+     * 判断a是否b的上属
+     */
+    public boolean isUpperInGroup(@Nullable Long groupId, @Nonnull Long a, @Nonnull Long b) {
+        return BaniraUtils.isUpperInGroup(this, groupId, a, b);
+    }
+
+    /**
+     * 判断机器人是否b的上属
+     */
+    public boolean isUpperInGroup(@Nullable Long groupId, @Nonnull Long b) {
+        return BaniraUtils.isUpperInGroup(this, groupId, this.getSelfId(), b);
     }
 
     /**

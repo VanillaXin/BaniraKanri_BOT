@@ -8,7 +8,6 @@ import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
-import com.mikuac.shiro.enums.AtEnum;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -36,7 +35,7 @@ public class ExamplePlugin extends BasePlugin {
      * @return 是否拦截事件传递
      */
     @AnyMessageHandler
-    @MessageHandlerFilter(at = AtEnum.NEED)
+    @MessageHandlerFilter(cmd = "/hello")
     public boolean hello(Bot tob, AnyMessageEvent event) {
         BaniraBot bot = new BaniraBot(tob);
         // LOGGER.debug(event.getMessage());

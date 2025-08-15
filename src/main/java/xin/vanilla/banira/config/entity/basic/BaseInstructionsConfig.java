@@ -28,8 +28,8 @@ public record BaseInstructionsConfig(
     public static BaseInstructionsConfig preset() {
         return new BaseInstructionsConfig(
                 BaniraUtils.mutableSetOf("添加", "add", "put", "insert"),
-                BaniraUtils.mutableSetOf("删除", "del", "delete"),
-                BaniraUtils.mutableSetOf("查询", "list", "ls", "sel"),
+                BaniraUtils.mutableSetOf("删除", "del", "delete", "remove"),
+                BaniraUtils.mutableSetOf("查询", "list", "ls", "sel", "get"),
                 BaniraUtils.mutableSetOf("全局", "all", "global"),
                 BaniraUtils.mutableSetOf("当前", "that", "this", "here"),
                 BaniraUtils.mutableSetOf("@全体成员", "@全体", "@所有人", "@all", "@All", "@ALL")

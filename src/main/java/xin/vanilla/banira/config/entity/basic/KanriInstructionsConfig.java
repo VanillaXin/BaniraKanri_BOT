@@ -36,7 +36,8 @@ public record KanriInstructionsConfig(
         Set<String> essence,
         Set<String> admin,
         Set<String> butler,
-        Set<String> servant
+        Set<String> servant,
+        Set<String> groupName
 ) {
 
     public static KanriInstructionsConfig preset() {
@@ -53,7 +54,8 @@ public record KanriInstructionsConfig(
                 BaniraUtils.mutableSetOf("精华", "essence"),
                 BaniraUtils.mutableSetOf("群管理", "admin", "gad", "ad"),
                 BaniraUtils.mutableSetOf("主管", "管家", "女仆长", "butler", "chief"),
-                BaniraUtils.mutableSetOf("仆人", "女仆", "妹抖", "servant", "maid")
+                BaniraUtils.mutableSetOf("仆人", "女仆", "妹抖", "servant", "maid"),
+                BaniraUtils.mutableSetOf("群名", "群名称", "groupname", "gname", "gn")
         );
     }
 

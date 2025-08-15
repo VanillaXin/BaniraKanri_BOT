@@ -1,6 +1,5 @@
 package xin.vanilla.banira.plugin.kanri;
 
-import com.mikuac.shiro.common.utils.ShiroUtils;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
@@ -11,7 +10,7 @@ import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.Arrays;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -27,6 +26,12 @@ public class CardCommand implements KanriHandler {
     private BaniraCodeHandler codeHandler;
 
     @Override
+    public boolean botHasPermission(@Nonnull KanriContext context) {
+        // 可以改自己的所以直接返回true
+        return true;
+    }
+
+    @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
         return context.bot().hasPermission(context.group(), context.sender(), EnumPermission.CARD);
     }
@@ -34,24 +39,27 @@ public class CardCommand implements KanriHandler {
     @Nonnull
     @Override
     public Set<String> getAction() {
-        return globalConfig.get().instConfig().kanri().card();
+        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().card(), Set::of);
     }
 
     @Override
     public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
-        if (args.length < 1) return FAIL;
-
         // 解析目标
-        Set<Long> targets = BaniraUtils.mutableSetOf();
-        if (args.length == 1) {
-            if (BaniraUtils.hasReplay(context.event().getArrayMsg())) {
-                targets.add(BaniraUtils.getReplayQQ(context.bot(), context.group(), context.event().getArrayMsg()));
-            } else return FAIL;
-        }
-        targets.addAll(ShiroUtils.getAtList(context.event().getArrayMsg()));
-        targets.addAll(getQQs(Arrays.copyOf(args, args.length - 1)));
+        Set<Long> targets = getQQsWithReplay(context, args);
 
-        String card = args[args.length - 1];
+        // 解析内容
+        String card;
+        if (args.length == 0) {
+            if (BaniraUtils.hasReplay(context.event().getArrayMsg())) {
+                card = BaniraUtils.getReplayContent(context.bot(), context.event().getArrayMsg());
+            } else {
+                card = "";
+            }
+        } else {
+            card = args[args.length - 1];
+        }
+        if (card == null) return FAIL;
+
         BaniraCodeContext codeContext = new BaniraCodeContext(context.bot());
 
         for (Long targetId : targets) {
@@ -68,10 +76,6 @@ public class CardCommand implements KanriHandler {
             }
         }
         executeFail(context);
-
-        if (context.msgId() > 0) {
-            context.bot().setMsgEmojiLike(context.msgId(), String.valueOf(124), true);
-        }
 
         return targets.isEmpty() ? FAIL : SUCCESS;
     }

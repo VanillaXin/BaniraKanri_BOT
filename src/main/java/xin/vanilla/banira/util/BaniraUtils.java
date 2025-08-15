@@ -5,6 +5,7 @@ import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.response.GroupMemberInfoResp;
+import com.mikuac.shiro.dto.action.response.MsgResp;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import com.mikuac.shiro.dto.event.message.GuildMessageEvent;
 import com.mikuac.shiro.dto.event.message.MessageEvent;
@@ -126,6 +127,18 @@ public class BaniraUtils {
                 .orElse(null);
     }
 
+    public static String getReplayContent(BaniraBot bot, List<ArrayMsg> arrayMsg) {
+        Long replayId = getReplayId(arrayMsg);
+        String result = null;
+        if (replayId != null) {
+            ActionData<MsgResp> msgData = bot.getMsg(replayId.intValue());
+            if (bot.isActionDataNotEmpty(msgData)) {
+                result = msgData.getData().getMessage();
+            }
+        }
+        return result;
+    }
+
     public static long getReplayQQ(BaniraBot bot, Long groupId, List<ArrayMsg> arrayMsg) {
         long qq = arrayMsg.stream()
                 .filter(e -> e.getType() == MsgTypeEnum.reply)
@@ -157,6 +170,18 @@ public class BaniraUtils {
                         .map(m -> m.group("id"))
                         .findFirst().orElse(null)) :
                 null;
+    }
+
+    public static String getReplayContent(BaniraBot bot, String msg) {
+        Long replayId = getReplayId(msg);
+        String result = null;
+        if (replayId != null) {
+            ActionData<MsgResp> msgData = bot.getMsg(replayId.intValue());
+            if (bot.isActionDataNotEmpty(msgData)) {
+                result = msgData.getData().getMessage();
+            }
+        }
+        return result;
     }
 
     public static long getReplayQQ(BaniraBot bot, Long groupId, String msg) {
@@ -317,18 +342,31 @@ public class BaniraUtils {
             return !isGroupOwner(bot, groupId, b)
                     && !isOwner(b)
                     && !isButler(b);
-        if (isServant(groupId, a))
-            return !isGroupOwner(bot, groupId, b)
-                    && !isOwner(b)
-                    && !isButler(b)
-                    && !isServant(groupId, b);
         if (isGroupOwner(bot, groupId, a))
             return !isOwner(b);
         if (isGroupAdmin(bot, groupId, a))
             return !isGroupOwner(bot, groupId, b)
                     && !isOwner(b)
                     && !isButler(b)
+                    && !isGroupAdmin(bot, groupId, b);
+        if (isServant(groupId, a))
+            return !isGroupOwner(bot, groupId, b)
+                    && !isOwner(b)
+                    && !isButler(b)
+                    && !isGroupAdmin(bot, groupId, b)
                     && !isServant(groupId, b);
+        return false;
+    }
+
+    /**
+     * 判断a是否b的上属
+     */
+    public static boolean isUpperInGroup(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long a, @Nonnull Long b) {
+        if (isGroupOwner(bot, groupId, a))
+            return true;
+        if (isGroupAdmin(bot, groupId, a))
+            return !isGroupOwner(bot, groupId, b)
+                    && !isGroupAdmin(bot, groupId, b);
         return false;
     }
 

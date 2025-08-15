@@ -12,6 +12,7 @@ import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -27,6 +28,12 @@ public class RecallCommand implements KanriHandler {
     private IMessageRecordManager messageRecordManager;
 
     @Override
+    public boolean botHasPermission(@Nonnull KanriContext context) {
+        // 可以撤回自己的所以直接返回true
+        return true;
+    }
+
+    @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
         return context.bot().hasPermission(context.group(), context.sender(), EnumPermission.RECA);
     }
@@ -34,7 +41,7 @@ public class RecallCommand implements KanriHandler {
     @Nonnull
     @Override
     public Set<String> getAction() {
-        return globalConfig.get().instConfig().kanri().withdraw();
+        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().withdraw(), Set::of);
     }
 
     @Override

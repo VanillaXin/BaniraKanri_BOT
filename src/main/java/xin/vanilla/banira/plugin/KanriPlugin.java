@@ -11,6 +11,7 @@ import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.kanri.KanriHandler;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -41,6 +42,7 @@ public class KanriPlugin extends BasePlugin {
                 , event.getSender().getUserId()
                 , KanriContext.getMsgId(event)
                 , KanriContext.getGuildMsgId(event)
+                , message
         );
 
         int result = KanriHandler.NIL;
@@ -48,31 +50,37 @@ public class KanriPlugin extends BasePlugin {
                 .filter(h -> h.getAction().contains(kanriAction))
                 .findFirst();
         if (handler.isPresent()) {
-            if (handler.get().hasPermission(context)) {
+            if (!handler.get().botHasPermission(context)) {
+                result = KanriHandler.BOT_NO_OP;
+            } else if (handler.get().hasPermission(context)) {
                 String[] args = Arrays.copyOfRange(parts, 1, parts.length);
                 try {
                     result = handler.get().execute(context, args);
                 } catch (Exception e) {
                     LOGGER.error("Kanri command parsing failed", e);
-                    // bot.sendGroupMsg(event.getGroupId(), "指令解析失败", false);
-                    bot.setMsgEmojiLike(event.getMessageId(), String.valueOf(67), true);
+                    result = KanriHandler.FAIL;
                 }
             } else {
-                result = KanriHandler.NO_PERMISSION;
+                result = KanriHandler.NO_OP;
             }
         }
-        if (result == KanriHandler.NO_PERMISSION) {
-            // bot.sendGroupMsg(event.getGroupId()
-            //         , MsgUtils.builder()
-            //                 .reply(event.getMessageId())
-            //                 .text("你没有权限执行该操作")
-            //                 .build()
-            //         , false
-            // );
-            bot.setMsgEmojiLike(event.getMessageId(), String.valueOf(123), true);
-        } else if (result == KanriHandler.FAIL) {
-            bot.setMsgEmojiLike(event.getMessageId(), String.valueOf(67), true);
+
+        String emoji;
+        switch (result) {
+            // no
+            case KanriHandler.NO_OP -> emoji = String.valueOf(123);
+            // sleep
+            case KanriHandler.BOT_NO_OP -> emoji = String.valueOf(8);
+            // broken heart
+            case KanriHandler.FAIL -> emoji = String.valueOf(67);
+            // ok
+            case KanriHandler.SUCCESS -> emoji = String.valueOf(124);
+            default -> emoji = null;
         }
+        if (StringUtils.isNotNullOrEmpty(emoji)) {
+            bot.setMsgEmojiLike(event.getMessageId(), emoji, true);
+        }
+
         return result == KanriHandler.SUCCESS;
     }
 

@@ -8,8 +8,8 @@ import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.StringUtils;
 
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 
@@ -23,6 +23,11 @@ public class AtAllCommand implements KanriHandler {
     private Supplier<GlobalConfig> globalConfig;
 
     @Override
+    public boolean botHasPermission(@Nonnull KanriContext context) {
+        return context.bot().isGroupOwnerOrAdmin(context.group());
+    }
+
+    @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
         return context.bot().hasPermission(context.group(), context.sender(), EnumPermission.ATAL);
     }
@@ -30,7 +35,7 @@ public class AtAllCommand implements KanriHandler {
     @Nonnull
     @Override
     public Set<String> getAction() {
-        return globalConfig.get().instConfig().base().atAll();
+        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().base().atAll(), Set::of);
     }
 
     @Override

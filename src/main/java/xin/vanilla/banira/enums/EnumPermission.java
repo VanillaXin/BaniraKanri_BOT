@@ -17,9 +17,11 @@ public enum EnumPermission {
     KICK("移除群员", "kick", 1),
     RECA("撤回消息", "recall", 1),
     GARE("处理加群请求", "group add request", 1),
-    ESSE("设置群精华", "essence", 1),
+    AESS("设置群精华", "add essence", 1),
+    RESS("设置群精华", "remove essence", 1),
     GNAM("修改群名称", "group name", 1),
-    ADMI("增删群管理", "admin", 2),
+    AADM("增加群管理", "add admin", 2),
+    RADM("移除群管理", "remove admin", 2),
     ;
 
     private final String desc;

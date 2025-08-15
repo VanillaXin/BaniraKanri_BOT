@@ -15,10 +15,10 @@ import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * 设置群头衔
+ * 设置群名称
  */
 @Component
-public class TagCommand implements KanriHandler {
+public class GroupNameCommand implements KanriHandler {
 
     @Resource
     private Supplier<GlobalConfig> globalConfig;
@@ -27,25 +27,22 @@ public class TagCommand implements KanriHandler {
 
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {
-        return context.bot().isGroupOwner(context.group());
+        return context.bot().isGroupOwnerOrAdmin(context.group());
     }
 
     @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
-        return context.bot().hasPermission(context.group(), context.sender(), EnumPermission.TAG);
+        return context.bot().hasPermission(context.group(), context.sender(), EnumPermission.GNAM);
     }
 
     @Nonnull
     @Override
     public Set<String> getAction() {
-        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().tag(), Set::of);
+        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().groupName(), Set::of);
     }
 
     @Override
     public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
-        // 解析目标
-        Set<Long> targets = getQQsWithReplay(context, args);
-
         // 解析内容
         String tag;
         if (args.length == 0) {
@@ -55,28 +52,20 @@ public class TagCommand implements KanriHandler {
                 tag = "";
             }
         } else {
-            tag = args[args.length - 1];
+            tag = context.content();
         }
         if (tag == null) return FAIL;
 
         BaniraCodeContext codeContext = new BaniraCodeContext(context.bot());
 
-        for (Long targetId : targets) {
-            if (context.bot().isUpper(context.group(), context.sender(), targetId)) {
-                BaniraCodeContext code = codeHandler.decode(
-                        codeContext.setSender(context.sender())
-                                .setGroup(context.group())
-                                .setTarget(targetId)
-                                .setMsg(tag)
-                );
-                context.bot().setGroupSpecialTitle(context.group(), targetId, code.getMsg(), -1);
-            } else {
-                fail.add(targetId);
-            }
-        }
-        executeFail(context);
+        BaniraCodeContext code = codeHandler.decode(
+                codeContext.setSender(context.sender())
+                        .setGroup(context.group())
+                        .setMsg(tag)
+        );
+        context.bot().setGroupName(context.group(), code.getMsg());
 
-        return targets.isEmpty() ? FAIL : SUCCESS;
+        return SUCCESS;
     }
 
 }

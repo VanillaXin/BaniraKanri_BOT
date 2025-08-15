@@ -1,6 +1,7 @@
 package xin.vanilla.banira.plugin.kanri;
 
 import com.mikuac.shiro.common.utils.MsgUtils;
+import com.mikuac.shiro.common.utils.ShiroUtils;
 import jakarta.annotation.Nonnull;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -10,15 +11,23 @@ import java.util.Set;
 
 public interface KanriHandler {
 
-    int NIL = -2;
+    int NIL = 0;
     int SUCCESS = 1;
-    int FAIL = 0;
-    int NO_PERMISSION = -1;
+    int FAIL = -1;
+    int NO_OP = -2;
+    int BOT_NO_OP = -3;
 
     /**
      * 没有权限操作的QQ
      */
     Set<Long> fail = BaniraUtils.mutableSetOf();
+
+    /**
+     * 机器人是否有权限执行
+     *
+     * @param context 上下文
+     */
+    boolean botHasPermission(@Nonnull KanriContext context);
 
     /**
      * 是否有权限执行
@@ -42,20 +51,6 @@ public interface KanriHandler {
      */
     int execute(@Nonnull KanriContext context, @Nonnull String[] args);
 
-    @Nonnull
-    default Set<Long> getQQs(String[] args) {
-        Set<Long> qqs = BaniraUtils.mutableSetOf();
-        for (String arg : args) {
-            if (BaniraUtils.hasAt(arg)) {
-                qqs.add(BaniraUtils.getAtQQ(arg));
-            } else {
-                long l = StringUtils.toLong(arg, -1L);
-                if (l != -1) qqs.add(l);
-            }
-        }
-        return qqs;
-    }
-
     default void clearFail() {
         fail.clear();
     }
@@ -77,6 +72,40 @@ public interface KanriHandler {
             );
             clearFail();
         }
+    }
+
+    @Nonnull
+    default Set<Long> getQQs(String[] args) {
+        Set<Long> qqs = BaniraUtils.mutableSetOf();
+        for (String arg : args) {
+            if (BaniraUtils.hasAt(arg)) {
+                qqs.add(BaniraUtils.getAtQQ(arg));
+            } else {
+                long l = StringUtils.toLong(arg, -1L);
+                if (l != -1) qqs.add(l);
+            }
+        }
+        return qqs;
+    }
+
+    @Nonnull
+    default Set<Long> getQQsWithoutReplay(@Nonnull KanriContext context, @Nonnull String[] args) {
+        Set<Long> result = BaniraUtils.mutableSetOf();
+        result.addAll(ShiroUtils.getAtList(context.event().getArrayMsg()));
+        result.addAll(getQQs(args));
+        return result;
+    }
+
+    @Nonnull
+    default Set<Long> getQQsWithReplay(@Nonnull KanriContext context, @Nonnull String[] args) {
+        Set<Long> result = BaniraUtils.mutableSetOf();
+        if (BaniraUtils.hasReplay(context.event().getArrayMsg())) {
+            result.add(BaniraUtils.getReplayQQ(context.bot(), context.group(), context.event().getArrayMsg()));
+        } else if (BaniraUtils.hasAtAll(context.event().getArrayMsg())) {
+            result.add(233L);
+        }
+        result.addAll(getQQsWithoutReplay(context, args));
+        return result;
     }
 
 }
