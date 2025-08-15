@@ -2,7 +2,6 @@ package xin.vanilla.banira.config.entity.basic;
 
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.enums.EnumPermission;
-import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.Set;
 
@@ -17,12 +16,5 @@ public record PermissionConfig(
         Long id,
         Set<EnumPermission> permissions
 ) {
-
-    public static PermissionConfig preset() {
-        return new PermissionConfig(
-                null,
-                BaniraUtils.mutableSetOf()
-        );
-    }
 
 }

@@ -1,16 +1,23 @@
 package xin.vanilla.banira.plugin;
 
 import com.mikuac.shiro.annotation.GroupMessageHandler;
+import com.mikuac.shiro.annotation.PrivateMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
+import com.mikuac.shiro.dto.event.message.MessageEvent;
+import com.mikuac.shiro.dto.event.message.PrivateMessageEvent;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.coder.ToGroupCode;
+import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.kanri.KanriHandler;
+import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
@@ -24,12 +31,42 @@ import java.util.Optional;
 public class KanriPlugin extends BasePlugin {
     @Autowired(required = false)
     private List<KanriHandler> handlers = new ArrayList<>();
+    @Resource
+    private ToGroupCode toGroupCode;
 
     @GroupMessageHandler
-    public boolean kanri(Bot tob, GroupMessageEvent event) {
+    public boolean group(Bot tob, GroupMessageEvent event) {
         BaniraBot bot = new BaniraBot(tob);
 
-        String message = event.getMessage();
+        BaniraCodeContext code = toGroupCode.execute(new BaniraCodeContext(bot, event.getArrayMsg())
+                .setSender(event.getUserId())
+                .setGroup(event.getGroupId())
+                .setMsg(event.getMessage())
+        );
+
+        if (BaniraUtils.isGroupIdValid(code.getGroup())) {
+            return execute(bot, event, code.getMsg(), code.getGroup(), event.getMessageId());
+        }
+        return false;
+    }
+
+    @PrivateMessageHandler
+    public boolean friend(Bot tob, PrivateMessageEvent event) {
+        BaniraBot bot = new BaniraBot(tob);
+
+        BaniraCodeContext code = toGroupCode.execute(new BaniraCodeContext(bot, event.getArrayMsg())
+                .setSender(event.getUserId())
+                .setTarget(event.getSelfId())
+                .setMsg(event.getMessage())
+        );
+
+        if (BaniraUtils.isGroupIdValid(code.getGroup())) {
+            return execute(bot, event, code.getMsg(), code.getGroup(), event.getMessageId());
+        }
+        return false;
+    }
+
+    private boolean execute(BaniraBot bot, MessageEvent event, String message, long groupId, int msgId) {
         if (!super.isKanriCommand(message)) return false;
         message = super.replaceKanriCommand(message);
 
@@ -38,11 +75,11 @@ public class KanriPlugin extends BasePlugin {
 
         KanriContext context = new KanriContext(event
                 , bot
-                , event.getGroupId()
-                , event.getSender().getUserId()
+                , groupId
+                , event.getUserId()
                 , KanriContext.getMsgId(event)
                 , KanriContext.getGuildMsgId(event)
-                , message
+                , message.replace(parts[0], "").stripLeading()
         );
 
         int result = KanriHandler.NIL;
@@ -78,7 +115,7 @@ public class KanriPlugin extends BasePlugin {
             default -> emoji = null;
         }
         if (StringUtils.isNotNullOrEmpty(emoji)) {
-            bot.setMsgEmojiLike(event.getMessageId(), emoji, true);
+            bot.setMsgEmojiLike(msgId, emoji, true);
         }
 
         return result == KanriHandler.SUCCESS;

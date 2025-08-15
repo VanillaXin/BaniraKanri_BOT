@@ -35,7 +35,7 @@ public record GlobalConfig(
                 "",
                 "ws://127.0.0.1:8080",
                 0L,
-                BaniraUtils.mutableSetOf(PermissionConfig.preset()),
+                BaniraUtils.mutableSetOf(),
                 BaseConfig.preset(),
                 InstructionsConfig.preset(),
                 OtherConfig.preset()

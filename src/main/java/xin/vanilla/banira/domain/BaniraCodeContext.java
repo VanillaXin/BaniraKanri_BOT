@@ -1,13 +1,20 @@
 package xin.vanilla.banira.domain;
 
+import com.mikuac.shiro.model.ArrayMsg;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.plugin.common.BaniraBot;
+
+import java.util.List;
 
 @Data
 @Accessors(chain = true)
 public class BaniraCodeContext implements Cloneable {
     private final BaniraBot bot;
+    /**
+     * 原始消息
+     */
+    private final List<ArrayMsg> originalMsg;
     /**
      * 群组(若有)
      */
@@ -29,7 +36,7 @@ public class BaniraCodeContext implements Cloneable {
         try {
             return (BaniraCodeContext) super.clone();
         } catch (Exception e) {
-            return new BaniraCodeContext(bot)
+            return new BaniraCodeContext(bot, originalMsg)
                     .setGroup(group)
                     .setSender(sender)
                     .setTarget(target)

@@ -65,4 +65,14 @@ public class MessageRecord {
         return this;
     }
 
+    public MessageRecord setTargetId(Long targetId) {
+        this.targetId = targetId != null ? targetId : 0L;
+        return this;
+    }
+
+    public MessageRecord setGroupId(Long groupId) {
+        this.groupId = groupId != null ? groupId : 0L;
+        return this;
+    }
+
 }

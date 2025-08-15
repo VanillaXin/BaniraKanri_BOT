@@ -1,9 +1,10 @@
 package xin.vanilla.banira.config.entity.basic;
 
 import lombok.experimental.Accessors;
+import xin.vanilla.banira.plugin.ExamplePlugin;
+import xin.vanilla.banira.plugin.KanriPlugin;
 import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -22,7 +23,10 @@ public record BaseConfig(
     public static BaseConfig preset() {
         return new BaseConfig(
                 BaniraUtils.mutableSetOf(),
-                new HashMap<>()
+                BaniraUtils.mutableMapOf(
+                        KanriPlugin.class.getName(), 1
+                        , ExamplePlugin.class.getName(), 99
+                )
         );
     }
 

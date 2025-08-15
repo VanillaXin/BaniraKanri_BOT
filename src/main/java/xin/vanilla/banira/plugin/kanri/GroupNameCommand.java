@@ -56,7 +56,7 @@ public class GroupNameCommand implements KanriHandler {
         }
         if (tag == null) return FAIL;
 
-        BaniraCodeContext codeContext = new BaniraCodeContext(context.bot());
+        BaniraCodeContext codeContext = new BaniraCodeContext(context.bot(), context.event().getArrayMsg());
 
         BaniraCodeContext code = codeHandler.decode(
                 codeContext.setSender(context.sender())

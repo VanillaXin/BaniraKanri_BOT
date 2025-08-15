@@ -82,7 +82,7 @@ public interface KanriHandler {
                 qqs.add(BaniraUtils.getAtQQ(arg));
             } else {
                 long l = StringUtils.toLong(arg, -1L);
-                if (l >= 10000) qqs.add(l);
+                if (BaniraUtils.isFriendIdValid(l)) qqs.add(l);
             }
         }
         return qqs;

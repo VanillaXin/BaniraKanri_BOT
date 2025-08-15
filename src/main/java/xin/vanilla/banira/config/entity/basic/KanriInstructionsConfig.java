@@ -52,7 +52,7 @@ public record KanriInstructionsConfig(
                 BaniraUtils.mutableSetOf("群名片", "card"),
                 BaniraUtils.mutableSetOf("戳一戳", "戳", "tap", "slap"),
                 BaniraUtils.mutableSetOf("禁言", "mute", "ban"),
-                BaniraUtils.mutableSetOf("解除禁言", "loud", "unmute", "unban"),
+                BaniraUtils.mutableSetOf("解除禁言", "解禁", "loud", "unmute", "unban"),
                 BaniraUtils.mutableSetOf("撤回", "withdraw", "recall", "rec"),
                 BaniraUtils.mutableSetOf("踢出群聊", "kick"),
                 BaniraUtils.mutableSetOf("精华", "essence"),
@@ -61,7 +61,7 @@ public record KanriInstructionsConfig(
                 BaniraUtils.mutableSetOf("仆人", "女仆", "妹抖", "servant", "maid"),
                 BaniraUtils.mutableSetOf("权限", "op", "permission"),
                 BaniraUtils.mutableSetOf("群名", "群名称", "groupname", "gname", "gn"),
-                BaniraUtils.mutableSetOf("审批", "approve")
+                BaniraUtils.mutableSetOf("审批", "审核", "approve")
         );
     }
 

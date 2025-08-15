@@ -60,7 +60,7 @@ public class CardCommand implements KanriHandler {
         }
         if (card == null) return FAIL;
 
-        BaniraCodeContext codeContext = new BaniraCodeContext(context.bot());
+        BaniraCodeContext codeContext = new BaniraCodeContext(context.bot(), context.event().getArrayMsg());
 
         for (Long targetId : targets) {
             if (context.bot().isUpper(context.group(), context.sender(), targetId)) {

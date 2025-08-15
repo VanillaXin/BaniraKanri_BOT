@@ -6,8 +6,8 @@ import lombok.experimental.Accessors;
 import xin.vanilla.banira.config.entity.basic.BaseConfig;
 import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.basic.PermissionConfig;
+import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
@@ -27,9 +27,9 @@ public record GroupConfig(
 
     public static GroupConfig preset() {
         return new GroupConfig(
-                new HashMap<>(),
-                new HashMap<>(),
-                new HashMap<>()
+                BaniraUtils.mutableMapOf(),
+                BaniraUtils.mutableMapOf(),
+                BaniraUtils.mutableMapOf()
         );
     }
 
