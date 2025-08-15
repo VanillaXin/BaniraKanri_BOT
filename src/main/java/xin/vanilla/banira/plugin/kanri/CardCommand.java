@@ -72,7 +72,7 @@ public class CardCommand implements KanriHandler {
                 );
                 context.bot().setGroupCard(context.group(), targetId, code.getMsg());
             } else {
-                fail.add(targetId);
+                nop.add(targetId);
             }
         }
         executeFail(context);

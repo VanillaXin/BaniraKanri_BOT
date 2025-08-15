@@ -71,7 +71,7 @@ public class TagCommand implements KanriHandler {
                 );
                 context.bot().setGroupSpecialTitle(context.group(), targetId, code.getMsg(), -1);
             } else {
-                fail.add(targetId);
+                nop.add(targetId);
             }
         }
         executeFail(context);

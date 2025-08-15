@@ -14,7 +14,9 @@ import com.mikuac.shiro.enums.MsgTypeEnum;
 import com.mikuac.shiro.model.ArrayMsg;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ResolvableType;
+import xin.vanilla.banira.config.YamlConfigManager;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.basic.PermissionConfig;
@@ -29,9 +31,14 @@ import java.util.*;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
+@Slf4j
 public class BaniraUtils {
 
     // region private
+
+    // endregion private
+
+    // region 配置管理
 
     private static GlobalConfig getGlobalConfig() {
         Supplier<GlobalConfig> globalConfig = SpringContextHolder.getBean(
@@ -47,7 +54,43 @@ public class BaniraUtils {
         return groupConfig.get();
     }
 
-    // endregion private
+    private static YamlConfigManager<GlobalConfig> getGlobalConfigManager() {
+        return SpringContextHolder.getBean(
+                ResolvableType.forClassWithGenerics(YamlConfigManager.class, GlobalConfig.class)
+        );
+    }
+
+    private static YamlConfigManager<GroupConfig> getGroupConfigManager() {
+        return SpringContextHolder.getBean(
+                ResolvableType.forClassWithGenerics(YamlConfigManager.class, GroupConfig.class)
+        );
+    }
+
+    public static boolean saveGlobalConfig() {
+        try {
+            getGlobalConfigManager().save();
+        } catch (Exception e) {
+            LOGGER.error("Failed to save global config", e);
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean saveGroupConfig() {
+        try {
+            getGroupConfigManager().save();
+        } catch (Exception e) {
+            LOGGER.error("Failed to save group config", e);
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean saveConfig() {
+        return saveGlobalConfig() && saveGroupConfig();
+    }
+
+    // endregion 配置管理
 
     // region mutableSetOf
 
@@ -310,8 +353,15 @@ public class BaniraUtils {
      */
     public static boolean isServant(@Nullable Long groupId, @Nonnull Long qq) {
         if (groupId == null || groupId <= 0L) return false;
-        Set<PermissionConfig> servant = getGroupConfig().servant().get(groupId);
+        Set<PermissionConfig> servant = getGroupConfig().maid().get(groupId);
         return CollectionUtils.isNotNullOrEmpty(servant) && servant.stream().anyMatch(e -> qq.equals(e.id()));
+    }
+
+    /**
+     * 判断是否仆人
+     */
+    public static boolean isMaid(@Nullable Long groupId, @Nonnull Long qq) {
+        return isServant(groupId, qq);
     }
 
     /**
@@ -389,7 +439,7 @@ public class BaniraUtils {
                     .ifPresent(p -> permissions.addAll(p.permissions()));
         }
         if (groupId != null && groupId > 0L) {
-            Set<PermissionConfig> servant = getGroupConfig().servant().getOrDefault(groupId, new HashSet<>());
+            Set<PermissionConfig> servant = getGroupConfig().maid().getOrDefault(groupId, new HashSet<>());
             servant.stream()
                     .filter(p -> qq.equals(p.id()))
                     .findFirst()
@@ -431,6 +481,57 @@ public class BaniraUtils {
      */
     public static boolean hasAnyPermissions(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull Collection<EnumPermission> permissions) {
         return getPermission(bot, groupId, qq).stream().anyMatch(permissions::contains);
+    }
+
+    public static Set<String> getPermissionNames(EnumPermission permission) {
+        GlobalConfig globalConfig = getGlobalConfig();
+        switch (permission) {
+            case APER, RPER -> {
+                return globalConfig.instConfig().kanri().op();
+            }
+            case MUTE, MALL -> {
+                return globalConfig.instConfig().kanri().mute();
+            }
+            case LOUD, LALL -> {
+                return globalConfig.instConfig().kanri().loud();
+            }
+            case ATAL -> {
+                return globalConfig.instConfig().base().atAll();
+            }
+            case CARD -> {
+                return globalConfig.instConfig().kanri().card();
+            }
+            case TAG -> {
+                return globalConfig.instConfig().kanri().tag();
+            }
+            case KICK -> {
+                return globalConfig.instConfig().kanri().kick();
+            }
+            case RECA -> {
+                return globalConfig.instConfig().kanri().withdraw();
+            }
+            case GARE -> {
+                return globalConfig.instConfig().kanri().approve();
+            }
+            case AESS, RESS -> {
+                return globalConfig.instConfig().kanri().essence();
+            }
+            case GNAM -> {
+                return globalConfig.instConfig().kanri().groupName();
+            }
+            case AADM, RADM -> {
+                return globalConfig.instConfig().kanri().admin();
+            }
+            case AMAI, RMAI -> {
+                return globalConfig.instConfig().kanri().maid();
+            }
+            case ABUT, RBUT -> {
+                return globalConfig.instConfig().kanri().butler();
+            }
+            default -> {
+                return Set.of();
+            }
+        }
     }
 
     // endregion 权限判断

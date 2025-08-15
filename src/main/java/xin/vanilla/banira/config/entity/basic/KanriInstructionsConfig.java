@@ -8,19 +8,21 @@ import java.util.Set;
 /**
  * 管理指令配置
  *
- * @param prefix   前缀
- * @param status   框架状态
- * @param tag      头衔
- * @param card     群名片
- * @param tap      戳一戳
- * @param mute     禁言
- * @param loud     解除禁言
- * @param withdraw 撤回
- * @param kick     踢出群聊
- * @param essence  精华
- * @param admin    群管理
- * @param butler   主管
- * @param servant  仆人
+ * @param prefix    前缀
+ * @param status    框架状态
+ * @param tag       头衔
+ * @param card      群名片
+ * @param tap       戳一戳
+ * @param mute      禁言
+ * @param loud      解除禁言
+ * @param withdraw  撤回
+ * @param kick      踢出群聊
+ * @param essence   精华
+ * @param admin     群管理
+ * @param butler    主管
+ * @param maid      女仆
+ * @param op        权限
+ * @param groupName 群名称
  */
 @Accessors(chain = true)
 public record KanriInstructionsConfig(
@@ -36,8 +38,10 @@ public record KanriInstructionsConfig(
         Set<String> essence,
         Set<String> admin,
         Set<String> butler,
-        Set<String> servant,
-        Set<String> groupName
+        Set<String> maid,
+        Set<String> op,
+        Set<String> groupName,
+        Set<String> approve
 ) {
 
     public static KanriInstructionsConfig preset() {
@@ -55,7 +59,9 @@ public record KanriInstructionsConfig(
                 BaniraUtils.mutableSetOf("群管理", "admin", "gad", "ad"),
                 BaniraUtils.mutableSetOf("主管", "管家", "女仆长", "butler", "chief"),
                 BaniraUtils.mutableSetOf("仆人", "女仆", "妹抖", "servant", "maid"),
-                BaniraUtils.mutableSetOf("群名", "群名称", "groupname", "gname", "gn")
+                BaniraUtils.mutableSetOf("权限", "op", "permission"),
+                BaniraUtils.mutableSetOf("群名", "群名称", "groupname", "gname", "gn"),
+                BaniraUtils.mutableSetOf("审批", "approve")
         );
     }
 

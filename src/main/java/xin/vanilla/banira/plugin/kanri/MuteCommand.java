@@ -58,7 +58,7 @@ public class MuteCommand implements KanriHandler {
         // 群员禁言
         else {
             if (duration <= 0) return FAIL;
-            if (context.bot().hasPermission(context.group(), context.sender(), EnumPermission.MUTE)) {
+            if (!context.bot().hasPermission(context.group(), context.sender(), EnumPermission.MUTE)) {
                 return NO_OP;
             }
 
@@ -68,7 +68,7 @@ public class MuteCommand implements KanriHandler {
                 ) {
                     context.bot().setGroupBan(context.group(), targetId, duration);
                 } else {
-                    fail.add(targetId);
+                    nop.add(targetId);
                 }
             }
             executeFail(context);

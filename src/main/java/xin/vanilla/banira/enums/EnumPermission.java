@@ -1,16 +1,22 @@
 package xin.vanilla.banira.enums;
 
 import lombok.Getter;
+import xin.vanilla.banira.util.BaniraUtils;
 
+import java.util.Collection;
 import java.util.EnumSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Getter
 public enum EnumPermission {
+    APER("增加权限", "add permission", 1),
+    RPER("移除权限", "remove permission", 1),
     MUTE("设置群员禁言", "mute", 1),
     LOUD("解除群员禁言", "loud", 1),
     MALL("设置全体禁言", "mute all", 1),
+    LALL("解除全体禁言", "loud all", 1),
     ATAL("艾特全体成员", "at all", 1),
     CARD("修改群名片", "card", 1),
     TAG("修改群头衔", "tag", 1),
@@ -22,6 +28,10 @@ public enum EnumPermission {
     GNAM("修改群名称", "group name", 1),
     AADM("增加群管理", "add admin", 2),
     RADM("移除群管理", "remove admin", 2),
+    AMAI("增加女仆", "add maid", 3),
+    RMAI("移除女仆", "remove maid", 3),
+    ABUT("增加主管", "add butler", 4),
+    RBUT("移除主管", "remove butler", 4),
     ;
 
     private final String desc;
@@ -42,6 +52,22 @@ public enum EnumPermission {
     }
 
     /**
+     * 获取主管拥有的权限
+     */
+    public static Set<EnumPermission> getButler() {
+        return getAll().stream()
+                .filter(p -> p.level <= 3)
+                .collect(Collectors.toSet());
+    }
+
+    /**
+     * 获取女仆拥有的权限
+     */
+    public static Set<EnumPermission> getMaid() {
+        return getGroupAdmin();
+    }
+
+    /**
      * 获取群主拥有的权限
      */
     public static Set<EnumPermission> getGroupOwner() {
@@ -57,6 +83,30 @@ public enum EnumPermission {
         return getAll().stream()
                 .filter(p -> p.level <= 1)
                 .collect(Collectors.toSet());
+    }
+
+    public static EnumPermission valueFrom(String s) {
+        for (EnumPermission permission : EnumPermission.values()) {
+            if (permission.name().equalsIgnoreCase(s)
+                    || permission.word.equalsIgnoreCase(s)
+                    || permission.desc.equalsIgnoreCase(s)
+                    || BaniraUtils.getPermissionNames(permission).contains(s)
+            ) {
+                return permission;
+            }
+        }
+        return null;
+    }
+
+    public static Set<EnumPermission> valueFrom(Collection<String> collection) {
+        return collection.stream()
+                .map(EnumPermission::valueFrom)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+    }
+
+    public static Set<EnumPermission> valueFrom(String... strings) {
+        return valueFrom(Set.of(strings));
     }
 
 }

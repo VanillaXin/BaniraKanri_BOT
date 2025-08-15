@@ -27,7 +27,7 @@ public class LoudCommand implements KanriHandler {
 
     @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
-        return context.bot().hasPermission(context.group(), context.sender(), EnumPermission.LOUD);
+        return context.bot().hasAnyPermissions(context.group(), context.sender(), EnumPermission.LOUD, EnumPermission.LALL);
     }
 
     @Nonnull
@@ -43,7 +43,7 @@ public class LoudCommand implements KanriHandler {
 
         // 全体解禁
         if (targets.contains(233L)) {
-            if (context.bot().hasPermission(context.group(), context.sender(), EnumPermission.MALL)) {
+            if (context.bot().hasPermission(context.group(), context.sender(), EnumPermission.LALL)) {
                 context.bot().setGroupWholeBan(context.group(), false);
             } else {
                 return NO_OP;
@@ -51,7 +51,7 @@ public class LoudCommand implements KanriHandler {
         }
         // 群员解禁
         else {
-            if (context.bot().hasPermission(context.group(), context.sender(), EnumPermission.MUTE)) {
+            if (!context.bot().hasPermission(context.group(), context.sender(), EnumPermission.LOUD)) {
                 return NO_OP;
             }
 
@@ -61,7 +61,7 @@ public class LoudCommand implements KanriHandler {
                 ) {
                     context.bot().setGroupBan(context.group(), targetId, 0);
                 } else {
-                    fail.add(targetId);
+                    nop.add(targetId);
                 }
             }
             executeFail(context);

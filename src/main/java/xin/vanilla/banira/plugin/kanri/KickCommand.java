@@ -49,7 +49,7 @@ public class KickCommand implements KanriHandler {
             ) {
                 context.bot().setGroupKick(context.group(), targetId, StringUtils.stringToBoolean(CollectionUtils.getLast(args)));
             } else {
-                fail.add(targetId);
+                nop.add(targetId);
             }
         }
         executeFail(context);

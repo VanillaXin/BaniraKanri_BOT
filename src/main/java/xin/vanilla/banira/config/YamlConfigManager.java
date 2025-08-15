@@ -8,6 +8,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import xin.vanilla.banira.util.DateUtils;
 
@@ -20,6 +21,7 @@ import java.util.Date;
 import java.util.Map;
 import java.util.Set;
 
+@Slf4j
 public class YamlConfigManager<T> {
 
     private final Path configPath;
@@ -38,7 +40,8 @@ public class YamlConfigManager<T> {
                              Class<T> clazz,
                              String configName,
                              YamlConfigWatcherService watcherService,
-                             ApplicationEventPublisher eventPublisher) throws IOException {
+                             ApplicationEventPublisher eventPublisher
+    ) throws IOException {
         this.configPath = configPath.toAbsolutePath();
         this.defaultInstance = defaultInstance;
         this.clazz = clazz;
@@ -48,14 +51,13 @@ public class YamlConfigManager<T> {
         this.eventPublisher = eventPublisher;
         this.configName = configName;
 
-        init(); // 初始加载/修复
+        init();
         // 注册热刷新
         watcherService.register(this.configPath, path -> {
             try {
                 reloadOnChange();
             } catch (Exception e) {
-                // 仅日志，不阻塞
-                e.printStackTrace();
+                LOGGER.error("Error reloading config", e);
             }
         });
     }
@@ -193,6 +195,10 @@ public class YamlConfigManager<T> {
 
     public T getCurrent() {
         return currentInstance;
+    }
+
+    public void save() throws IOException {
+        writeConfig(currentInstance);
     }
 
     private void publishEvent(T instance) {

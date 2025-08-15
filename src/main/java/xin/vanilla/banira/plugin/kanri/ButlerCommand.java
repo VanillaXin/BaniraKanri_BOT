@@ -4,36 +4,38 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.GlobalConfig;
+import xin.vanilla.banira.config.entity.basic.PermissionConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
+import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
 
 /**
- * 设置群管理
+ * 设置主管
  */
 @Component
-public class AdminCommand implements KanriHandler {
+public class ButlerCommand implements KanriHandler {
 
     @Resource
     private Supplier<GlobalConfig> globalConfig;
 
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {
-        return context.bot().isGroupOwner(context.group());
+        return true;
     }
 
     @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
-        return context.bot().hasAnyPermissions(context.group(), context.sender(), EnumPermission.AADM, EnumPermission.RADM);
+        return context.bot().hasAnyPermissions(context.group(), context.sender(), EnumPermission.ABUT, EnumPermission.RBUT);
     }
 
     @Nonnull
     @Override
     public Set<String> getAction() {
-        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().admin(), Set::of);
+        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().butler(), Set::of);
     }
 
     @Override
@@ -51,34 +53,35 @@ public class AdminCommand implements KanriHandler {
         // 判断权限
         if (operate == null
                 && !context.bot().hasAllPermissions(context.group(), context.sender()
-                , EnumPermission.AADM
-                , EnumPermission.RADM)
+                , EnumPermission.ABUT
+                , EnumPermission.RBUT)
         ) return NO_OP;
         else if (Boolean.TRUE.equals(operate)
                 && !context.bot().hasPermission(context.group(), context.sender()
-                , EnumPermission.AADM)
+                , EnumPermission.ABUT)
         ) return NO_OP;
         else if (Boolean.FALSE.equals(operate)
                 && !context.bot().hasPermission(context.group(), context.sender()
-                , EnumPermission.RADM)
+                , EnumPermission.RBUT)
         ) return NO_OP;
 
         // 解析目标
         Set<Long> targets = getQQsWithReplay(context, args);
 
         for (Long targetId : targets) {
-            boolean add = Objects.requireNonNullElseGet(operate, () -> !context.bot().isGroupAdmin(context.group(), targetId));
+            boolean add = Objects.requireNonNullElseGet(operate, () -> !BaniraUtils.isButler(targetId));
 
             if (add) {
-                context.bot().setGroupAdmin(context.group(), targetId, true);
+                globalConfig.get().butler().add(new PermissionConfig(targetId, EnumPermission.getButler()));
             } else {
                 if (context.bot().isUpper(context.group(), context.sender(), targetId)) {
-                    context.bot().setGroupAdmin(context.group(), targetId, false);
+                    globalConfig.get().butler().removeIf(butler -> targetId.equals(butler.id()));
                 } else {
                     nop.add(targetId);
                 }
             }
         }
+        BaniraUtils.saveGlobalConfig();
 
         return targets.isEmpty() ? FAIL : SUCCESS;
     }

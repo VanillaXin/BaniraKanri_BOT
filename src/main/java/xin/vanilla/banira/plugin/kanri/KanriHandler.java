@@ -20,7 +20,7 @@ public interface KanriHandler {
     /**
      * 没有权限操作的QQ
      */
-    Set<Long> fail = BaniraUtils.mutableSetOf();
+    Set<Long> nop = BaniraUtils.mutableSetOf();
 
     /**
      * 机器人是否有权限执行
@@ -52,14 +52,14 @@ public interface KanriHandler {
     int execute(@Nonnull KanriContext context, @Nonnull String[] args);
 
     default void clearFail() {
-        fail.clear();
+        nop.clear();
     }
 
     /**
      * 提示没有权限
      */
     default void executeFail(@Nonnull KanriContext context) {
-        if (!fail.isEmpty()) {
+        if (!nop.isEmpty()) {
             MsgUtils builder = MsgUtils.builder();
             if (context.msgId() > 0) {
                 builder.reply(context.msgId());
@@ -67,7 +67,7 @@ public interface KanriHandler {
                 builder.reply(context.guildMsgId());
             }
             context.bot().sendGroupMsg(context.group()
-                    , builder.text(String.format("你没有权限对%s执行该操作", fail)).build()
+                    , builder.text(String.format("你没有权限对%s执行该操作", nop)).build()
                     , false
             );
             clearFail();
@@ -82,7 +82,7 @@ public interface KanriHandler {
                 qqs.add(BaniraUtils.getAtQQ(arg));
             } else {
                 long l = StringUtils.toLong(arg, -1L);
-                if (l != -1) qqs.add(l);
+                if (l >= 10000) qqs.add(l);
             }
         }
         return qqs;
