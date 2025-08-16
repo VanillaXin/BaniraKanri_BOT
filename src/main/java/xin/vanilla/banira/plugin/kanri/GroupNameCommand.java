@@ -46,8 +46,8 @@ public class GroupNameCommand implements KanriHandler {
         // 解析内容
         String tag;
         if (args.length == 0) {
-            if (BaniraUtils.hasReplay(context.event().getArrayMsg())) {
-                tag = BaniraUtils.getReplayContent(context.bot(), context.event().getArrayMsg());
+            if (BaniraUtils.hasReply(context.event().getArrayMsg())) {
+                tag = BaniraUtils.getReplyContentString(context.bot(), context.event().getArrayMsg());
             } else {
                 tag = "";
             }

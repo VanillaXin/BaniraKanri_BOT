@@ -511,6 +511,26 @@ public class BaniraBot extends Bot {
         return BaniraUtils.hasAnyPermissions(this, groupId, qq, permissions);
     }
 
+    public List<ArrayMsg> getReplayContentById(Long replayId) {
+        return BaniraUtils.getReplayContentById(this, replayId);
+    }
+
+    public List<ArrayMsg> getReplayContent(List<ArrayMsg> arrayMsg) {
+        return BaniraUtils.getReplayContent(this, arrayMsg);
+    }
+
+    public String getReplayContentString(List<ArrayMsg> arrayMsg) {
+        return BaniraUtils.getReplyContentString(this, arrayMsg);
+    }
+
+    public List<ArrayMsg> getReplyContent(String msg) {
+        return BaniraUtils.getReplyContent(this, msg);
+    }
+
+    public String getReplyContentString(String msg) {
+        return BaniraUtils.getReplyContentString(this, msg);
+    }
+
     // endregion util
 
 }

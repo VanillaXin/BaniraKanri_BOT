@@ -3,7 +3,6 @@ package xin.vanilla.banira.util;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.mikuac.shiro.common.utils.JsonUtils;
 import com.mikuac.shiro.common.utils.MessageConverser;
-import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.response.GroupMemberInfoResp;
@@ -207,17 +206,11 @@ public class BaniraUtils {
 
     // region 回复
 
-    public static final Pattern REPLAY_PATTERN = Pattern.compile(
-            StringUtils.escapeExprSpecialWord(
-                    MsgUtils.builder().reply(233).build()
-            ).replace("233", "[^\\[\\]]*?")
-    );
-
-    public static boolean hasReplay(List<ArrayMsg> arrayMsg) {
+    public static boolean hasReply(List<ArrayMsg> arrayMsg) {
         return arrayMsg.stream().anyMatch(e -> e.getType() == MsgTypeEnum.reply);
     }
 
-    public static Long getReplayId(List<ArrayMsg> arrayMsg) {
+    public static Long getReplyId(List<ArrayMsg> arrayMsg) {
         return arrayMsg.stream()
                 .filter(e -> e.getType() == MsgTypeEnum.reply)
                 .findFirst()
@@ -225,19 +218,26 @@ public class BaniraUtils {
                 .orElse(null);
     }
 
-    public static String getReplayContent(BaniraBot bot, List<ArrayMsg> arrayMsg) {
-        Long replayId = getReplayId(arrayMsg);
-        String result = null;
+    public static List<ArrayMsg> getReplayContentById(BaniraBot bot, Long replayId) {
+        List<ArrayMsg> result = null;
         if (replayId != null) {
             ActionData<MsgResp> msgData = bot.getMsg(replayId.intValue());
             if (bot.isActionDataNotEmpty(msgData)) {
-                result = msgData.getData().getMessage();
+                result = msgData.getData().getArrayMsg();
             }
         }
         return result;
     }
 
-    public static long getReplayQQ(BaniraBot bot, Long groupId, List<ArrayMsg> arrayMsg) {
+    public static List<ArrayMsg> getReplayContent(BaniraBot bot, List<ArrayMsg> arrayMsg) {
+        return getReplayContentById(bot, getReplyId(arrayMsg));
+    }
+
+    public static String getReplyContentString(BaniraBot bot, List<ArrayMsg> arrayMsg) {
+        return MessageConverser.arraysToString(getReplayContent(bot, arrayMsg));
+    }
+
+    public static long getReplyQQ(BaniraBot bot, Long groupId, List<ArrayMsg> arrayMsg) {
         long qq = arrayMsg.stream()
                 .filter(e -> e.getType() == MsgTypeEnum.reply)
                 .findFirst()
@@ -246,7 +246,7 @@ public class BaniraUtils {
         if (qq == 0) {
             IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
             List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
-                    .setMsgId(String.valueOf(getReplayId(arrayMsg)))
+                    .setMsgId(String.valueOf(getReplyId(arrayMsg)))
                     .setBotId(bot.getSelfId())
                     .setTargetId(groupId)
             );
@@ -258,33 +258,31 @@ public class BaniraUtils {
         return qq;
     }
 
-    public static boolean hasReplay(String msg) {
-        return StringUtils.isNotNullOrEmpty(msg) && REPLAY_PATTERN.matcher(msg).find();
+    public static boolean hasReply(String msg) {
+        return StringUtils.isNotNullOrEmpty(msg) && msg.contains("[CQ:reply,");
     }
 
-    public static Long getReplayId(String msg) {
-        return hasReplay(msg) ?
+    public static Long getReplyId(String msg) {
+        return hasReply(msg) ?
                 StringUtils.toLong(ID_PATTERN.matcher(msg).results()
                         .map(m -> m.group("id"))
                         .findFirst().orElse(null)) :
                 null;
     }
 
-    public static String getReplayContent(BaniraBot bot, String msg) {
-        Long replayId = getReplayId(msg);
-        String result = null;
-        if (replayId != null) {
-            ActionData<MsgResp> msgData = bot.getMsg(replayId.intValue());
-            if (bot.isActionDataNotEmpty(msgData)) {
-                result = msgData.getData().getMessage();
-            }
-        }
-        return result;
+    public static List<ArrayMsg> getReplyContent(BaniraBot bot, String msg) {
+        Long replayId = getReplyId(msg);
+        return getReplayContentById(bot, replayId);
     }
 
-    public static long getReplayQQ(BaniraBot bot, Long groupId, String msg) {
+    public static String getReplyContentString(BaniraBot bot, String msg) {
+        Long replayId = getReplyId(msg);
+        return MessageConverser.arraysToString(getReplayContentById(bot, replayId));
+    }
+
+    public static long getReplyQQ(BaniraBot bot, Long groupId, String msg) {
         long qq = 0;
-        if (hasReplay(msg)) {
+        if (hasReply(msg)) {
             qq = QQ_PATTERN.matcher(msg).results()
                     .map(m -> m.group("qq"))
                     .map(Long::parseLong)
@@ -292,7 +290,7 @@ public class BaniraUtils {
             if (qq == 0) {
                 IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
                 List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
-                        .setMsgId(String.valueOf(getReplayId(msg)))
+                        .setMsgId(String.valueOf(getReplyId(msg)))
                         .setBotId(bot.getSelfId())
                         .setTargetId(groupId)
                 );
@@ -305,8 +303,16 @@ public class BaniraUtils {
         return qq;
     }
 
-    public static String replaceReplay(String msg) {
-        return hasReplay(msg) ? REPLAY_PATTERN.matcher(msg).replaceAll("") : msg;
+    public static String replaceReply(String msg) {
+        String result = msg;
+        if (hasReply(msg)) {
+            result = MessageConverser.arraysToString(
+                    MessageConverser.stringToArray(msg).stream()
+                            .filter(o -> o.getType() != MsgTypeEnum.reply)
+                            .toList()
+            );
+        }
+        return result;
     }
 
     // endregion 回复

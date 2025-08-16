@@ -1,4 +1,4 @@
-package xin.vanilla.banira.event;
+package xin.vanilla.banira.listener;
 
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -10,13 +10,12 @@ import xin.vanilla.banira.config.entity.GroupConfig;
 public class YamlConfigChangeListener {
 
     @EventListener
-    public void onAppConfigReloaded(ConfigReloadedEvent<GlobalConfig> event) {
+    public void onGlobalConfigReloaded(ConfigReloadedEvent<GlobalConfig> event) {
 
     }
 
     @EventListener
-    public void onDbConfigReloaded(ConfigReloadedEvent<GroupConfig> event) {
+    public void onGroupConfigReloaded(ConfigReloadedEvent<GroupConfig> event) {
 
     }
 }
-

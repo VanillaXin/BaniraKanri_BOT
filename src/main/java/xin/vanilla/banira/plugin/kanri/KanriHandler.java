@@ -99,8 +99,8 @@ public interface KanriHandler {
     @Nonnull
     default Set<Long> getQQsWithReplay(@Nonnull KanriContext context, @Nonnull String[] args) {
         Set<Long> result = BaniraUtils.mutableSetOf();
-        if (BaniraUtils.hasReplay(context.event().getArrayMsg())) {
-            result.add(BaniraUtils.getReplayQQ(context.bot(), context.group(), context.event().getArrayMsg()));
+        if (BaniraUtils.hasReply(context.event().getArrayMsg())) {
+            result.add(BaniraUtils.getReplyQQ(context.bot(), context.group(), context.event().getArrayMsg()));
         } else if (BaniraUtils.hasAtAll(context.event().getArrayMsg())) {
             result.add(233L);
         }

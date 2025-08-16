@@ -50,8 +50,8 @@ public class CardCommand implements KanriHandler {
         // 解析内容
         String card;
         if (args.length == 0) {
-            if (BaniraUtils.hasReplay(context.event().getArrayMsg())) {
-                card = BaniraUtils.getReplayContent(context.bot(), context.event().getArrayMsg());
+            if (BaniraUtils.hasReply(context.event().getArrayMsg())) {
+                card = BaniraUtils.getReplyContentString(context.bot(), context.event().getArrayMsg());
             } else {
                 card = "";
             }

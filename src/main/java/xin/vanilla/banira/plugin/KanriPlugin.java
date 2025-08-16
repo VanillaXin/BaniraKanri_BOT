@@ -25,6 +25,9 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 群管指令
+ */
 @Slf4j
 @Shiro
 @Component

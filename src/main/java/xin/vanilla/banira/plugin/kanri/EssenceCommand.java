@@ -56,8 +56,8 @@ public class EssenceCommand implements KanriHandler {
 
         // 解析目标
         int target;
-        if (BaniraUtils.hasReplay(context.event().getArrayMsg()) && args.length == 0) {
-            target = (int) BaniraUtils.getReplayQQ(context.bot(), context.group(), context.event().getArrayMsg());
+        if (BaniraUtils.hasReply(context.event().getArrayMsg()) && args.length == 0) {
+            target = (int) BaniraUtils.getReplyQQ(context.bot(), context.group(), context.event().getArrayMsg());
         } else if (args.length > 0) {
             ActionData<MsgId> msgId = context.bot().sendGroupMsg(context.group(), context.content(), false);
             if (context.bot().isActionDataMsgIdNotEmpty(msgId)) {

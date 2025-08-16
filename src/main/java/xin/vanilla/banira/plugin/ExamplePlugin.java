@@ -19,6 +19,9 @@ import xin.vanilla.banira.service.IMessageRecordManager;
 
 import java.util.List;
 
+/**
+ * 示例插件
+ */
 @Slf4j
 @Shiro
 @Component

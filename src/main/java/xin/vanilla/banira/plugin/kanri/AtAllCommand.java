@@ -41,8 +41,8 @@ public class AtAllCommand implements KanriHandler {
     @Override
     public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
         int replayId = -1;
-        if (BaniraUtils.hasReplay(context.event().getArrayMsg())) {
-            replayId = BaniraUtils.getReplayId(context.event().getArrayMsg()).intValue();
+        if (BaniraUtils.hasReply(context.event().getArrayMsg())) {
+            replayId = BaniraUtils.getReplyId(context.event().getArrayMsg()).intValue();
         }
         if (replayId < 0) {
             replayId = context.msgId();

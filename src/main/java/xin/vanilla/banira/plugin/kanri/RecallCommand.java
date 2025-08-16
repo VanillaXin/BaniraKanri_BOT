@@ -50,8 +50,8 @@ public class RecallCommand implements KanriHandler {
         Set<Integer> targets = BaniraUtils.mutableSetOf(context.msgId());
 
         int start;
-        if (BaniraUtils.hasReplay(context.event().getArrayMsg())) {
-            start = BaniraUtils.getReplayId(context.event().getArrayMsg()).intValue();
+        if (BaniraUtils.hasReply(context.event().getArrayMsg())) {
+            start = BaniraUtils.getReplyId(context.event().getArrayMsg()).intValue();
             if (args.length == 0) targets.add(start);
         } else if (args.length > 0) {
             start = context.msgId();

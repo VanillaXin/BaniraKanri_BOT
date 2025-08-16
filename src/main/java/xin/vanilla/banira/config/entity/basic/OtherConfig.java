@@ -9,13 +9,15 @@ import java.util.Set;
 @Accessors(chain = true)
 public record OtherConfig(
         Set<String> hentaiPath,
-        Set<WifeConfig> wifeConfig
+        Set<WifeConfig> wifeConfig,
+        Set<String> imageFaceToImage
 ) {
 
     public static OtherConfig preset() {
         return new OtherConfig(
-                BaniraUtils.mutableSetOf(""),
-                BaniraUtils.mutableSetOf(new WifeConfig("^抽(<nick>.{2,5})$", "$nick"))
+                BaniraUtils.mutableSetOf("")
+                , BaniraUtils.mutableSetOf(new WifeConfig("^抽(<nick>.{2,5})$", "$nick"))
+                , BaniraUtils.mutableSetOf("getface", "getimage", "getimg")
         );
     }
 

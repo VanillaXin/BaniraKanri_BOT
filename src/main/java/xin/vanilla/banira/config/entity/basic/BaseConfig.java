@@ -2,6 +2,7 @@ package xin.vanilla.banira.config.entity.basic;
 
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.plugin.ExamplePlugin;
+import xin.vanilla.banira.plugin.ImageFaceToImagePlugin;
 import xin.vanilla.banira.plugin.KanriPlugin;
 import xin.vanilla.banira.util.BaniraUtils;
 
@@ -26,6 +27,7 @@ public record BaseConfig(
                 BaniraUtils.mutableMapOf(
                         KanriPlugin.class.getName(), 1
                         , ExamplePlugin.class.getName(), 99
+                        , ImageFaceToImagePlugin.class.getName(), 99
                 )
         );
     }
