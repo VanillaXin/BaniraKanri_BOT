@@ -24,7 +24,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Bot大包装，实现记录发送的消息
+ * Bot大包装，实现记录发送的消息并提供部分工具方法
  */
 @SuppressWarnings("unused")
 public class BaniraBot extends Bot {
@@ -38,6 +38,7 @@ public class BaniraBot extends Bot {
                 , bot.getBotMessageEventInterceptor()
         );
     }
+
 
     // region override
 
@@ -369,6 +370,33 @@ public class BaniraBot extends Bot {
     }
 
     // endregion override
+
+
+    // region ex
+
+    /**
+     * 设置消息表情回复
+     *
+     * @param msgId 消息Id
+     * @param code  表情代码 {@link com.mikuac.shiro.common.utils.FaceUtils}
+     * @return 是否成功
+     */
+    public boolean setMsgEmojiLike(int msgId, long code) {
+        ActionRaw actionRaw = super.setMsgEmojiLike(msgId, String.valueOf(code), true);
+        return actionRaw != null && "ok".equalsIgnoreCase(actionRaw.getStatus());
+    }
+
+    /**
+     * 设置消息表情回复 心碎💔
+     *
+     * @param msgId 消息Id
+     * @return 是否成功
+     */
+    public boolean setMsgEmojiLikeBrokenHeart(int msgId) {
+        return setMsgEmojiLike(msgId, 67);
+    }
+
+    // endregion ex
 
 
     // region util

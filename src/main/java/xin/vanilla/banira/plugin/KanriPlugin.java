@@ -18,7 +18,6 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.kanri.KanriHandler;
 import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -105,23 +104,20 @@ public class KanriPlugin extends BasePlugin {
             }
         }
 
-        String emoji;
+        Integer emoji;
         switch (result) {
             // no
-            case KanriHandler.NO_OP -> emoji = "123";
+            case KanriHandler.NO_OP -> emoji = 123;
             // sleep
-            case KanriHandler.BOT_NO_OP -> emoji = "8";
+            case KanriHandler.BOT_NO_OP -> emoji = 8;
             // broken heart
-            case KanriHandler.FAIL -> emoji = "67";
+            case KanriHandler.FAIL -> emoji = 67;
             // ok
-            case KanriHandler.SUCCESS -> emoji = "124";
+            case KanriHandler.SUCCESS -> emoji = 124;
             default -> emoji = null;
         }
-        if (StringUtils.isNotNullOrEmpty(emoji)) {
-            bot.setMsgEmojiLike(msgId, emoji, true);
-        }
 
-        return result == KanriHandler.SUCCESS;
+        return emoji != null && bot.setMsgEmojiLike(msgId, emoji);
     }
 
 }

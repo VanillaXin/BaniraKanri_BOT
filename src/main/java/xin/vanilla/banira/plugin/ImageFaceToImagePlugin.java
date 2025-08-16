@@ -35,14 +35,18 @@ public class ImageFaceToImagePlugin extends BasePlugin {
         ) {
             if (BaniraUtils.hasReply(event.getArrayMsg())) {
                 List<ArrayMsg> replayContent = bot.getReplayContent(event.getArrayMsg());
-                MsgUtils builder = MsgUtils.builder()
-                        .reply(event.getMessageId());
-                replayContent.stream()
+                List<String> urls = replayContent.stream()
                         .filter(msg -> msg.getType() == MsgTypeEnum.image)
                         .map(msg -> msg.getStringData("url"))
-                        .forEach(url -> builder.text(url).img(url));
-                ActionData<MsgId> msgId = bot.sendMsg(event, builder.build(), false);
-                return bot.isActionDataMsgIdNotEmpty(msgId);
+                        .toList();
+                if (!urls.isEmpty()) {
+                    MsgUtils builder = MsgUtils.builder().reply(event.getMessageId());
+                    urls.forEach(url -> builder.text(url).img(url));
+                    ActionData<MsgId> msgId = bot.sendMsg(event, builder.build(), false);
+                    return bot.isActionDataMsgIdNotEmpty(msgId);
+                } else {
+                    return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                }
             }
         }
         return false;
