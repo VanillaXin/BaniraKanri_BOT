@@ -1,10 +1,13 @@
 package xin.vanilla.banira.plugin.common;
 
+import com.mikuac.shiro.common.utils.JsonUtils;
 import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.ActionRaw;
 import com.mikuac.shiro.dto.action.common.MsgId;
+import com.mikuac.shiro.dto.action.response.GetForwardMsgResp;
+import com.mikuac.shiro.dto.action.response.LoginInfoResp;
 import com.mikuac.shiro.dto.action.response.MsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.model.ArrayMsg;
@@ -249,19 +252,29 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionRaw}
      */
     public ActionData<MsgId> sendGroupForwardMsg(long groupId, List<Map<String, Object>> msg) {
-        ActionData<MsgId> msgId = super.sendGroupForwardMsg(groupId, msg);
-        if (isActionDataMsgIdNotEmpty(msgId)) {
+        ActionData<MsgId> msgIdData = super.sendGroupForwardMsg(groupId, msg);
+        if (isActionDataMsgIdNotEmpty(msgIdData)) {
+            Integer msgId = getActionDataMsgId(msgIdData);
             MessageRecord record = new MessageRecord()
-                    .setMsgId(getActionDataMsgId(msgId))
+                    .setMsgId(msgId)
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setGroupId(groupId)
                     .setTime(System.currentTimeMillis() / 1000)
-                    .setMsgRaw(String.format("[CQ:forward,id=%s]", getActionDataMsgId(msgId)))
                     .setMsgType(EnumMessageType.GROUP);
+
+            ActionData<GetForwardMsgResp> forwardMsg = getForwardMsg(msgId);
+            if (isActionDataNotEmpty(forwardMsg)) {
+                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, forwardMsg.getData().getMessages());
+                record.setMsgRaw(JsonUtils.toJSONString(arrayMsg))
+                        .setMsgRecode(arrayMsg.toCQCode());
+            } else {
+                record.setMsgRaw(String.format("[CQ:forward,id=%s]", msgId))
+                        .setMsgRecode(String.format("[CQ:forward,id=%s]", msgId));
+            }
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
-        return msgId;
+        return msgIdData;
     }
 
     /**
@@ -273,19 +286,29 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionRaw}
      */
     public ActionData<MsgId> sendPrivateForwardMsg(long userId, List<Map<String, Object>> msg) {
-        ActionData<MsgId> msgId = super.sendPrivateForwardMsg(userId, msg);
-        if (isActionDataMsgIdNotEmpty(msgId)) {
+        ActionData<MsgId> msgIdData = super.sendPrivateForwardMsg(userId, msg);
+        if (isActionDataMsgIdNotEmpty(msgIdData)) {
+            Integer msgId = getActionDataMsgId(msgIdData);
             MessageRecord record = new MessageRecord()
-                    .setMsgId(getActionDataMsgId(msgId))
+                    .setMsgId(msgId)
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setTargetId(userId)
                     .setTime(System.currentTimeMillis() / 1000)
-                    .setMsgRaw(String.format("[CQ:forward,id=%s]", getActionDataMsgId(msgId)))
                     .setMsgType(EnumMessageType.FRIEND);
+
+            ActionData<GetForwardMsgResp> forwardMsg = getForwardMsg(msgId);
+            if (isActionDataNotEmpty(forwardMsg)) {
+                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, forwardMsg.getData().getMessages());
+                record.setMsgRaw(JsonUtils.toJSONString(arrayMsg))
+                        .setMsgRecode(arrayMsg.toCQCode());
+            } else {
+                record.setMsgRaw(String.format("[CQ:forward,id=%s]", msgId))
+                        .setMsgRecode(String.format("[CQ:forward,id=%s]", msgId));
+            }
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
-        return msgId;
+        return msgIdData;
     }
 
     /**
@@ -297,22 +320,32 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionRaw}
      */
     public ActionData<MsgId> sendForwardMsg(AnyMessageEvent event, List<Map<String, Object>> msg) {
-        ActionData<MsgId> msgId = super.sendForwardMsg(event, msg);
-        if (isActionDataMsgIdNotEmpty(msgId)) {
+        ActionData<MsgId> msgIdData = super.sendForwardMsg(event, msg);
+        if (isActionDataMsgIdNotEmpty(msgIdData)) {
+            Integer msgId = getActionDataMsgId(msgIdData);
             MessageRecord record = new MessageRecord()
-                    .setMsgId(getActionDataMsgId(msgId))
+                    .setMsgId(msgId)
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setGroupId(event.getGroupId())
                     .setTime(System.currentTimeMillis() / 1000)
-                    .setMsgRaw(String.format("[CQ:forward,id=%s]", getActionDataMsgId(msgId)))
                     .setMsgType(EnumMessageType.getType(event));
+
+            ActionData<GetForwardMsgResp> forwardMsg = getForwardMsg(msgId);
+            if (isActionDataNotEmpty(forwardMsg)) {
+                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, forwardMsg.getData().getMessages());
+                record.setMsgRaw(JsonUtils.toJSONString(arrayMsg))
+                        .setMsgRecode(arrayMsg.toCQCode());
+            } else {
+                record.setMsgRaw(String.format("[CQ:forward,id=%s]", msgId))
+                        .setMsgRecode(String.format("[CQ:forward,id=%s]", msgId));
+            }
             if (record.getMsgType() != EnumMessageType.GROUP) {
                 record.setTargetId(event.getUserId());
             }
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
-        return msgId;
+        return msgIdData;
     }
 
     /**
@@ -327,19 +360,29 @@ public class BaniraBot extends Bot {
      *                <p>参考 {@link com.mikuac.shiro.common.utils.ShiroUtils#generateSingleMsg(long, String, String)}</p>来生成单条聊天记录
      */
     public ActionData<MsgId> sendGroupForwardMsg(long groupId, List<Map<String, Object>> msg, String prompt, String source, String summary, List<Map<String, String>> news) {
-        ActionData<MsgId> msgId = super.sendGroupForwardMsg(groupId, msg, prompt, source, summary, news);
-        if (isActionDataMsgIdNotEmpty(msgId)) {
+        ActionData<MsgId> msgIdData = super.sendGroupForwardMsg(groupId, msg, prompt, source, summary, news);
+        if (isActionDataMsgIdNotEmpty(msgIdData)) {
+            Integer msgId = getActionDataMsgId(msgIdData);
             MessageRecord record = new MessageRecord()
-                    .setMsgId(getActionDataMsgId(msgId))
+                    .setMsgId(msgId)
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setGroupId(groupId)
                     .setTime(System.currentTimeMillis() / 1000)
-                    .setMsgRaw(String.format("[CQ:forward,id=%s]", getActionDataMsgId(msgId)))
                     .setMsgType(EnumMessageType.GROUP);
+
+            ActionData<GetForwardMsgResp> forwardMsg = getForwardMsg(msgId);
+            if (isActionDataNotEmpty(forwardMsg)) {
+                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, forwardMsg.getData().getMessages());
+                record.setMsgRaw(JsonUtils.toJSONString(arrayMsg))
+                        .setMsgRecode(arrayMsg.toCQCode());
+            } else {
+                record.setMsgRaw(String.format("[CQ:forward,id=%s]", msgId))
+                        .setMsgRecode(String.format("[CQ:forward,id=%s]", msgId));
+            }
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
-        return msgId;
+        return msgIdData;
     }
 
     /**
@@ -354,19 +397,29 @@ public class BaniraBot extends Bot {
      *                <p>参考 {@link com.mikuac.shiro.common.utils.ShiroUtils#generateSingleMsg(long, String, String)}</p>来生成单条聊天记录
      */
     public ActionData<MsgId> sendPrivateForwardMsg(long userId, List<Map<String, Object>> msg, String prompt, String source, String summary, List<Map<String, String>> news) {
-        ActionData<MsgId> msgId = super.sendPrivateForwardMsg(userId, msg, prompt, source, summary, news);
-        if (isActionDataMsgIdNotEmpty(msgId)) {
+        ActionData<MsgId> msgIdData = super.sendPrivateForwardMsg(userId, msg, prompt, source, summary, news);
+        if (isActionDataMsgIdNotEmpty(msgIdData)) {
+            Integer msgId = getActionDataMsgId(msgIdData);
             MessageRecord record = new MessageRecord()
-                    .setMsgId(getActionDataMsgId(msgId))
+                    .setMsgId(msgId)
                     .setBotId(super.getSelfId())
                     .setSenderId(super.getSelfId())
                     .setTargetId(userId)
                     .setTime(System.currentTimeMillis() / 1000)
-                    .setMsgRaw(String.format("[CQ:forward,id=%s]", getActionDataMsgId(msgId)))
                     .setMsgType(EnumMessageType.FRIEND);
+
+            ActionData<GetForwardMsgResp> forwardMsg = getForwardMsg(msgId);
+            if (isActionDataNotEmpty(forwardMsg)) {
+                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, forwardMsg.getData().getMessages());
+                record.setMsgRaw(JsonUtils.toJSONString(arrayMsg))
+                        .setMsgRecode(arrayMsg.toCQCode());
+            } else {
+                record.setMsgRaw(String.format("[CQ:forward,id=%s]", msgId))
+                        .setMsgRecode(String.format("[CQ:forward,id=%s]", msgId));
+            }
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
-        return msgId;
+        return msgIdData;
     }
 
     // endregion override
@@ -394,6 +447,18 @@ public class BaniraBot extends Bot {
      */
     public boolean setMsgEmojiLikeBrokenHeart(int msgId) {
         return setMsgEmojiLike(msgId, 67);
+    }
+
+    public LoginInfoResp getLoginInfoEx() {
+        LoginInfoResp result = new LoginInfoResp();
+        ActionData<LoginInfoResp> loginInfo = super.getLoginInfo();
+        if (isActionDataNotEmpty(loginInfo)) {
+            result = loginInfo.getData();
+        } else {
+            result.setUserId(this.getSelfId());
+            result.setNickname("香草酱");
+        }
+        return result;
     }
 
     // endregion ex

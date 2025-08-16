@@ -3,9 +3,11 @@ package xin.vanilla.banira.plugin;
 import com.mikuac.shiro.annotation.AnyMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.MsgUtils;
+import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.MsgId;
+import com.mikuac.shiro.dto.action.response.LoginInfoResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.enums.MsgTypeEnum;
 import com.mikuac.shiro.model.ArrayMsg;
@@ -15,7 +17,9 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.util.BaniraUtils;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 图片表情转图片
@@ -40,9 +44,17 @@ public class ImageFaceToImagePlugin extends BasePlugin {
                         .map(msg -> msg.getStringData("url"))
                         .toList();
                 if (!urls.isEmpty()) {
-                    MsgUtils builder = MsgUtils.builder().reply(event.getMessageId());
-                    urls.forEach(url -> builder.text(url).img(url));
-                    ActionData<MsgId> msgId = bot.sendMsg(event, builder.build(), false);
+                    LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
+                    List<Map<String, Object>> msg = new ArrayList<>();
+                    msg.add(ShiroUtils.generateSingleMsg(event.getUserId(), event.getSender().getNickname(), event.getMessage()));
+                    urls.forEach(url -> msg.add(
+                            ShiroUtils.generateSingleMsg(
+                                    bot.getSelfId()
+                                    , loginInfoEx.getNickname()
+                                    , MsgUtils.builder().text(url).img(url).build()
+                            )
+                    ));
+                    ActionData<MsgId> msgId = bot.sendForwardMsg(event, msg);
                     return bot.isActionDataMsgIdNotEmpty(msgId);
                 } else {
                     return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());

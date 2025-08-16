@@ -465,9 +465,13 @@ public class BaniraUtils {
         return result;
     }
 
-    public static String encodeForwardMsg(Long forwardId, List<MsgResp> forwardMsg) {
+    public static ArrayMsg packForwardMsg(Long forwardId, List<MsgResp> forwardMsg) {
         Map<String, Object> forwardData = BaniraUtils.mutableMapOf("id", forwardId, "content", forwardMsg);
-        return new ArrayMsg().setType(MsgTypeEnum.forward).setData(forwardData).toCQCode();
+        return new ArrayMsg().setType(MsgTypeEnum.forward).setData(forwardData);
+    }
+
+    public static String encodeForwardMsg(Long forwardId, List<MsgResp> forwardMsg) {
+        return packForwardMsg(forwardId, forwardMsg).toCQCode();
     }
 
     public static List<ArrayMsg> decodeForwardMsg(String forwardMsg) {
