@@ -1,5 +1,7 @@
 package xin.vanilla.banira.util;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.mikuac.shiro.common.utils.JsonUtils;
 import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
@@ -379,6 +381,94 @@ public class BaniraUtils {
     }
 
     // endregion 消息ID
+
+    // region 合并转发
+
+    public static boolean hasForward(List<ArrayMsg> arrayMsg) {
+        return arrayMsg.stream().anyMatch(e -> e.getType() == MsgTypeEnum.forward);
+    }
+
+    public static Long getForwardId(List<ArrayMsg> arrayMsg) {
+        return arrayMsg.stream()
+                .filter(e -> e.getType() == MsgTypeEnum.forward)
+                .findFirst()
+                .map(e -> e.getLongData("id"))
+                .orElse(null);
+    }
+
+    public static List<MsgResp> getForwardContentFirst(ArrayMsg... arrayMsg) {
+        List<MsgResp> result = new ArrayList<>();
+        if (CollectionUtils.isNotNullOrEmpty(arrayMsg)) {
+            if (arrayMsg[0].getType() == MsgTypeEnum.forward) {
+                String content = arrayMsg[0].getStringData("content");
+                if (JsonUtils.isValid(content)) {
+                    result = JsonUtils.readValue(content, new TypeReference<>() {
+                    });
+                }
+            }
+        }
+        return result;
+    }
+
+    public static List<List<MsgResp>> getForwardContent(Collection<ArrayMsg> arrayMsg) {
+        return getForwardContent(arrayMsg.toArray(new ArrayMsg[]{}));
+    }
+
+    public static List<List<MsgResp>> getForwardContent(ArrayMsg... arrayMsg) {
+        List<List<MsgResp>> result = new ArrayList<>();
+        if (CollectionUtils.isNotNullOrEmpty(arrayMsg)) {
+            for (ArrayMsg msg : arrayMsg) {
+                result.add(getForwardContentFirst(msg));
+            }
+        }
+        return result;
+    }
+
+    public static boolean hsaForward(String msg) {
+        return StringUtils.isNotNullOrEmpty(msg) && msg.contains("[CQ:forward,");
+    }
+
+    public static Long getForwardId(String msg) {
+        return hsaForward(msg) ?
+                ID_PATTERN.matcher(msg).results()
+                        .map(m -> m.group("id"))
+                        .map(Long::parseLong)
+                        .findFirst().orElse(null) :
+                null;
+    }
+
+    public static List<MsgResp> getForwardContentFirst(String msg) {
+        List<MsgResp> result = new ArrayList<>();
+        if (hsaForward(msg)) {
+            List<ArrayMsg> arrayMsg = decodeForwardMsg(msg);
+            if (CollectionUtils.isNotNullOrEmpty(arrayMsg)) {
+                result = getForwardContentFirst(arrayMsg.toArray(new ArrayMsg[]{}));
+            }
+        }
+        return result;
+    }
+
+    public static List<List<MsgResp>> getForwardContent(String msg) {
+        List<List<MsgResp>> result = new ArrayList<>();
+        if (hsaForward(msg)) {
+            List<ArrayMsg> arrayMsg = decodeForwardMsg(msg);
+            if (CollectionUtils.isNotNullOrEmpty(arrayMsg)) {
+                result = getForwardContent(arrayMsg);
+            }
+        }
+        return result;
+    }
+
+    public static String encodeForwardMsg(Long forwardId, List<MsgResp> forwardMsg) {
+        Map<String, Object> forwardData = BaniraUtils.mutableMapOf("id", forwardId, "content", forwardMsg);
+        return new ArrayMsg().setType(MsgTypeEnum.forward).setData(forwardData).toCQCode();
+    }
+
+    public static List<ArrayMsg> decodeForwardMsg(String forwardMsg) {
+        return MessageConverser.stringToArray(forwardMsg);
+    }
+
+    // endregion 合并转发
 
     // region 其他
 

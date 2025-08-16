@@ -42,7 +42,7 @@ public class MessageRecord {
      */
     private Long time;
     /**
-     * 消息内容
+     * 消息内容 ({@link java.util.List} of {@link com.mikuac.shiro.model.ArrayMsg})
      */
     private String msgRaw;
     /**
@@ -50,7 +50,7 @@ public class MessageRecord {
      */
     private EnumMessageType msgType;
     /**
-     * 消息内容
+     * 消息内容 (CQCode)
      */
     private String msgRecode = "";
 
@@ -72,6 +72,16 @@ public class MessageRecord {
 
     public MessageRecord setGroupId(Long groupId) {
         this.groupId = groupId != null ? groupId : 0L;
+        return this;
+    }
+
+    public MessageRecord setMsgRaw(String msgRaw) {
+        this.msgRaw = msgRaw != null ? msgRaw : "";
+        return this;
+    }
+
+    public MessageRecord setMsgRecode(String msgRecode) {
+        this.msgRecode = msgRecode != null ? msgRecode : "";
         return this;
     }
 

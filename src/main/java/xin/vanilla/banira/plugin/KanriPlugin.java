@@ -105,13 +105,13 @@ public class KanriPlugin extends BasePlugin {
         String emoji;
         switch (result) {
             // no
-            case KanriHandler.NO_OP -> emoji = String.valueOf(123);
+            case KanriHandler.NO_OP -> emoji = "123";
             // sleep
-            case KanriHandler.BOT_NO_OP -> emoji = String.valueOf(8);
+            case KanriHandler.BOT_NO_OP -> emoji = "8";
             // broken heart
-            case KanriHandler.FAIL -> emoji = String.valueOf(67);
+            case KanriHandler.FAIL -> emoji = "67";
             // ok
-            case KanriHandler.SUCCESS -> emoji = String.valueOf(124);
+            case KanriHandler.SUCCESS -> emoji = "124";
             default -> emoji = null;
         }
         if (StringUtils.isNotNullOrEmpty(emoji)) {

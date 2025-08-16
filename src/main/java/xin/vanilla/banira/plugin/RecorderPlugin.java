@@ -2,16 +2,20 @@ package xin.vanilla.banira.plugin;
 
 import com.mikuac.shiro.annotation.AnyMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
+import com.mikuac.shiro.common.utils.JsonUtils;
 import com.mikuac.shiro.core.Bot;
+import com.mikuac.shiro.dto.action.common.ActionData;
+import com.mikuac.shiro.dto.action.response.GetForwardMsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumMessageType;
+import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.service.IMessageRecordManager;
+import xin.vanilla.banira.util.BaniraUtils;
 
 /**
  * 消息记录
@@ -37,10 +41,24 @@ public class RecorderPlugin extends BasePlugin {
                 .setSenderId(event.getUserId())
                 .setGroupId(event.getGroupId())
                 .setTime(event.getTime())
-                .setMsgRaw(event.getMessage())
+                .setMsgRaw(JsonUtils.toJSONString(event.getArrayMsg()))
+                .setMsgRecode(event.getMessage())
                 .setMsgType(EnumMessageType.getType(event));
         if (record.getMsgType() == EnumMessageType.MEMBER) {
             record.setTargetId(event.getUserId());
+        }
+
+        // 解析转发消息
+        if (BaniraUtils.hasForward(event.getArrayMsg())) {
+            ActionData<GetForwardMsgResp> forwardMsg = bot.getForwardMsg(event.getMessageId());
+            if (bot.isActionDataNotEmpty(forwardMsg)) {
+                record.setMsgRecode(
+                        BaniraUtils.encodeForwardMsg(
+                                BaniraUtils.getForwardId(event.getArrayMsg())
+                                , forwardMsg.getData().getMessages()
+                        )
+                );
+            }
         }
 
         messageRecordManager.addMessageRecord(record);
