@@ -8,6 +8,8 @@ package xin.vanilla.banira.config.entity.extended;
  */
 public record WifeConfig(
         String reg,
-        String nick
+        String nick,
+        String success,
+        String fail
 ) {
 }

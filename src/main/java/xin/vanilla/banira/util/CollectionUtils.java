@@ -123,6 +123,20 @@ public class CollectionUtils {
         return elements[elements.length - 1];
     }
 
+    public static <T> T getOrDefault(Collection<T> elements, int index, T defaultValue) {
+        if (elements == null || elements.isEmpty()) {
+            return defaultValue;
+        }
+        return getNthElement(elements, index);
+    }
+
+    public static <T> T getOrDefault(T[] elements, int index, T defaultValue) {
+        if (elements == null || elements.length == 0) {
+            return defaultValue;
+        }
+        return elements[index];
+    }
+
     /**
      * 获取集合中指定索引位置的元素
      *

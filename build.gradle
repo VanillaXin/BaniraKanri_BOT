@@ -50,6 +50,16 @@ dependencies {
     implementation 'jakarta.validation:jakarta.validation-api:3.1.1'
     implementation 'org.hibernate.validator:hibernate-validator'
 
+    // PinYin
+    implementation 'com.github.houbb:pinyin:0.4.0'
+    // rcon
+    implementation 'xin.vanilla.rcon:rcon:1.2.1'
+    // system info
+    implementation 'com.github.oshi:oshi-core:6.8.2'
+    // wordle
+    implementation 'com.kennycason:kumo-core:1.28'
+    implementation 'com.kennycason:kumo-tokenizers:1.28'
+
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 
     // Lombok

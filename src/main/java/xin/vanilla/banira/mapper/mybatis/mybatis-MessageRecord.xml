@@ -373,6 +373,14 @@
             </foreach>
         </if>
 
+        <if test="_KEY_WORD_ != null">
+            AND (
+            t.msg_raw LIKE #{_KEY_WORD_}
+            OR t.msg_type LIKE #{_KEY_WORD_}
+            OR t.msg_recode LIKE #{_KEY_WORD_}
+            )
+        </if>
+
     </sql>
 
     <sql id="orderSql">
@@ -429,20 +437,6 @@
         FROM message_record t
         <include refid="whereSql"/>
         <include refid="orderSql"/>
-    </select>
-
-    <select id="selectByParamLimit" resultType="xin.vanilla.banira.domain.MessageRecord">
-        SELECT
-        <if test="_ALL_FIELDS_">
-            <include refid="allColumn"/>
-        </if>
-        <if test="!_ALL_FIELDS_">
-            <include refid="baseColumn"/>
-        </if>
-        FROM message_record t
-        <include refid="whereSql"/>
-        <include refid="orderSql"/>
-        LIMIT #{limit} OFFSET #{offset}
     </select>
 
 </mapper>

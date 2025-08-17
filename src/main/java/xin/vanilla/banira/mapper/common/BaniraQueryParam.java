@@ -13,7 +13,7 @@ import java.util.List;
 @Setter
 @SuppressWarnings({"unused"})
 public class BaniraQueryParam extends HashMap<String, Object> {
-    public static final String QUERY_ATTR_KEY_WORD = "_KEY_WORD_";
+    public static final String QUERY_KEY_WORD = "_KEY_WORD_";
 
     public static final String ALL_FIELDS = "_ALL_FIELDS_";
     public static final String ORDER = "_ORDER_";

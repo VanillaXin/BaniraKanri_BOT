@@ -4,6 +4,7 @@ import com.mikuac.shiro.common.utils.JsonUtils;
 import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
+import com.mikuac.shiro.dto.action.common.ActionList;
 import com.mikuac.shiro.dto.action.common.ActionRaw;
 import com.mikuac.shiro.dto.action.common.MsgId;
 import com.mikuac.shiro.dto.action.response.GetForwardMsgResp;
@@ -19,6 +20,7 @@ import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.start.SpringContextHolder;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.Collection;
@@ -449,6 +451,16 @@ public class BaniraBot extends Bot {
         return setMsgEmojiLike(msgId, 67);
     }
 
+    /**
+     * 设置消息表情回复 收到👌
+     *
+     * @param msgId 消息Id
+     * @return 是否成功
+     */
+    public boolean setMsgEmojiLikeOk(int msgId) {
+        return setMsgEmojiLike(msgId, 124);
+    }
+
     public LoginInfoResp getLoginInfoEx() {
         LoginInfoResp result = new LoginInfoResp();
         ActionData<LoginInfoResp> loginInfo = super.getLoginInfo();
@@ -468,6 +480,10 @@ public class BaniraBot extends Bot {
 
     public boolean isActionDataNotEmpty(ActionData<?> actionData) {
         return actionData != null && actionData.getData() != null;
+    }
+
+    public boolean isActionDataNotEmpty(ActionList<?> actionData) {
+        return actionData != null && CollectionUtils.isNotNullOrEmpty(actionData.getData());
     }
 
     public boolean isActionDataMsgIdNotEmpty(ActionData<MsgId> msgId) {

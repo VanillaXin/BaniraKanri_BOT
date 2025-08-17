@@ -4,6 +4,7 @@ import lombok.experimental.Accessors;
 import xin.vanilla.banira.plugin.ExamplePlugin;
 import xin.vanilla.banira.plugin.ImageFaceToImagePlugin;
 import xin.vanilla.banira.plugin.KanriPlugin;
+import xin.vanilla.banira.plugin.WifePlugin;
 import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.Map;
@@ -21,6 +22,13 @@ public record BaseConfig(
         Map<String, Integer> capability
 ) {
 
+    public static BaseConfig emtpy() {
+        return new BaseConfig(
+                BaniraUtils.mutableSetOf(),
+                BaniraUtils.mutableMapOf()
+        );
+    }
+
     public static BaseConfig preset() {
         return new BaseConfig(
                 BaniraUtils.mutableSetOf(),
@@ -28,6 +36,7 @@ public record BaseConfig(
                         KanriPlugin.class.getName(), 1
                         , ExamplePlugin.class.getName(), 99
                         , ImageFaceToImagePlugin.class.getName(), 99
+                        , WifePlugin.class.getName(), 99
                 )
         );
     }

@@ -98,7 +98,7 @@ public class RecallCommand implements KanriHandler {
                 param.setLimit(endIndex - startIndex + 1);
                 param.setOffset(Math.max(0, startIndex - 1));
             }
-            param.addOrderBy(MessageRecordQueryParam.ORDER_ATTR_ID, false);
+            param.addOrderBy(MessageRecordQueryParam.ORDER_ID, false);
             messageRecordManager.getMessageRecordList(param).stream()
                     .map(data -> StringUtils.toInt(data.getMsgId()))
                     .filter(data -> data > 0)

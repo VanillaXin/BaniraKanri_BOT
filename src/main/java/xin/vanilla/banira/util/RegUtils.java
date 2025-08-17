@@ -335,4 +335,51 @@ public class RegUtils {
         }
         return stringBuilder.toString();
     }
+
+    public static String extractParams(String regex, String input, String paramExpr) {
+        return extractParams(Pattern.compile(regex), input, paramExpr);
+    }
+
+    public static String extractParams(Pattern pattern, String input, String paramExpr) {
+        return extractParams(pattern.matcher(input), paramExpr);
+    }
+
+    public static String extractParams(Matcher matcher, String paramExpr) {
+        try {
+            if (!matcher.matches()) return paramExpr;
+
+            Pattern varPattern = Pattern.compile("\\$(\\w+)");
+            Matcher varMatcher = varPattern.matcher(paramExpr);
+
+            StringBuilder sb = new StringBuilder();
+            while (varMatcher.find()) {
+                String groupKey = varMatcher.group(1);
+                String replacement;
+
+                try {
+                    // 数字分组
+                    if (groupKey.matches("\\d+")) {
+                        int groupIndex = Integer.parseInt(groupKey);
+                        replacement = matcher.group(groupIndex);
+                    }
+                    // 命名分组
+                    else {
+                        replacement = matcher.group(groupKey);
+                    }
+
+                    if (replacement == null) {
+                        replacement = "$" + groupKey;
+                    }
+                } catch (Exception e) {
+                    replacement = "$" + groupKey;
+                }
+
+                varMatcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
+            }
+            varMatcher.appendTail(sb);
+            return sb.toString();
+        } catch (Exception e) {
+            return paramExpr;
+        }
+    }
 }
