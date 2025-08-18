@@ -91,6 +91,11 @@ public class BaniraUtils {
         return saveGlobalConfig() && saveGroupConfig();
     }
 
+    public static String getBotNick() {
+        String nick = getGlobalConfig().botNick();
+        return StringUtils.isNotNullOrEmpty(nick) ? nick : "香草酱";
+    }
+
     // endregion 配置管理
 
     // region mutableSetOf

@@ -10,7 +10,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class DateUtils {
 
@@ -167,6 +166,52 @@ public class DateUtils {
         if (date == null) date = new Date();
         SimpleDateFormat format = new SimpleDateFormat(pattern);
         return format.format(date);
+    }
+
+    public static Date toTheYearStart(Date date) {
+        Calendar ca = Calendar.getInstance();
+        ca.setTime(date);
+        ca.set(Calendar.YEAR, ca.get(Calendar.YEAR));
+        ca.set(Calendar.MONTH, 0);
+        ca.set(Calendar.DAY_OF_MONTH, 1);
+        return toTheDayStart(ca.getTime());
+    }
+
+    public static Date toTheYearEnd(Date date) {
+        Calendar ca = Calendar.getInstance();
+        ca.setTime(date);
+        ca.set(Calendar.YEAR, ca.get(Calendar.YEAR));
+        ca.set(Calendar.MONTH, 11);
+        ca.set(Calendar.DAY_OF_MONTH, 31);
+        return toTheDayEnd(ca.getTime());
+    }
+
+    public static Date toTheMonthStart(Date date) {
+        Calendar ca = Calendar.getInstance();
+        ca.setTime(date);
+        ca.set(Calendar.DAY_OF_MONTH, 1);
+        return toTheDayStart(ca.getTime());
+    }
+
+    public static Date toTheMonthEnd(Date date) {
+        Calendar ca = Calendar.getInstance();
+        ca.setTime(date);
+        ca.set(Calendar.DAY_OF_MONTH, ca.getActualMaximum(Calendar.DAY_OF_MONTH));
+        return toTheDayEnd(ca.getTime());
+    }
+
+    public static Date toTheWeekStart(Date date) {
+        Calendar ca = Calendar.getInstance();
+        ca.setTime(date);
+        ca.set(Calendar.DAY_OF_WEEK, 1);
+        return toTheDayStart(ca.getTime());
+    }
+
+    public static Date toTheWeekEnd(Date date) {
+        Calendar ca = Calendar.getInstance();
+        ca.setTime(date);
+        ca.set(Calendar.DAY_OF_WEEK, 7);
+        return toTheDayEnd(ca.getTime());
     }
 
     public static Date toTheDayStart(Date date) {
@@ -703,32 +748,17 @@ public class DateUtils {
     }
 
     /**
-     * 计算连续签到天数
-     *
-     * @param dateList 日期列表
-     * @param current  当前日期
+     * 获取10位时间戳
      */
-    public static int calculateContinuousDays(List<Date> dateList, Date current) {
-        if (dateList == null || dateList.isEmpty()) {
-            return 0;
-        }
-        dateList.add(current);
-        dateList = dateList.stream()
-                .map(DateUtils::toDateInt)
-                .distinct()
-                .sorted(Comparator.reverseOrder())
-                .map(DateUtils::getDate)
-                .collect(Collectors.toList());
-        if (current == null) current = dateList.getFirst();
-        int continuousDays = 0;
-        for (int i = 0; i < dateList.size(); i++) {
-            Date date = dateList.get(i);
-            if (i == 0 && DateUtils.toDateInt(current) <= DateUtils.toDateInt(date))
-                continuousDays++;
-            else if (i - 1 >= 0 && DateUtils.toDateInt(DateUtils.addDay(dateList.get(i - 1), -1)) == DateUtils.toDateInt(date))
-                continuousDays++;
-            else break;
-        }
-        return continuousDays;
+    public static long getTimestamp(Date date) {
+        return date.getTime() / 1000;
     }
+
+    /**
+     * 获取13位时间戳
+     */
+    public static long getTimestamp13(Date date) {
+        return date.getTime();
+    }
+
 }

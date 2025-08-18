@@ -34,7 +34,7 @@ public record OtherConfig(
 
                 , BaniraUtils.mutableSetOf("wife", "老婆")
 
-                , BaniraUtils.mutableSetOf("getface", "getimage", "getimg")
+                , BaniraUtils.mutableSetOf("获取表情", "获取图片", "获取表情图片", "getface", "getimage", "getimg")
         );
     }
 

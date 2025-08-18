@@ -18,9 +18,14 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.Date;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * YAML配置管理器
+ */
 @Slf4j
 public class YamlConfigManager<T> {
 
@@ -31,8 +36,9 @@ public class YamlConfigManager<T> {
     private final Validator validator;
     private final ApplicationEventPublisher eventPublisher;
     private final String configName;
+    private final AtomicBoolean isProcessing = new AtomicBoolean(false);
+    private volatile long lastModifiedOnWrite = 0;
 
-    // volatile single instance
     private volatile T currentInstance;
 
     public YamlConfigManager(Path configPath,
@@ -55,7 +61,16 @@ public class YamlConfigManager<T> {
         // 注册热刷新
         watcherService.register(this.configPath, path -> {
             try {
-                reloadOnChange();
+                // 忽略自身写入触发的变更
+                if (isProcessing.get()) {
+                    return;
+                }
+
+                // 检查文件是否确实发生了变化
+                long currentModified = Files.getLastModifiedTime(configPath).toMillis();
+                if (currentModified != lastModifiedOnWrite) {
+                    reloadOnChange();
+                }
             } catch (Exception e) {
                 LOGGER.error("Error reloading config", e);
             }
@@ -79,96 +94,179 @@ public class YamlConfigManager<T> {
             return;
         }
 
-        T loaded;
-        try {
-            loaded = mapper.readValue(configPath.toFile(), clazz);
-        } catch (Exception e) {
-            backupOriginal("parse-failure");
-            writeConfig(defaultInstance);
-            this.currentInstance = deepCopy(defaultInstance);
-            publishEvent(currentInstance);
-            return;
-        }
-
-        T merged = validateAndMerge(loaded);
-        this.currentInstance = merged;
-        publishEvent(merged);
+        loadAndProcessConfig();
     }
 
     private synchronized void reloadOnChange() throws IOException {
-        T loaded;
-        try {
-            loaded = mapper.readValue(configPath.toFile(), clazz);
-        } catch (Exception e) {
-            // 读取出错，不覆盖当前，备份失败文件
-            backupOriginal("hot-reload-parse-failure");
+        if (isProcessing.get()) {
             return;
         }
-        T merged = validateAndMerge(loaded);
-        this.currentInstance = merged;
-        publishEvent(merged);
+        loadAndProcessConfig();
     }
 
-    private T validateAndMerge(T loaded) throws IOException {
-        Set<ConstraintViolation<T>> violations = validator.validate(loaded);
-        if (violations.isEmpty()) {
-            return loaded;
+    private void loadAndProcessConfig() throws IOException {
+        isProcessing.set(true);
+        try {
+            T loaded;
+            try {
+                loaded = mapper.readValue(configPath.toFile(), clazz);
+            } catch (Exception e) {
+                handleLoadFailure("parse-failure", "Failed to parse config file", e);
+                return;
+            }
+
+            try {
+                // 深度合并配置
+                T merged = deepMerge(defaultInstance, loaded);
+                Set<ConstraintViolation<T>> violations = validator.validate(merged);
+
+                if (violations.isEmpty()) {
+                    // 只有当配置确实改变时才写回
+                    if (!merged.equals(currentInstance)) {
+                        writeConfig(merged);
+                    }
+                    this.currentInstance = merged;
+                    publishEvent(merged);
+                } else {
+                    handleValidationFailure(merged, violations);
+                }
+            } catch (Exception e) {
+                handleLoadFailure("merge-failure", "Failed to merge config", e);
+            }
+        } finally {
+            isProcessing.set(false);
         }
-        // 验证失败：备份原始，按字段从 defaultInstance 覆盖
+    }
+
+    @SuppressWarnings("unchecked")
+    private T deepMerge(T defaults, T overrides) {
+        // 序列化为Map结构
+        Map<String, Object> defaultMap = mapper.convertValue(defaults, Map.class);
+        Map<String, Object> overrideMap = mapper.convertValue(overrides, Map.class);
+
+        // 递归合并
+        Map<String, Object> resultMap = deepMergeMaps(defaultMap, overrideMap);
+
+        // 反序列化回对象
+        return mapper.convertValue(resultMap, clazz);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> deepMergeMaps(Map<String, Object> defaults, Map<String, Object> overrides) {
+        Map<String, Object> result = new LinkedHashMap<>(defaults);
+
+        for (Map.Entry<String, Object> entry : overrides.entrySet()) {
+            String key = entry.getKey();
+            Object overrideValue = entry.getValue();
+            Object defaultValue = result.get(key);
+
+            if (defaultValue instanceof Map && overrideValue instanceof Map) {
+                // 递归合并嵌套Map
+                result.put(key, deepMergeMaps(
+                        (Map<String, Object>) defaultValue,
+                        (Map<String, Object>) overrideValue
+                ));
+            } else if (overrideValue != null) {
+                // 覆盖非空值
+                result.put(key, overrideValue);
+            }
+        }
+        return result;
+    }
+
+    @SuppressWarnings("unchecked")
+    private void handleValidationFailure(T config, Set<ConstraintViolation<T>> violations) throws IOException {
         backupOriginal("validation-failure");
-        // 把 loaded / defaultInstance 都转成 Map
-        Map<String, Object> loadedMap = mapper.convertValue(loaded, Map.class);
+
+        // 修复非法字段
+        Map<String, Object> configMap = mapper.convertValue(config, Map.class);
         Map<String, Object> defaultMap = mapper.convertValue(defaultInstance, Map.class);
 
-        for (ConstraintViolation<T> v : violations) {
-            String path = v.getPropertyPath().toString(); // 可能是 nested.field
-            applyDefaultForPath(loadedMap, defaultMap, path);
+        for (ConstraintViolation<T> violation : violations) {
+            String path = violation.getPropertyPath().toString();
+            applyDefaultForPath(configMap, defaultMap, path);
         }
-        // 反序列化回对象
-        T merged = mapper.convertValue(loadedMap, clazz);
-        // 写回修复后的
-        writeConfig(merged);
-        return merged;
+
+        // 创建修复后的配置
+        T fixed = mapper.convertValue(configMap, clazz);
+        Set<ConstraintViolation<T>> fixedViolations = validator.validate(fixed);
+
+        if (fixedViolations.isEmpty()) {
+            writeConfig(fixed);
+            this.currentInstance = fixed;
+            publishEvent(fixed);
+        } else {
+            handleLoadFailure("fix-failure", "Failed to fix invalid config", null);
+        }
     }
 
-    /**
-     * 递归地在 loadedMap 中将 propertyPath 指向的值替换成 defaultMap 中对应值
-     */
     @SuppressWarnings("unchecked")
-    private void applyDefaultForPath(Map<String, Object> loadedMap, Map<String, Object> defaultMap, String propertyPath) {
-        String[] parts = propertyPath.split("\\.");
-        Map<String, Object> cursorLoaded = loadedMap;
-        Map<String, Object> cursorDefault = defaultMap;
-        for (int i = 0; i < parts.length; i++) {
-            String part = parts[i];
-            if (i == parts.length - 1) {
-                // 最后一层，替换
-                Object defaultVal = cursorDefault != null ? cursorDefault.get(part) : null;
-                if (defaultVal != null) {
-                    cursorLoaded.put(part, defaultVal);
+    private void applyDefaultForPath(Map<String, Object> configMap, Map<String, Object> defaultMap, String propertyPath) {
+        String[] pathSegments = propertyPath.split("\\.");
+        Map<String, Object> current = configMap;
+        Map<String, Object> defaultCurrent = defaultMap;
+
+        for (int i = 0; i < pathSegments.length; i++) {
+            String segment = pathSegments[i];
+            boolean isLast = (i == pathSegments.length - 1);
+
+            Object node = current.get(segment);
+            Object defaultNode = defaultCurrent != null ? defaultCurrent.get(segment) : null;
+
+            if (isLast) {
+                // 最终字段：应用默认值
+                if (defaultNode != null) {
+                    current.put(segment, deepCopyValue(defaultNode));
                 } else {
-                    // 如果 default 也没有，移除有问题的字段以让后续校验处理
-                    cursorLoaded.remove(part);
+                    current.remove(segment);
                 }
             } else {
-                Object nextLoaded = cursorLoaded.get(part);
-                Object nextDefault = cursorDefault != null ? cursorDefault.get(part) : null;
-                if (!(nextLoaded instanceof Map) || !(nextDefault instanceof Map)) {
-                    // 结构不一致，直接用 default 里的整个子树替换
-                    if (nextDefault instanceof Map) {
-                        cursorLoaded.put(part, deepCopyMap((Map<String, Object>) nextDefault));
-                    }
+                // 嵌套路径处理
+                if (node instanceof Map && defaultNode instanceof Map) {
+                    current = (Map<String, Object>) node;
+                    defaultCurrent = (Map<String, Object>) defaultNode;
+                } else if (defaultNode instanceof Map) {
+                    // 替换无效结构
+                    Map<String, Object> newMap = deepCopyMap((Map<String, Object>) defaultNode);
+                    current.put(segment, newMap);
+                    current = newMap;
+                    defaultCurrent = (Map<String, Object>) defaultNode;
+                } else {
+                    // 路径中断，停止处理
                     return;
                 }
-                cursorLoaded = (Map<String, Object>) nextLoaded;
-                cursorDefault = (Map<String, Object>) nextDefault;
             }
         }
     }
 
+    private Object deepCopyValue(Object source) {
+        return mapper.convertValue(source, source.getClass());
+    }
+
     @SuppressWarnings("unchecked")
     private Map<String, Object> deepCopyMap(Map<String, Object> source) {
-        return mapper.convertValue(mapper.convertValue(source, Map.class), Map.class);
+        Map<String, Object> copy = new LinkedHashMap<>();
+        source.forEach((k, v) -> {
+            if (v instanceof Map) {
+                copy.put(k, deepCopyMap((Map<String, Object>) v));
+            } else {
+                copy.put(k, v);
+            }
+        });
+        return copy;
+    }
+
+    private void handleLoadFailure(String reason, String message, Exception e) throws IOException {
+        if (e != null) {
+            LOGGER.error(message, e);
+        } else {
+            LOGGER.error(message);
+        }
+
+        backupOriginal(reason);
+        writeConfig(defaultInstance);
+        this.currentInstance = deepCopy(defaultInstance);
+        publishEvent(currentInstance);
     }
 
     private void backupOriginal(String reason) throws IOException {
@@ -179,15 +277,23 @@ public class YamlConfigManager<T> {
     }
 
     private void writeConfig(T obj) throws IOException {
-        String raw = mapper.writeValueAsString(obj);
-        raw = raw.replaceAll("(?m): null(\\s|$)", ":$1");
-        Files.writeString(configPath, raw, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        try {
+            String raw = mapper.writeValueAsString(obj);
+            raw = raw.replaceAll("(?m): null(\\s|$)", ":$1");
+            Files.writeString(configPath, raw,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.TRUNCATE_EXISTING);
+            // 记录本次写入的时间戳
+            lastModifiedOnWrite = Files.getLastModifiedTime(configPath).toMillis();
+        } catch (IOException e) {
+            LOGGER.error("Failed to write config", e);
+            throw e;
+        }
     }
 
     private T deepCopy(T source) {
         try {
-            byte[] bytes = mapper.writeValueAsBytes(source);
-            return mapper.readValue(bytes, clazz);
+            return mapper.readValue(mapper.writeValueAsBytes(source), clazz);
         } catch (IOException e) {
             throw new RuntimeException("Failed to deep copy", e);
         }

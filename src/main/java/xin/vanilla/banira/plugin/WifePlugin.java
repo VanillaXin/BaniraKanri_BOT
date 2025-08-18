@@ -1,5 +1,15 @@
 package xin.vanilla.banira.plugin;
 
+import com.kennycason.kumo.CollisionMode;
+import com.kennycason.kumo.WordCloud;
+import com.kennycason.kumo.WordFrequency;
+import com.kennycason.kumo.bg.CircleBackground;
+import com.kennycason.kumo.font.FontWeight;
+import com.kennycason.kumo.font.KumoFont;
+import com.kennycason.kumo.font.scale.SqrtFontScalar;
+import com.kennycason.kumo.nlp.FrequencyAnalyzer;
+import com.kennycason.kumo.nlp.tokenizers.ChineseWordTokenizer;
+import com.kennycason.kumo.palette.ColorPalette;
 import com.mikuac.shiro.annotation.GroupMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.MsgUtils;
@@ -23,9 +33,14 @@ import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.service.IWifeRecordManager;
 import xin.vanilla.banira.util.*;
 
+import java.awt.*;
+import java.io.ByteArrayOutputStream;
+import java.util.List;
 import java.util.*;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * 抽老婆
@@ -43,6 +58,13 @@ public class WifePlugin extends BasePlugin {
     private static final WifeConfig DISABLED = new WifeConfig("_DISABLED_", "_DISABLED_", "_DISABLED_", "_DISABLED_");
     private static final Map<String, Pattern> PATTERN_CACHE = BaniraUtils.mutableMapOf();
     private static final Random RANDOM = new Random();
+
+    /**
+     * 词云fontMetrics(用于计算文本长度)
+     */
+    private static final FontMetrics fontMetrics = new WordCloud(
+            new Dimension(50, 50), CollisionMode.PIXEL_PERFECT
+    ).getBufferedImage().createGraphics().getFontMetrics();
 
     /**
      * 抽取
@@ -200,6 +222,10 @@ public class WifePlugin extends BasePlugin {
                     return bot.isActionDataMsgIdNotEmpty(msgId);
                 }
             }
+            // 统计
+            else if (globalConfig.get().instConfig().base().status().contains(operate)) {
+                return this.statistics(bot, event, Arrays.copyOfRange(split, 2, split.length));
+            }
             // 未知
             else {
                 return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
@@ -210,13 +236,408 @@ public class WifePlugin extends BasePlugin {
     }
 
     /**
-     * TODO 统计
+     * 统计
      */
-    @GroupMessageHandler
-    public boolean statistics(Bot tob, GroupMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
+    private boolean statistics(BaniraBot bot, GroupMessageEvent event, String[] args) {
+        LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
 
-        return false;
+        Date current = new Date();
+        Date theYearStart = DateUtils.toTheYearStart(current);
+        Date theYearEnd = DateUtils.toTheYearEnd(current);
+
+        List<Map<String, Object>> forwardMsg = new ArrayList<>();
+        forwardMsg.add(ShiroUtils.generateSingleMsg(event.getUserId(), event.getSender().getNickname(), event.getMessage()));
+
+        // 个人
+        {
+            WifeRecordQueryParam param = new WifeRecordQueryParam();
+            param.setSenderId(event.getUserId());
+            param.setTimeByRange(DateUtils.getTimestamp(theYearStart), DateUtils.getTimestamp(theYearEnd));
+            List<WifeRecord> wifeRecordList = wifeRecordManager.getWifeRecordList(param);
+
+            Map<Long, WifeRecord> recordMap = wifeRecordList.stream()
+                    .sorted(Comparator.comparingLong(WifeRecord::getTime))
+                    .collect(Collectors.toMap(WifeRecord::getWifeId, Function.identity(), (oldVal, newVal) -> newVal));
+
+            int allCount = wifeRecordList.size();
+            // 分别wifeId和wifeNick次数最多的情况
+            Map<String, Long> nickCurrentMap = wifeRecordList.stream()
+                    .filter(record -> record.getTime() >= DateUtils.getTimestamp(theYearStart))
+                    .filter(record -> record.getTime() <= DateUtils.getTimestamp(theYearEnd))
+                    .map(WifeRecord::getWifeNick)
+                    .collect(Collectors.groupingBy(s -> s, Collectors.counting()));
+            String nickCurrent = nickCurrentMap
+                    .entrySet().stream().max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey).orElse("");
+
+            Map<Long, Long> wifeCurrentMap = wifeRecordList.stream()
+                    .filter(record -> record.getTime() >= DateUtils.getTimestamp(theYearStart))
+                    .filter(record -> record.getTime() <= DateUtils.getTimestamp(theYearEnd))
+                    .map(WifeRecord::getWifeId)
+                    .collect(Collectors.groupingBy(s -> s, Collectors.counting()));
+            Long wifeCurrent = wifeCurrentMap
+                    .entrySet().stream().max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey).orElse(null);
+
+            if (nickCurrentMap.isEmpty()) {
+                forwardMsg.add(ShiroUtils.generateSingleMsg(
+                        bot.getSelfId()
+                        , loginInfoEx.getNickname()
+                        , MsgUtils.builder()
+                                .text("暂无个人记录")
+                                .build()
+                ));
+            }
+            //
+            else {
+                forwardMsg.add(ShiroUtils.generateSingleMsg(
+                        bot.getSelfId()
+                        , loginInfoEx.getNickname()
+                        , MsgUtils.builder()
+                                .text(event.getSender().getNickname())
+                                .text(" 的年度抽老婆报告")
+                                .build()
+                ));
+
+                forwardMsg.add(ShiroUtils.generateSingleMsg(
+                        bot.getSelfId()
+                        , loginInfoEx.getNickname()
+                        , MsgUtils.builder()
+                                .text("阁下在")
+                                .text(String.valueOf(DateUtils.getYearPart(current)))
+                                .text("年总计抽取老婆")
+                                .text(String.valueOf(allCount))
+                                .text("次")
+                                .build()
+                ));
+
+                forwardMsg.add(ShiroUtils.generateSingleMsg(
+                        bot.getSelfId()
+                        , loginInfoEx.getNickname()
+                        , MsgUtils.builder()
+                                .text("其中使用得最多的昵称是: ")
+                                .text(nickCurrent)
+                                .text("\n共使用了")
+                                .text(String.valueOf(nickCurrentMap.get(nickCurrent)))
+                                .text("次")
+                                .text("\n是对")
+                                .text(nickCurrent)
+                                .text("情有独钟吗")
+                                .build()
+                ));
+
+                if (wifeCurrent != null) {
+                    forwardMsg.add(ShiroUtils.generateSingleMsg(
+                                    bot.getSelfId()
+                                    , loginInfoEx.getNickname()
+                                    , MsgUtils.builder()
+                                            .text("与阁下最有缘分的群友是:")
+                                            .img(ShiroUtils.getUserAvatar(wifeCurrent, 0))
+                                            .text("\n『")
+                                            .text(recordMap.get(wifeCurrent).getWifeName())
+                                            .text("』(")
+                                            .text(String.valueOf(wifeCurrent))
+                                            .text(")")
+                                            .text("\n共邂逅了")
+                                            .text(String.valueOf(wifeCurrentMap.get(wifeCurrent)))
+                                            .text("次")
+                                            .build()
+                            )
+                    );
+                }
+
+                // 词云
+                {
+                    final List<WordFrequency> wordFrequencies = nickCurrentMap.entrySet().stream()
+                            .filter(entry -> StringUtils.isNotNullOrEmpty(entry.getKey()))
+                            .filter(entry -> fontMetrics.stringWidth(entry.getKey()) > 0)
+                            .map(entry -> new WordFrequency(entry.getKey(), Math.toIntExact(entry.getValue())))
+                            .collect(Collectors.toList());
+                    final FrequencyAnalyzer frequencyAnalyzer = new FrequencyAnalyzer();
+                    frequencyAnalyzer.setWordFrequenciesToReturn(600);
+                    frequencyAnalyzer.setMinWordLength(2);
+                    frequencyAnalyzer.setWordTokenizer(new ChineseWordTokenizer());
+                    final Dimension dimension = new Dimension(600, 600);
+                    final WordCloud wordCloud = new WordCloud(dimension, CollisionMode.PIXEL_PERFECT);
+                    wordCloud.setPadding(2);
+                    // wordCloud.setBackgroundColor(Color.WHITE);
+                    wordCloud.setBackground(new CircleBackground(300));
+                    wordCloud.setColorPalette(new ColorPalette(new Color(0xD5CFFA), new Color(0xBBB1FA), new Color(0x9A8CF5), new Color(0x806EF5)));
+                    wordCloud.setKumoFont(new KumoFont("YueYuan", FontWeight.PLAIN));
+                    wordCloud.setFontScalar(new SqrtFontScalar(12, 45));
+                    wordCloud.build(wordFrequencies);
+                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                    wordCloud.writeToStreamAsPNG(outputStream);
+
+                    forwardMsg.add(ShiroUtils.generateSingleMsg(
+                            bot.getSelfId()
+                            , loginInfoEx.getNickname()
+                            , MsgUtils.builder()
+                                    .text("阁下的年度词云")
+                                    .img(outputStream.toByteArray())
+                                    .build()
+                    ));
+                }
+
+                // 老婆云
+                {
+                    final List<WordFrequency> wordFrequencies = wifeCurrentMap.entrySet().stream()
+                            .filter(entry -> entry.getKey() != null)
+                            .map(entry -> {
+                                WifeRecord wifeRecord = recordMap.get(entry.getKey());
+                                return new WordFrequency(wifeRecord != null
+                                        && StringUtils.isNotNullOrEmpty(wifeRecord.getWifeName())
+                                        && fontMetrics.stringWidth(wifeRecord.getWifeName()) > 0
+                                        ? wifeRecord.getWifeName()
+                                        : String.valueOf(entry.getKey()), Math.toIntExact(entry.getValue()));
+                            })
+                            .collect(Collectors.toList());
+                    final FrequencyAnalyzer frequencyAnalyzer = new FrequencyAnalyzer();
+                    frequencyAnalyzer.setWordFrequenciesToReturn(600);
+                    frequencyAnalyzer.setMinWordLength(2);
+                    frequencyAnalyzer.setWordTokenizer(new ChineseWordTokenizer());
+                    final Dimension dimension = new Dimension(600, 600);
+                    final WordCloud wordCloud = new WordCloud(dimension, CollisionMode.PIXEL_PERFECT);
+                    wordCloud.setPadding(2);
+                    // wordCloud.setBackgroundColor(Color.WHITE);
+                    wordCloud.setBackground(new CircleBackground(300));
+                    wordCloud.setColorPalette(new ColorPalette(new Color(0xD5CFFA), new Color(0xBBB1FA), new Color(0x9A8CF5), new Color(0x806EF5)));
+                    wordCloud.setKumoFont(new KumoFont("YueYuan", FontWeight.PLAIN));
+                    wordCloud.setFontScalar(new SqrtFontScalar(12, 45));
+                    wordCloud.build(wordFrequencies);
+                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                    wordCloud.writeToStreamAsPNG(outputStream);
+
+                    forwardMsg.add(ShiroUtils.generateSingleMsg(
+                            bot.getSelfId()
+                            , loginInfoEx.getNickname()
+                            , MsgUtils.builder()
+                                    .text("阁下的年度老婆云")
+                                    .img(outputStream.toByteArray())
+                                    .build()
+                    ));
+                }
+            }
+        }
+
+        // 群内
+        {
+            WifeRecordQueryParam param = new WifeRecordQueryParam();
+            param.setGroupId(event.getGroupId());
+            param.setTimeByRange(DateUtils.getTimestamp(theYearStart), DateUtils.getTimestamp(theYearEnd));
+            List<WifeRecord> wifeRecordList = wifeRecordManager.getWifeRecordList(param);
+
+            Map<Long, WifeRecord> recordMap = wifeRecordList.stream()
+                    .sorted(Comparator.comparingLong(WifeRecord::getTime))
+                    .collect(Collectors.toMap(WifeRecord::getWifeId, Function.identity(), (oldVal, newVal) -> newVal));
+
+            // 分别wifeId和wifeNick次数最多的情况
+            Map<String, Long> nickCurrentMap = wifeRecordList.stream()
+                    .filter(record -> record.getTime() >= DateUtils.getTimestamp(theYearStart))
+                    .filter(record -> record.getTime() <= DateUtils.getTimestamp(theYearEnd))
+                    .map(WifeRecord::getWifeNick)
+                    .collect(Collectors.groupingBy(s -> s, Collectors.counting()));
+            String nickCurrent = nickCurrentMap
+                    .entrySet().stream().max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey).orElse("");
+
+            Map<Long, Long> wifeCurrentMap = wifeRecordList.stream()
+                    .filter(record -> record.getTime() >= DateUtils.getTimestamp(theYearStart))
+                    .filter(record -> record.getTime() <= DateUtils.getTimestamp(theYearEnd))
+                    .map(WifeRecord::getWifeId)
+                    .collect(Collectors.groupingBy(s -> s, Collectors.counting()));
+            Long wifeCurrent = wifeCurrentMap
+                    .entrySet().stream().max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey).orElse(null);
+
+            if (nickCurrentMap.isEmpty()) {
+                forwardMsg.add(ShiroUtils.generateSingleMsg(
+                        bot.getSelfId()
+                        , loginInfoEx.getNickname()
+                        , MsgUtils.builder()
+                                .text("暂无群组记录")
+                                .build()
+                ));
+            }
+            //
+            else {
+                forwardMsg.add(ShiroUtils.generateSingleMsg(
+                        bot.getSelfId()
+                        , loginInfoEx.getNickname()
+                        , MsgUtils.builder()
+                                .text(String.valueOf(DateUtils.getYearPart(current)))
+                                .text("群内年度最佳昵称: ")
+                                .text(nickCurrent)
+                                .text("\n共被使用")
+                                .text(String.valueOf(nickCurrentMap.get(nickCurrent)))
+                                .text("次")
+                                .build()
+                ));
+
+                if (wifeCurrent != null) {
+                    forwardMsg.add(ShiroUtils.generateSingleMsg(
+                            bot.getSelfId()
+                            , loginInfoEx.getNickname()
+                            , MsgUtils.builder()
+                                    .text(String.valueOf(DateUtils.getYearPart(current)))
+                                    .text("群内年度最佳群友: ")
+                                    .img(ShiroUtils.getUserAvatar(wifeCurrent, 0))
+                                    .text("\n『")
+                                    .text(recordMap.get(wifeCurrent).getWifeName())
+                                    .text("』(")
+                                    .text(String.valueOf(wifeCurrent))
+                                    .text(")")
+                                    .text("\n共被抽中")
+                                    .text(String.valueOf(wifeCurrentMap.get(wifeCurrent)))
+                                    .text("次")
+                                    .build()
+                    ));
+                }
+
+                // 词云
+                {
+                    final List<WordFrequency> wordFrequencies = nickCurrentMap.entrySet().stream()
+                            .filter(entry -> StringUtils.isNotNullOrEmpty(entry.getKey()))
+                            .filter(entry -> fontMetrics.stringWidth(entry.getKey()) > 0)
+                            .map(entry -> new WordFrequency(entry.getKey(), Math.toIntExact(entry.getValue())))
+                            .collect(Collectors.toList());
+                    final FrequencyAnalyzer frequencyAnalyzer = new FrequencyAnalyzer();
+                    frequencyAnalyzer.setWordFrequenciesToReturn(600);
+                    frequencyAnalyzer.setMinWordLength(2);
+                    frequencyAnalyzer.setWordTokenizer(new ChineseWordTokenizer());
+                    final Dimension dimension = new Dimension(600, 600);
+                    final WordCloud wordCloud = new WordCloud(dimension, CollisionMode.PIXEL_PERFECT);
+                    wordCloud.setPadding(2);
+                    // wordCloud.setBackgroundColor(Color.WHITE);
+                    wordCloud.setBackground(new CircleBackground(300));
+                    wordCloud.setColorPalette(new ColorPalette(new Color(0xD5CFFA), new Color(0xBBB1FA), new Color(0x9A8CF5), new Color(0x806EF5)));
+                    wordCloud.setKumoFont(new KumoFont("YueYuan", FontWeight.PLAIN));
+                    wordCloud.setFontScalar(new SqrtFontScalar(12, 45));
+                    wordCloud.build(wordFrequencies);
+                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                    wordCloud.writeToStreamAsPNG(outputStream);
+
+                    forwardMsg.add(ShiroUtils.generateSingleMsg(
+                            bot.getSelfId()
+                            , loginInfoEx.getNickname()
+                            , MsgUtils.builder()
+                                    .text("群内年度词云")
+                                    .img(outputStream.toByteArray())
+                                    .build()
+                    ));
+                }
+            }
+        }
+
+        // 全局
+        {
+            WifeRecordQueryParam param = new WifeRecordQueryParam();
+            param.setTimeByRange(DateUtils.getTimestamp(theYearStart), DateUtils.getTimestamp(theYearEnd));
+            List<WifeRecord> wifeRecordList = wifeRecordManager.getWifeRecordList(param);
+
+            Map<Long, WifeRecord> recordMap = wifeRecordList.stream()
+                    .sorted(Comparator.comparingLong(WifeRecord::getTime))
+                    .collect(Collectors.toMap(WifeRecord::getWifeId, Function.identity(), (oldVal, newVal) -> newVal));
+
+            // 分别wifeId和wifeNick次数最多的情况
+            Map<String, Long> nickCurrentMap = wifeRecordList.stream()
+                    .filter(record -> record.getTime() >= DateUtils.getTimestamp(theYearStart))
+                    .filter(record -> record.getTime() <= DateUtils.getTimestamp(theYearEnd))
+                    .map(WifeRecord::getWifeNick)
+                    .collect(Collectors.groupingBy(s -> s, Collectors.counting()));
+            String nickCurrent = nickCurrentMap
+                    .entrySet().stream().max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey).orElse("");
+
+            Map<Long, Long> wifeCurrentMap = wifeRecordList.stream()
+                    .filter(record -> record.getTime() >= DateUtils.getTimestamp(theYearStart))
+                    .filter(record -> record.getTime() <= DateUtils.getTimestamp(theYearEnd))
+                    .map(WifeRecord::getWifeId)
+                    .collect(Collectors.groupingBy(s -> s, Collectors.counting()));
+            Long wifeCurrent = wifeCurrentMap
+                    .entrySet().stream().max(Map.Entry.comparingByValue())
+                    .map(Map.Entry::getKey).orElse(null);
+            if (nickCurrentMap.isEmpty()) {
+                forwardMsg.add(ShiroUtils.generateSingleMsg(
+                        bot.getSelfId()
+                        , loginInfoEx.getNickname()
+                        , MsgUtils.builder()
+                                .text("暂无全局记录")
+                                .build()
+                ));
+            }
+            //
+            else {
+                forwardMsg.add(ShiroUtils.generateSingleMsg(
+                        bot.getSelfId()
+                        , loginInfoEx.getNickname()
+                        , MsgUtils.builder()
+                                .text(String.valueOf(DateUtils.getYearPart(current)))
+                                .text("年度最佳昵称: ")
+                                .text(nickCurrent)
+                                .text("\n共被使用")
+                                .text(String.valueOf(nickCurrentMap.get(nickCurrent)))
+                                .text("次")
+                                .build()
+                ));
+
+                if (wifeCurrent != null) {
+                    forwardMsg.add(ShiroUtils.generateSingleMsg(
+                            bot.getSelfId()
+                            , loginInfoEx.getNickname()
+                            , MsgUtils.builder()
+                                    .text(String.valueOf(DateUtils.getYearPart(current)))
+                                    .text("年度最佳群友: ")
+                                    .img(ShiroUtils.getUserAvatar(wifeCurrent, 0))
+                                    .text("\n『")
+                                    .text(recordMap.get(wifeCurrent).getWifeName())
+                                    .text("』(")
+                                    .text(String.valueOf(wifeCurrent))
+                                    .text(")")
+                                    .text("\n共被抽中")
+                                    .text(String.valueOf(wifeCurrentMap.get(wifeCurrent)))
+                                    .text("次")
+                                    .build()
+                    ));
+                }
+
+                // 词云
+                {
+                    final List<WordFrequency> wordFrequencies = nickCurrentMap.entrySet().stream()
+                            .filter(entry -> StringUtils.isNotNullOrEmpty(entry.getKey()))
+                            .filter(entry -> fontMetrics.stringWidth(entry.getKey()) > 0)
+                            .map(entry -> new WordFrequency(entry.getKey(), Math.toIntExact(entry.getValue())))
+                            .collect(Collectors.toList());
+                    final FrequencyAnalyzer frequencyAnalyzer = new FrequencyAnalyzer();
+                    frequencyAnalyzer.setWordFrequenciesToReturn(600);
+                    frequencyAnalyzer.setMinWordLength(2);
+                    frequencyAnalyzer.setWordTokenizer(new ChineseWordTokenizer());
+                    final Dimension dimension = new Dimension(600, 600);
+                    final WordCloud wordCloud = new WordCloud(dimension, CollisionMode.PIXEL_PERFECT);
+                    wordCloud.setPadding(2);
+                    // wordCloud.setBackgroundColor(Color.WHITE);
+                    wordCloud.setBackground(new CircleBackground(300));
+                    wordCloud.setColorPalette(new ColorPalette(new Color(0xD5CFFA), new Color(0xBBB1FA), new Color(0x9A8CF5), new Color(0x806EF5)));
+                    wordCloud.setKumoFont(new KumoFont("YueYuan", FontWeight.PLAIN));
+                    wordCloud.setFontScalar(new SqrtFontScalar(12, 45));
+                    wordCloud.build(wordFrequencies);
+                    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+                    wordCloud.writeToStreamAsPNG(outputStream);
+
+                    forwardMsg.add(ShiroUtils.generateSingleMsg(
+                            bot.getSelfId()
+                            , loginInfoEx.getNickname()
+                            , MsgUtils.builder()
+                                    .text("年度词云")
+                                    .img(outputStream.toByteArray())
+                                    .build()
+                    ));
+                }
+            }
+        }
+
+        ActionData<MsgId> msgId = bot.sendGroupForwardMsg(event.getGroupId(), forwardMsg);
+        return bot.isActionDataMsgIdNotEmpty(msgId);
     }
 
 

@@ -468,7 +468,7 @@ public class BaniraBot extends Bot {
             result = loginInfo.getData();
         } else {
             result.setUserId(this.getSelfId());
-            result.setNickname("香草酱");
+            result.setNickname(BaniraUtils.getBotNick());
         }
         return result;
     }

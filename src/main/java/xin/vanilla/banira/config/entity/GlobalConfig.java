@@ -13,6 +13,7 @@ import java.util.Set;
 /**
  * 全局配置
  *
+ * @param botNick     机器人昵称
  * @param owner       主人
  * @param butler      管家
  * @param baseConfig  基础配置
@@ -24,6 +25,7 @@ public record GlobalConfig(
         @Nonnull String token,
         @Nonnull String wsUrl,
         @Nonnull Long owner,
+        @Nonnull String botNick,
         @Nonnull Set<PermissionConfig> butler,
         @Nonnull BaseConfig baseConfig,
         @Nonnull InstructionsConfig instConfig,
@@ -35,6 +37,7 @@ public record GlobalConfig(
                 "",
                 "ws://127.0.0.1:8080",
                 0L,
+                "香草酱",
                 BaniraUtils.mutableSetOf(),
                 BaseConfig.preset(),
                 InstructionsConfig.preset(),
