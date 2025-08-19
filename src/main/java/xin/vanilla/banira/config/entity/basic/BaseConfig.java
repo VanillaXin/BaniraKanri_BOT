@@ -19,7 +19,7 @@ public record BaseConfig(
         Map<String, Integer> capability
 ) {
 
-    public static BaseConfig emtpy() {
+    public static BaseConfig empty() {
         return new BaseConfig(
                 BaniraUtils.mutableSetOf(),
                 BaniraUtils.mutableMapOf()

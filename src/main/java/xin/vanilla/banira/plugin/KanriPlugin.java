@@ -19,10 +19,7 @@ import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.kanri.KanriHandler;
 import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * 群管指令
@@ -35,6 +32,23 @@ public class KanriPlugin extends BasePlugin {
     private List<KanriHandler> handlers = new ArrayList<>();
     @Resource
     private ToGroupCode toGroupCode;
+
+    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
+            "kanri"
+    );
+
+    /**
+     * 获取帮助信息
+     *
+     * @param type 帮助类型
+     */
+    @Override
+    protected String getHelpInfo(String type) {
+        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
+
+        }
+        return null;
+    }
 
     @GroupMessageHandler
     public boolean group(Bot tob, GroupMessageEvent event) {

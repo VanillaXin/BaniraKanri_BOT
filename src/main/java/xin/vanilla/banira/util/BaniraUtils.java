@@ -20,6 +20,8 @@ import org.springframework.core.ResolvableType;
 import xin.vanilla.banira.config.YamlConfigManager;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
+import xin.vanilla.banira.config.entity.basic.BaseConfig;
+import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.basic.PermissionConfig;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumPermission;
@@ -94,6 +96,56 @@ public class BaniraUtils {
     public static String getBotNick() {
         String nick = getGlobalConfig().botNick();
         return StringUtils.isNotNullOrEmpty(nick) ? nick : "香草酱";
+    }
+
+    public static BaseConfig getBaseConfig() {
+        return getBaseConfig(null);
+    }
+
+    public static BaseConfig getBaseConfig(Long groupId) {
+        BaseConfig baseConfig = null;
+        if (isGroupIdValid(groupId)) {
+            // 群聊配置
+            GroupConfig groupConfig = getGroupConfig();
+            if (groupConfig.baseConfig().containsKey(groupId)) {
+                if (groupConfig.baseConfig().get(groupId) != null) {
+                    baseConfig = groupConfig.baseConfig().get(groupId);
+                } else {
+                    groupConfig.baseConfig().put(groupId, BaseConfig.empty());
+                    saveGroupConfig();
+                }
+            }
+        }
+        // 全局配置
+        if (baseConfig == null) {
+            baseConfig = getGlobalConfig().baseConfig();
+        }
+        return baseConfig;
+    }
+
+    public static OtherConfig getOthersConfig() {
+        return getOthersConfig(null);
+    }
+
+    public static OtherConfig getOthersConfig(Long groupId) {
+        OtherConfig otherConfig = null;
+        if (isGroupIdValid(groupId)) {
+            // 群聊配置
+            GroupConfig groupConfig = getGroupConfig();
+            if (groupConfig.otherConfig().containsKey(groupId)) {
+                if (groupConfig.otherConfig().get(groupId) != null) {
+                    otherConfig = groupConfig.otherConfig().get(groupId);
+                } else {
+                    groupConfig.otherConfig().put(groupId, OtherConfig.empty());
+                    saveGroupConfig();
+                }
+            }
+        }
+        // 全局配置
+        if (otherConfig == null) {
+            otherConfig = getGlobalConfig().otherConfig();
+        }
+        return otherConfig;
     }
 
     // endregion 配置管理

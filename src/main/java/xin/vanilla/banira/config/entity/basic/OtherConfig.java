@@ -11,7 +11,8 @@ public record OtherConfig(
         Set<String> hentaiPath,
         Set<WifeConfig> wifeConfig,
         Set<String> wifeInsConfig,
-        Set<String> imageFaceToImage
+        Set<String> imageFaceToImage,
+        String statusBgUrl
 ) {
 
     public static OtherConfig empty() {
@@ -20,6 +21,7 @@ public record OtherConfig(
                 , BaniraUtils.mutableSetOf()
                 , BaniraUtils.mutableSetOf()
                 , BaniraUtils.mutableSetOf()
+                , ""
         );
     }
 
@@ -35,6 +37,8 @@ public record OtherConfig(
                 , BaniraUtils.mutableSetOf("wife", "老婆")
 
                 , BaniraUtils.mutableSetOf("获取表情", "获取图片", "获取表情图片", "getface", "getimage", "getimg")
+
+                , "bg.png"
         );
     }
 

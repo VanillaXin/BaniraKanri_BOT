@@ -17,6 +17,8 @@ import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
 
+import java.util.Set;
+
 /**
  * 消息记录
  */
@@ -27,6 +29,23 @@ public class RecorderPlugin extends BasePlugin {
 
     @Resource
     private IMessageRecordManager messageRecordManager;
+
+    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
+            "msgrecord"
+    );
+
+    /**
+     * 获取帮助信息
+     *
+     * @param type 帮助类型
+     */
+    @Override
+    protected String getHelpInfo(String type) {
+        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
+
+        }
+        return null;
+    }
 
     @AnyMessageHandler
     public void recorder(Bot tob, AnyMessageEvent event) {

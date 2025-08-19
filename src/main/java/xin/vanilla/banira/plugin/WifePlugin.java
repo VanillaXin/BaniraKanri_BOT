@@ -35,8 +35,8 @@ import xin.vanilla.banira.util.*;
 
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -65,6 +65,23 @@ public class WifePlugin extends BasePlugin {
     private static final FontMetrics fontMetrics = new WordCloud(
             new Dimension(50, 50), CollisionMode.PIXEL_PERFECT
     ).getBufferedImage().createGraphics().getFontMetrics();
+
+    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
+            "wife"
+    );
+
+    /**
+     * 获取帮助信息
+     *
+     * @param type 帮助类型
+     */
+    @Override
+    protected String getHelpInfo(String type) {
+        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
+
+        }
+        return null;
+    }
 
     /**
      * 抽取
@@ -643,24 +660,23 @@ public class WifePlugin extends BasePlugin {
 
     private Set<WifeConfig> getWifeConfig(long groupId) {
         Set<WifeConfig> wifeConfig = BaniraUtils.mutableSetOf();
-        // 群聊配置
-        if (groupConfig.get().otherConfig().containsKey(groupId)) {
-            if (CollectionUtils.isNotNullOrEmpty(groupConfig.get().otherConfig().get(groupId).wifeConfig())) {
-                wifeConfig = groupConfig.get().otherConfig().get(groupId).wifeConfig();
-                // 判断群聊是否禁用
-                if (wifeConfig.stream()
-                        .anyMatch(wife -> DISABLED.equals(wife)
-                                || (DISABLED.reg().equals(wife.reg()) && DISABLED.nick().equals(wife.nick()))
-                        )
-                ) {
-                    return BaniraUtils.mutableSetOf();
-                }
+        OtherConfig othersConfig = BaniraUtils.getOthersConfig(groupId);
+        if (CollectionUtils.isNotNullOrEmpty(othersConfig.wifeConfig())) {
+            wifeConfig = othersConfig.wifeConfig();
+            // 判断群聊是否禁用
+            if (wifeConfig.stream()
+                    .anyMatch(wife -> DISABLED.equals(wife)
+                            || (DISABLED.reg().equals(wife.reg()) && DISABLED.nick().equals(wife.nick()))
+                    )
+            ) {
+                return BaniraUtils.mutableSetOf();
             }
         }
         // 全局配置
         if (wifeConfig.isEmpty()) {
-            if (CollectionUtils.isNotNullOrEmpty(globalConfig.get().otherConfig().wifeConfig())) {
-                wifeConfig = globalConfig.get().otherConfig().wifeConfig();
+            othersConfig = BaniraUtils.getOthersConfig();
+            if (CollectionUtils.isNotNullOrEmpty(othersConfig.wifeConfig())) {
+                wifeConfig = othersConfig.wifeConfig();
                 // 判断全局是否禁用
                 if (wifeConfig.stream()
                         .anyMatch(wife -> DISABLED.equals(wife)

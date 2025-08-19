@@ -20,6 +20,7 @@ import xin.vanilla.banira.util.BaniraUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * 图片表情转图片
@@ -28,6 +29,23 @@ import java.util.Map;
 @Shiro
 @Component
 public class ImageFaceToImagePlugin extends BasePlugin {
+
+    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
+            "getface"
+    );
+
+    /**
+     * 获取帮助信息
+     *
+     * @param type 帮助类型
+     */
+    @Override
+    protected String getHelpInfo(String type) {
+        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
+
+        }
+        return null;
+    }
 
     @AnyMessageHandler
     public boolean convert(Bot tob, AnyMessageEvent event) {

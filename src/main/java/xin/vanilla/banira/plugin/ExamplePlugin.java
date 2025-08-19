@@ -31,6 +31,16 @@ public class ExamplePlugin extends BasePlugin {
     private IMessageRecordManager messageRecordManager;
 
     /**
+     * 获取帮助信息
+     *
+     * @param type 帮助类型
+     */
+    @Override
+    protected String getHelpInfo(String type) {
+        return null;
+    }
+
+    /**
      * 被AT时触发回复
      *
      * @param tob   机器人实例

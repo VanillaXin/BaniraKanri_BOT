@@ -34,18 +34,15 @@ import xin.vanilla.banira.util.*;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.FileStore;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
+import java.util.stream.Stream;
 
 /**
  * 框架状态
@@ -66,8 +63,24 @@ public class StatusPlugin extends BasePlugin {
 
     private static final File HTML_FILE = new File("config/status_plugin/index.html");
     private static final File CONFIG_FILE = new File("config/status_plugin/config.js");
+    private static final File TEMP_BG_FILE = new File("config/status_plugin/temp.png");
 
-    private JsonObject status;
+    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
+            "status"
+    );
+
+    /**
+     * 获取帮助信息
+     *
+     * @param type 帮助类型
+     */
+    @Override
+    protected String getHelpInfo(String type) {
+        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
+
+        }
+        return null;
+    }
 
     @AnyMessageHandler
     public boolean status(Bot tob, AnyMessageEvent event) {
@@ -89,7 +102,7 @@ public class StatusPlugin extends BasePlugin {
                 return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             }
 
-            refreshStatus(bot);
+            JsonObject status = this.generateStatus(bot);
 
             try {
                 FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE);
@@ -118,7 +131,7 @@ public class StatusPlugin extends BasePlugin {
         return false;
     }
 
-    private void refreshStatus(BaniraBot bot) {
+    private JsonObject generateStatus(BaniraBot bot) {
         LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
         Date now = new Date();
         Date date = new Date(applicationContext.getStartupDate());
@@ -133,7 +146,7 @@ public class StatusPlugin extends BasePlugin {
         VirtualMemory swapInfo = memoryInfo.getVirtualMemory();
 
         OperatingSystem osInfo = OshiUtil.getOs();
-        Date systemStartDate = new Date(now.getTime() - osInfo.getSystemBootTime());
+        Date systemStartDate = new Date(osInfo.getSystemBootTime() * 1000L);
 
         MessageRecordQueryParam param = new MessageRecordQueryParam();
         param.setBotId(bot.getSelfId());
@@ -155,14 +168,20 @@ public class StatusPlugin extends BasePlugin {
 
         JsonObject statusObject = new JsonObject();
 
+        // background
+        JsonUtils.setString(statusObject, "background", getBgUrl());
+
         // bot
         {
             JsonObject botObject = new JsonObject();
             JsonUtils.setString(botObject, "title", loginInfoEx.getNickname());
             JsonUtils.setString(botObject, "avatar", ShiroUtils.getUserAvatar(bot.getSelfId(), 0));
-            JsonUtils.setString(botObject, "status", String.format("%s-%s"
+            JsonUtils.setString(botObject, "status", String.format("%s-%s | BaniraKanri v%s_commit%s:%s"
                     , version.getAppName()
                     , version.getAppVersion()
+                    , baniraVersionInfo.getVersion()
+                    , baniraVersionInfo.getGitCommitCount()
+                    , baniraVersionInfo.getGitCommitShortId()
             ));
             JsonUtils.setString(botObject, "activity", String.format("收%s | 发%s | 群%s | 好友%s"
                     , totalCount - sendCount
@@ -176,17 +195,13 @@ public class StatusPlugin extends BasePlugin {
         // uptime
         {
             JsonObject uptimeObject = new JsonObject();
-            JsonUtils.setString(uptimeObject, "plugin", String.format("BaniraKanri %s_commit%s:%s 已运行%s"
-                    , baniraVersionInfo.getVersion()
-                    , baniraVersionInfo.getGitCommitCount()
-                    , baniraVersionInfo.getGitCommitShortId()
-                    , DateUtils.formatDuration(duration)
-            ));
-            JsonUtils.setString(uptimeObject, "system", String.format("系统已运行%s"
-                    , DateUtils.formatDuration(DateUtils.dateOfTwo(systemStartDate, now))
-            ));
-            JsonUtils.setString(uptimeObject, "compilation", String.format("%s | Compiled by %s | %s %s"
-                    , DateUtils.toDateTimeString(date)
+            JsonUtils.setString(uptimeObject, "plugin",
+                    DateUtils.formatDuration(duration)
+            );
+            JsonUtils.setString(uptimeObject, "system",
+                    DateUtils.formatDuration(DateUtils.dateOfTwo(systemStartDate, now))
+            );
+            JsonUtils.setString(uptimeObject, "compilation", String.format("Compiled by %s | %s %s"
                     , JavaVersionUtils.getClassVersion(StatusPlugin.class)
                     , osInfo.getFamily()
                     , System.getProperty("os.arch")
@@ -226,18 +241,18 @@ public class StatusPlugin extends BasePlugin {
                         .divide(BigDecimal.valueOf(memoryInfo.getTotal()), 2, RoundingMode.HALF_UP)
                         .doubleValue()
                 );
-                JsonUtils.setString(ramObject, "total", String.format("总共 %s"
-                        , StorageUnitUtils.convert(BigDecimal.valueOf(memoryInfo.getTotal())
+                JsonUtils.setString(ramObject, "total",
+                        StorageUnitUtils.convert(BigDecimal.valueOf(memoryInfo.getTotal())
                                 , StorageUnitUtils.BYTE, 2)
-                ));
-                JsonUtils.setString(ramObject, "used", String.format("已用 %s"
-                        , StorageUnitUtils.convert(BigDecimal.valueOf(memoryInfo.getTotal() - memoryInfo.getAvailable())
+                );
+                JsonUtils.setString(ramObject, "used",
+                        StorageUnitUtils.convert(BigDecimal.valueOf(memoryInfo.getTotal() - memoryInfo.getAvailable())
                                 , StorageUnitUtils.BYTE, 2)
-                ));
-                JsonUtils.setString(ramObject, "remaining", String.format("剩余 %s"
-                        , StorageUnitUtils.convert(BigDecimal.valueOf(memoryInfo.getAvailable())
+                );
+                JsonUtils.setString(ramObject, "remaining",
+                        StorageUnitUtils.convert(BigDecimal.valueOf(memoryInfo.getAvailable())
                                 , StorageUnitUtils.BYTE, 2)
-                ));
+                );
 
                 JsonUtils.setJsonObject(resourcesObject, "ram", ramObject);
             }
@@ -246,23 +261,22 @@ public class StatusPlugin extends BasePlugin {
             {
                 JsonObject swapObject = new JsonObject();
 
-                JsonUtils.setDouble(swapObject, "percentage", BigDecimal.valueOf(swapInfo.getSwapTotal() - swapInfo.getSwapUsed())
+                JsonUtils.setDouble(swapObject, "percentage", BigDecimal.valueOf(swapInfo.getSwapUsed())
                         .multiply(BigDecimal.valueOf(100))
                         .divide(BigDecimal.valueOf(swapInfo.getSwapTotal()), 2, RoundingMode.HALF_UP)
                         .doubleValue()
                 );
-                JsonUtils.setString(swapObject, "total", String.format("总共 %s"
-                        , StorageUnitUtils.convert(BigDecimal.valueOf(swapInfo.getSwapTotal())
+                JsonUtils.setString(swapObject, "total",
+                        StorageUnitUtils.convert(BigDecimal.valueOf(swapInfo.getSwapTotal())
                                 , StorageUnitUtils.BYTE, 2)
-                ));
-                JsonUtils.setString(swapObject, "used", String.format("已用 %s"
-                        , StorageUnitUtils.convert(BigDecimal.valueOf(swapInfo.getSwapUsed())
+                );
+                JsonUtils.setString(swapObject, "used",
+                        StorageUnitUtils.convert(BigDecimal.valueOf(swapInfo.getSwapUsed())
+                                , StorageUnitUtils.BYTE, 2));
+                JsonUtils.setString(swapObject, "remaining",
+                        StorageUnitUtils.convert(BigDecimal.valueOf(swapInfo.getSwapTotal() - swapInfo.getSwapUsed())
                                 , StorageUnitUtils.BYTE, 2)
-                ));
-                JsonUtils.setString(swapObject, "remaining", String.format("剩余 %s"
-                        , StorageUnitUtils.convert(BigDecimal.valueOf(swapInfo.getSwapTotal() - swapInfo.getSwapUsed())
-                                , StorageUnitUtils.BYTE, 2)
-                ));
+                );
 
                 JsonUtils.setJsonObject(resourcesObject, "swap", swapObject);
             }
@@ -317,20 +331,65 @@ public class StatusPlugin extends BasePlugin {
             JsonUtils.setString(systemSpecsObject, "cpu", OshiUtil.getHardware().getProcessor().getProcessorIdentifier().getName());
             JsonUtils.setString(systemSpecsObject, "plugin", String.format("总计%s个 | 启用%s个"
                     , pluginList.size()
-                    , pluginList.stream().filter(this::isEnabled).count()
+                    , pluginList.stream().filter(this::isPluginEnabled).count()
             ));
-            JsonUtils.setString(systemSpecsObject, "memory", String.format("已用 %s"
-                    , StorageUnitUtils.convert(BigDecimal.valueOf(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())
+            JsonUtils.setString(systemSpecsObject, "memory",
+                    StorageUnitUtils.convert(BigDecimal.valueOf(Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory())
                             , StorageUnitUtils.BYTE, 2)
-            ));
+            );
 
             JsonUtils.setJsonObject(statusObject, "systemSpecs", systemSpecsObject);
         }
 
-        this.status = statusObject;
+        return statusObject;
     }
 
-    private boolean isEnabled(String className) {
+    private String getBgUrl() {
+        String url = BaniraUtils.getOthersConfig().statusBgUrl();
+        try {
+            if (StringUtils.isNotNullOrEmpty(url)) {
+                // 判断是否链接
+                if (url.startsWith("http://") || url.startsWith("https://")) {
+                    return url;
+                }
+                File file = new File(url);
+                if (file.exists()) {
+                    // 判断是否文件夹
+                    if (file.isDirectory()) {
+                        List<Path> files = getLocalPicList(url);
+                        if (CollectionUtils.isNotNullOrEmpty(files)) {
+                            Files.copy(files.getFirst(), TEMP_BG_FILE.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                            return TEMP_BG_FILE.getPath();
+                        }
+                    }
+                    // 判断是否文件
+                    else if (file.isFile()) {
+                        Files.copy(file.toPath(), TEMP_BG_FILE.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                        return TEMP_BG_FILE.getPath();
+                    }
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.error("Failed to get bg url", e);
+        }
+        return "bg.png";
+    }
+
+    /**
+     * 遍历路径及子路径下所有文件
+     */
+    private List<Path> getLocalPicList(String path) {
+        List<Path> files = new ArrayList<>();
+        try (Stream<Path> paths = Files.walk(Paths.get(path))) {
+            paths.filter(Files::isRegularFile).forEach(files::add);
+        } catch (IOException e) {
+            LOGGER.error("Failed to get local pic list", e);
+        }
+        Collections.shuffle(files);
+        return files;
+    }
+
+    private boolean isPluginEnabled(String className) {
         if (RecorderPlugin.class.getName().equalsIgnoreCase(className)) return true;
         if (globalConfig.get() == null || globalConfig.get().baseConfig().capability() == null
         ) {

@@ -233,4 +233,11 @@ public abstract class BasePlugin {
         KEYWORD_COMMAND_PATTERN.clear();
     }
 
+    /**
+     * 获取帮助信息
+     *
+     * @param type 帮助类型
+     */
+    protected abstract String getHelpInfo(String type);
+
 }
