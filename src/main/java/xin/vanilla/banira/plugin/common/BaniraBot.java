@@ -452,6 +452,16 @@ public class BaniraBot extends Bot {
     }
 
     /**
+     * 设置消息表情回复 No❌
+     *
+     * @param msgId 消息Id
+     * @return 是否成功
+     */
+    public boolean setMsgEmojiLikeNo(int msgId) {
+        return setMsgEmojiLike(msgId, 123);
+    }
+
+    /**
      * 设置消息表情回复 收到👌
      *
      * @param msgId 消息Id

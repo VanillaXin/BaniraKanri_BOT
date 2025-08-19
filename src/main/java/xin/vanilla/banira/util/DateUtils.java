@@ -748,10 +748,46 @@ public class DateUtils {
     }
 
     /**
+     * 将 Duration 格式化为 "X天X小时X分X秒"
+     * 只输出非零的部分，例如 0天不会显示
+     */
+    public static String formatDuration(Duration duration) {
+        if (duration == null) {
+            return "";
+        }
+
+        long seconds = duration.getSeconds();
+        long days = seconds / (24 * 3600);
+        seconds %= (24 * 3600);
+
+        long hours = seconds / 3600;
+        seconds %= 3600;
+
+        long minutes = seconds / 60;
+        seconds %= 60;
+
+        StringBuilder sb = new StringBuilder();
+        if (days > 0) {
+            sb.append(days).append("天");
+        }
+        if (hours > 0) {
+            sb.append(hours).append("小时");
+        }
+        if (minutes > 0) {
+            sb.append(minutes).append("分");
+        }
+        if (seconds > 0 || sb.isEmpty()) {
+            sb.append(seconds).append("秒");
+        }
+
+        return sb.toString();
+    }
+
+    /**
      * 获取10位时间戳
      */
     public static long getTimestamp(Date date) {
-        return date.getTime() / 1000;
+        return date.getTime() / 1000L;
     }
 
     /**

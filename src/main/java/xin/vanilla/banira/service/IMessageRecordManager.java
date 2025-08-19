@@ -19,6 +19,8 @@ public interface IMessageRecordManager {
 
     PageResult<MessageRecord> getMessageRecordPagedList(MessageRecordQueryParam param);
 
+    long getMessageRecordCount(MessageRecordQueryParam param);
+
     MessageRecord getMessageRecord(long groupId, int msgId);
 
 }

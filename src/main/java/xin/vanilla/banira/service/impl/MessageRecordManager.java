@@ -50,6 +50,12 @@ public class MessageRecordManager implements IMessageRecordManager {
     }
 
     @Override
+    public long getMessageRecordCount(MessageRecordQueryParam param) {
+        if (param == null) param = new MessageRecordQueryParam();
+        return messageRecordDao.selectCountByParam(param);
+    }
+
+    @Override
     public MessageRecord getMessageRecord(long groupId, int msgId) {
         MessageRecordQueryParam param = new MessageRecordQueryParam();
         param.setGroupId(groupId);

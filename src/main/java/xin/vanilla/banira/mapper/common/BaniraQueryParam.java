@@ -75,33 +75,53 @@ public class BaniraQueryParam extends HashMap<String, Object> {
         return this;
     }
 
-    public BaniraQueryParam addParam(String name, Object... values) {
-        this.put(name + "_array", values);
+    public BaniraQueryParam addParamNot(String key, Object value) {
+        if (value != null) this.put(key + "_not", value);
         return this;
     }
 
-    public BaniraQueryParam addParamByArray(String name, Object[] values) {
-        this.put(name + "_array", values);
+    public BaniraQueryParam addParam(String key, Object... values) {
+        this.put(key + "_array", values);
         return this;
     }
 
-    public BaniraQueryParam addParamByList(String name, Collection<?> values) {
-        this.put(name + "_list", values);
+    public BaniraQueryParam addParamNot(String key, Object... values) {
+        this.put(key + "_array_not", values);
         return this;
     }
 
-    public BaniraQueryParam addParamByOr(String name, Object... values) {
-        this.put(name + "_array_or", values);
+    public BaniraQueryParam addParamByArray(String key, Object[] values) {
+        this.put(key + "_array", values);
         return this;
     }
 
-    public BaniraQueryParam addParamByArrayOr(String name, Object[] values) {
-        this.put(name + "_array_or", values);
+    public BaniraQueryParam addParamByArrayNot(String key, Object[] values) {
+        this.put(key + "_array_not", values);
         return this;
     }
 
-    public BaniraQueryParam addParamByListOr(String name, Collection<?> values) {
-        this.put(name + "_list_or", values);
+    public BaniraQueryParam addParamByList(String key, Collection<?> values) {
+        this.put(key + "_list", values);
+        return this;
+    }
+
+    public BaniraQueryParam addParamByListNot(String key, Collection<?> values) {
+        this.put(key + "_list_not", values);
+        return this;
+    }
+
+    public BaniraQueryParam addParamByOr(String key, Object... values) {
+        this.put(key + "_array_or", values);
+        return this;
+    }
+
+    public BaniraQueryParam addParamByArrayOr(String key, Object[] values) {
+        this.put(key + "_array_or", values);
+        return this;
+    }
+
+    public BaniraQueryParam addParamByListOr(String key, Collection<?> values) {
+        this.put(key + "_list_or", values);
         return this;
     }
 

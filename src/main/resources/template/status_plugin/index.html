@@ -1,0 +1,661 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>香草青茶 - 机器人监控面板</title>
+    <link rel="stylesheet" href="all.min.css">
+    <script src="chart.js"></script>
+    <script src="config.js"></script>
+    <style>
+        :root {
+            --primary: #3498db;
+            --secondary: #2ecc71;
+            --warning: #f39c12;
+            --danger: #e74c3c;
+            --dark: #2c3e50;
+            --light: #ecf0f1;
+            --gray: #95a5a6;
+            --card-bg: #ffffff;
+            --body-bg: #f5f7fa;
+            --shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+
+        body {
+            /*background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);*/
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            color: #fff;
+            line-height: 1.6;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        @keyframes gradientBG {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: rgba(44, 62, 80, 0.85);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            color: white;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        .bot-avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid white;
+            object-fit: cover;
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.5);
+        }
+
+        .bot-info h1 {
+            font-size: 2rem;
+            margin-bottom: 8px;
+            color: #3498db;
+            text-shadow: 0 0 10px rgba(52, 152, 219, 0.7);
+        }
+
+        .bot-info p {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--secondary);
+            margin-right: 8px;
+            box-shadow: 0 0 10px #2ecc71;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.7;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                opacity: 0.7;
+            }
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(44, 62, 80, 0.8);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            background: rgba(26, 37, 52, 0.9);
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .card-body {
+            padding: 20px;
+        }
+
+        .info-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .info-item:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .info-item .label {
+            font-weight: 600;
+            color: #3498db;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .info-item .value {
+            font-size: 1.1rem;
+            color: #ecf0f1;
+        }
+
+        .progress-container {
+            margin-top: 10px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+            color: #bdc3c7;
+        }
+
+        .progress-bar {
+            height: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 6px;
+            transition: width 0.5s ease;
+        }
+
+        .disk-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .disk-item {
+            background: rgba(26, 37, 52, 0.6);
+            border-radius: 8px;
+            padding: 15px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chart-container {
+            height: 200px;
+            margin-top: 15px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(44, 62, 80, 0.8);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card .value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin: 10px 0;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .stat-card .label {
+            color: #bdc3c7;
+            font-size: 0.9rem;
+        }
+
+        .critical .value {
+            color: var(--danger);
+        }
+
+        .warning .value {
+            color: var(--warning);
+        }
+
+        .normal .value {
+            color: var(--secondary);
+        }
+
+        footer {
+            text-align: center;
+            margin-top: 40px;
+            padding: 20px;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 0.9rem;
+            background: rgba(26, 37, 52, 0.7);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .refresh-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .refresh-btn:hover {
+            background: #2980b9;
+            transform: scale(1.05);
+        }
+
+        .refresh-btn:active {
+            transform: scale(0.98);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #bdc3c7;
+            font-size: 1.2rem;
+        }
+
+        .loading i {
+            font-size: 2rem;
+            margin-bottom: 15px;
+            display: block;
+            animation: spin 1.5s linear infinite;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .dashboard {
+                grid-template-columns: 1fr;
+            }
+
+            .disk-container {
+                grid-template-columns: 1fr;
+            }
+
+            header {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+
+            .header-left {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header>
+        <div class="header-left">
+            <img id="bot-avatar" class="bot-avatar" src="" alt="Bot Avatar">
+            <div class="bot-info">
+                <h1 id="bot-title">香草青茶</h1>
+                <p><span class="status-indicator"></span><span id="bot-status">状态加载中...</span></p>
+                <p id="bot-activity">收0 | 发0 | 群0 | 好友0</p>
+            </div>
+        </div>
+    </header>
+
+    <div id="loading" class="loading">
+        <div style="color: #e74c3c; text-align: center; padding: 30px;">
+            <h2>配置加载失败</h2>
+            <p>请确保config.js文件存在且格式正确</p>
+        </div>
+    </div>
+
+    <div id="dashboard" style="display: none;">
+        <div class="stats-grid">
+            <div class="stat-card critical">
+                <div class="value" id="cpu-percentage">0%</div>
+                <div class="label">CPU 使用率</div>
+            </div>
+            <div class="stat-card critical">
+                <div class="value" id="ram-percentage">0%</div>
+                <div class="label">内存使用率</div>
+            </div>
+            <div class="stat-card warning">
+                <div class="value" id="swap-percentage">0%</div>
+                <div class="label">交换空间使用率</div>
+            </div>
+            <div class="stat-card">
+                <div class="value" id="disk-warning">0</div>
+                <div class="label">磁盘警告</div>
+            </div>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <div class="card-header">
+                    CPU 使用情况
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <div class="label">使用率</div>
+                        <div class="value" id="cpu-usage">0%</div>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="cpu-progress"
+                                     style="width: 0%; background-color: #e74c3c;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">规格</div>
+                        <div class="value" id="cpu-specs">加载中...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">处理器型号</div>
+                        <div class="value" id="cpu-model">加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    内存使用情况
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <div class="label">使用率</div>
+                        <div class="value" id="ram-usage">0%</div>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="ram-progress"
+                                     style="width: 0%; background-color: #e74c3c;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">总量</div>
+                        <div class="value" id="ram-total">加载中...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">已用</div>
+                        <div class="value" id="ram-used">加载中...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">剩余</div>
+                        <div class="value" id="ram-remaining">加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    磁盘使用情况
+                </div>
+                <div class="card-body">
+                    <div class="disk-container" id="disks-container">
+                        <!-- Disk items will be generated here -->
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    交换空间
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <div class="label">使用率</div>
+                        <div class="value" id="swap-usage">0%</div>
+                        <div class="progress-container">
+                            <div class="progress-bar">
+                                <div class="progress-fill" id="swap-progress"
+                                     style="width: 0%; background-color: #f39c12;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">总量</div>
+                        <div class="value" id="swap-total">加载中...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">已用</div>
+                        <div class="value" id="swap-used">加载中...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">剩余</div>
+                        <div class="value" id="swap-remaining">加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    运行时间
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <div class="label">插件运行时间</div>
+                        <div class="value" id="plugin-uptime">加载中...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">系统运行时间</div>
+                        <div class="value" id="system-uptime">加载中...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">编译信息</div>
+                        <div class="value" id="compilation-info">加载中...</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    系统信息
+                </div>
+                <div class="card-body">
+                    <div class="info-item">
+                        <div class="label">操作系统</div>
+                        <div class="value" id="os-info">加载中...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">插件状态</div>
+                        <div class="value" id="plugin-status">加载中...</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="label">内存使用</div>
+                        <div class="value" id="memory-usage">加载中...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>香草青茶 状态监控面板 | 最后更新: <span id="update-time"></span></p>
+    </footer>
+</div>
+
+<script>
+
+    // 更新页面元素
+    function updateUI(config) {
+        if (!config) return;
+
+        // 显示仪表板，隐藏加载提示
+        document.getElementById('loading').style.display = 'none';
+        document.getElementById('dashboard').style.display = 'block';
+
+        // 更新Bot信息
+        document.getElementById('bot-title').textContent = config.bot.title;
+        document.getElementById('bot-avatar').src = config.bot.avatar;
+        document.getElementById('bot-status').textContent = config.bot.status;
+        document.getElementById('bot-activity').textContent = config.bot.activity;
+
+        // 更新运行时间
+        document.getElementById('plugin-uptime').textContent = config.uptime.plugin;
+        document.getElementById('system-uptime').textContent = config.uptime.system;
+        document.getElementById('compilation-info').textContent = config.uptime.compilation;
+
+        // 更新资源信息
+        document.getElementById('cpu-percentage').textContent = config.resources.cpu.percentage + '%';
+        document.getElementById('ram-percentage').textContent = config.resources.ram.percentage + '%';
+        document.getElementById('swap-percentage').textContent = config.resources.swap.percentage + '%';
+
+        // 更新CPU部分
+        document.getElementById('cpu-usage').textContent = config.resources.cpu.percentage + '%';
+        document.getElementById('cpu-specs').textContent = config.resources.cpu.specs + ' | ' + config.resources.cpu.maxSpeed;
+        document.getElementById('cpu-model').textContent = config.systemSpecs.cpu;
+
+        // 更新内存部分
+        document.getElementById('ram-usage').textContent = config.resources.ram.percentage + '%';
+        document.getElementById('ram-total').textContent = config.resources.ram.total;
+        document.getElementById('ram-used').textContent = config.resources.ram.used;
+        document.getElementById('ram-remaining').textContent = config.resources.ram.remaining;
+
+        // 更新交换空间
+        document.getElementById('swap-usage').textContent = config.resources.swap.percentage + '%';
+        document.getElementById('swap-total').textContent = config.resources.swap.total;
+        document.getElementById('swap-used').textContent = config.resources.swap.used;
+        document.getElementById('swap-remaining').textContent = config.resources.swap.remaining;
+
+        // 更新磁盘信息
+        const disksContainer = document.getElementById('disks-container');
+        disksContainer.innerHTML = '';
+
+        let diskWarnings = 0;
+
+        config.disks.forEach(disk => {
+            const diskItem = document.createElement('div');
+            diskItem.className = 'disk-item';
+
+            // 根据使用率设置颜色
+            let color = '#2ecc71'; // 绿色
+            if (disk.percentage > 90) {
+                color = '#e74c3c'; // 红色
+                diskWarnings++;
+            } else if (disk.percentage > 80) {
+                color = '#f39c12'; // 橙色
+                diskWarnings++;
+            }
+
+            diskItem.innerHTML = `
+                    <div class="label">${disk.label} <span>${disk.percentage}%</span></div>
+                    <div class="progress-container">
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${disk.percentage}%; background-color: ${color};"></div>
+                        </div>
+                    </div>
+                    <div class="specs" style="margin-top: 8px; color: #bdc3c7; font-size: 0.9rem;">${disk.used} / ${disk.total}</div>
+                `;
+            disksContainer.appendChild(diskItem);
+        });
+
+        // 更新系统信息
+        document.getElementById('os-info').textContent = config.systemSpecs.os;
+        document.getElementById('plugin-status').textContent = config.systemSpecs.plugin;
+        document.getElementById('memory-usage').textContent = config.systemSpecs.memory;
+
+        // 更新磁盘警告数量
+        document.getElementById('disk-warning').textContent = diskWarnings;
+
+        // 更新进度条
+        document.getElementById('cpu-progress').style.width = Math.min(100, config.resources.cpu.percentage) + '%';
+        document.getElementById('ram-progress').style.width = config.resources.ram.percentage + '%';
+        document.getElementById('swap-progress').style.width = config.resources.swap.percentage + '%';
+
+        // 更新进度条颜色
+        document.getElementById('cpu-progress').style.backgroundColor =
+            config.resources.cpu.percentage > 500 ? '#e74c3c' :
+                config.resources.cpu.percentage > 300 ? '#f39c12' : '#2ecc71';
+
+        document.getElementById('ram-progress').style.backgroundColor =
+            config.resources.ram.percentage > 90 ? '#e74c3c' :
+                config.resources.ram.percentage > 80 ? '#f39c12' : '#2ecc71';
+
+        document.getElementById('swap-progress').style.backgroundColor =
+            config.resources.swap.percentage > 90 ? '#e74c3c' :
+                config.resources.swap.percentage > 70 ? '#f39c12' : '#2ecc71';
+
+        // 更新时间和日期
+        const now = new Date();
+        document.getElementById('update-time').textContent =
+            `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ` +
+            `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+
+    }
+
+    // 初始化页面
+    async function initPage() {
+        updateUI(configData);
+    }
+
+    // 页面加载完成后初始化
+    document.addEventListener('DOMContentLoaded', initPage);
+
+</script>
+</body>
+</html>

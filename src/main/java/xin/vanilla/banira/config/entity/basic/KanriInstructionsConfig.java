@@ -9,7 +9,6 @@ import java.util.Set;
  * 管理指令配置
  *
  * @param prefix    前缀
- * @param status    框架状态
  * @param tag       头衔
  * @param card      群名片
  * @param tap       戳一戳
@@ -27,7 +26,6 @@ import java.util.Set;
 @Accessors(chain = true)
 public record KanriInstructionsConfig(
         Set<String> prefix,
-        Set<String> status,
         Set<String> tag,
         Set<String> card,
         Set<String> tap,
@@ -47,7 +45,6 @@ public record KanriInstructionsConfig(
     public static KanriInstructionsConfig preset() {
         return new KanriInstructionsConfig(
                 BaniraUtils.mutableSetOf(),
-                BaniraUtils.mutableSetOf("状态", "status"),
                 BaniraUtils.mutableSetOf("头衔", "tag"),
                 BaniraUtils.mutableSetOf("群名片", "card"),
                 BaniraUtils.mutableSetOf("戳一戳", "戳", "tap", "slap"),
