@@ -89,7 +89,7 @@ public class StatusPlugin extends BasePlugin {
                 return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             }
 
-            refreshStatus(bot, event);
+            refreshStatus(bot);
 
             try {
                 FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE);
@@ -118,7 +118,7 @@ public class StatusPlugin extends BasePlugin {
         return false;
     }
 
-    private void refreshStatus(BaniraBot bot, AnyMessageEvent event) {
+    private void refreshStatus(BaniraBot bot) {
         LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
         Date now = new Date();
         Date date = new Date(applicationContext.getStartupDate());
@@ -136,11 +136,6 @@ public class StatusPlugin extends BasePlugin {
         Date systemStartDate = new Date(now.getTime() - osInfo.getSystemBootTime());
 
         MessageRecordQueryParam param = new MessageRecordQueryParam();
-        if (BaniraUtils.isGroupIdValid(event.getGroupId())) {
-            param.setGroupId(event.getGroupId());
-        } else {
-            param.setTargetId(event.getUserId());
-        }
         param.setBotId(bot.getSelfId());
         param.setTimeByGt(DateUtils.getTimestamp(date));
         long totalCount = messageRecordManager.getMessageRecordCount(param);
@@ -208,7 +203,6 @@ public class StatusPlugin extends BasePlugin {
                 JsonObject cpuObject = new JsonObject();
 
                 JsonUtils.setDouble(cpuObject, "percentage", BigDecimal.valueOf(cpuInfo.getUsed())
-                        .multiply(BigDecimal.valueOf(100))
                         .setScale(2, RoundingMode.HALF_UP).doubleValue()
                 );
                 JsonUtils.setString(cpuObject, "specs", String.format("%sC%sT"
