@@ -30,6 +30,8 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.start.SpringContextHolder;
 
+import java.net.URI;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
@@ -757,5 +759,27 @@ public class BaniraUtils {
     }
 
     // endregion 权限判断
+
+    // region 其他
+
+    public static boolean isVailidUrl(String url) {
+        try {
+            URI.create(url);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static boolean isVailidPath(String path) {
+        try {
+            Path.of(path);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // endregion 其他
 
 }

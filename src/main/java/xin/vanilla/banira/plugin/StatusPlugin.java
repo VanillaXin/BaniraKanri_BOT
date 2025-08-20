@@ -4,6 +4,8 @@ import cn.hutool.system.oshi.CpuInfo;
 import cn.hutool.system.oshi.OshiUtil;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonObject;
+import com.microsoft.playwright.Browser;
+import com.microsoft.playwright.Page;
 import com.mikuac.shiro.annotation.AnyMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.MsgUtils;
@@ -31,6 +33,9 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.*;
+import xin.vanilla.banira.util.html.HtmlScreenshotConfig;
+import xin.vanilla.banira.util.html.HtmlScreenshotResult;
+import xin.vanilla.banira.util.html.HtmlScreenshotUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -59,7 +64,8 @@ public class StatusPlugin extends BasePlugin {
     @Resource
     private IMessageRecordManager messageRecordManager;
 
-    private volatile long lastRender = 0;
+    private volatile long lastRenderTime = 0;
+    private static final Random RANDOM = new Random();
 
     private static final File HTML_FILE = new File("config/status_plugin/index.html");
     private static final File CONFIG_FILE = new File("config/status_plugin/config.js");
@@ -91,7 +97,8 @@ public class StatusPlugin extends BasePlugin {
                 && globalConfig.get().instConfig().base().status().contains(super.replaceCommand(message))
         ) {
             // 限制访问
-            if (System.currentTimeMillis() - lastRender < 1000 * 60) return bot.setMsgEmojiLikeNo(event.getMessageId());
+            if (System.currentTimeMillis() - lastRenderTime < 1000 * 60)
+                return bot.setMsgEmojiLikeNo(event.getMessageId());
 
             try {
                 if (!HTML_FILE.exists()) {
@@ -115,15 +122,25 @@ public class StatusPlugin extends BasePlugin {
             }
 
             try {
-                lastRender = System.currentTimeMillis();
-
+                this.lastRenderTime = System.currentTimeMillis();
+                HtmlScreenshotResult render = HtmlScreenshotUtils.render(
+                        new HtmlScreenshotConfig(new File("config/status_plugin/index.html"))
+                                .setContextOptions(new Browser.NewContextOptions()
+                                        .setViewportSize(1000, 800)
+                                        .setIsMobile(true)
+                                )
+                                .setScreenshotOptions(new Page.ScreenshotOptions()
+                                        .setFullPage(true)
+                                )
+                                .setInterval(RANDOM.nextInt(750, 2500))
+                );
                 String msg = MsgUtils.builder()
-                        .img(HtmlToImageUtils.renderFileToBytes(new File("config/status_plugin/index.html")))
+                        .img(render.getByte())
                         .build();
                 ActionData<MsgId> msgIdData = bot.sendMsg(event, msg, false);
                 return bot.isActionDataMsgIdNotEmpty(msgIdData);
             } catch (Exception e) {
-                lastRender = 0;
+                this.lastRenderTime = 0;
                 LOGGER.error("Failed to render html", e);
                 return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             }
