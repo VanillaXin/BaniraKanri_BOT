@@ -9,6 +9,8 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.Objects;
 import java.util.Set;
@@ -24,6 +26,23 @@ public class TagCommand implements KanriHandler {
     private Supplier<GlobalConfig> globalConfig;
     @Resource
     private BaniraCodeHandler codeHandler;
+
+    @Nonnull
+    @Override
+    public String getHelpInfo(String type) {
+        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            return "设置群头衔：\n\n" +
+                    "用法1：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    "<QQ号|艾特> ... " + "<头衔>" + "\n\n" +
+                    "用法2：(回复要设置的内容)\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction()
+                    ;
+        }
+        return "";
+    }
 
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {
@@ -55,7 +74,7 @@ public class TagCommand implements KanriHandler {
                 tag = "";
             }
         } else {
-            tag = args[args.length - 1];
+            tag = CollectionUtils.getLast(args);
         }
         if (tag == null) return FAIL;
 

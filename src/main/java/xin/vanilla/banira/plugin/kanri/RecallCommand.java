@@ -27,6 +27,31 @@ public class RecallCommand implements KanriHandler {
     @Resource
     private IMessageRecordManager messageRecordManager;
 
+    @Nonnull
+    @Override
+    public String getHelpInfo(String type) {
+        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            return "撤回消息：\n\n" +
+                    "用法1：(回复要撤回的消息)\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + "\n\n" +
+                    "用法2：(撤回当前消息前的第n条消息)\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    "<n> ..." + "\n\n" +
+                    "用法3：(撤回当前消息前的第n~m条消息)\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    "<n:m> ..." + "\n\n" +
+                    "用法4：(撤回当前消息前的第n条及后面的共m消息)\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    "<n+m> ..."
+                    ;
+        }
+        return "";
+    }
+
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {
         // 可以撤回自己的所以直接返回true

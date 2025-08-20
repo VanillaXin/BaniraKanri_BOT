@@ -8,6 +8,7 @@ import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.Objects;
 import java.util.Set;
@@ -21,6 +22,18 @@ public class AtAllCommand implements KanriHandler {
 
     @Resource
     private Supplier<GlobalConfig> globalConfig;
+
+    @Nonnull
+    @Override
+    public String getHelpInfo(String type) {
+        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            return "AT全体成员：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace()
+                    + this.getAction()
+                    ;
+        }
+        return "";
+    }
 
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {

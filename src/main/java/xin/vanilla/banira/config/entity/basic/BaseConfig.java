@@ -31,6 +31,7 @@ public record BaseConfig(
                 BaniraUtils.mutableSetOf(),
                 BaniraUtils.mutableMapOf(
                         KanriPlugin.class.getName(), 1
+                        , HelpPlugin.class.getName(), 2
                         , ExamplePlugin.class.getName(), 99
                         , ImageFaceToImagePlugin.class.getName(), 99
                         , WifePlugin.class.getName(), 99

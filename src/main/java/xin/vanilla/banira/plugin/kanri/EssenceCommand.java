@@ -12,6 +12,7 @@ import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.Objects;
 import java.util.Set;
@@ -25,6 +26,32 @@ public class EssenceCommand implements KanriHandler {
 
     @Resource
     private Supplier<GlobalConfig> globalConfig;
+
+    @Nonnull
+    @Override
+    public String getHelpInfo(String type) {
+        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            return "设置群精华消息：\n\n" +
+                    "用法1：\n" +
+                    "添加：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    globalConfig.get().instConfig().base().add() + " " +
+                    "<精华消息>" +
+                    "<QQ号|艾特> ... " + "<名片>" + "\n\n" +
+                    "用法2：(回复要设置的内容)\n" +
+                    "添加：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() +
+                    globalConfig.get().instConfig().base().add() +
+                    "删除：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    globalConfig.get().instConfig().base().del()
+                    ;
+        }
+        return "";
+    }
 
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {

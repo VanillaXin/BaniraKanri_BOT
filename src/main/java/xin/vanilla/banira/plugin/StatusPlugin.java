@@ -19,6 +19,7 @@ import com.mikuac.shiro.dto.action.response.GroupInfoResp;
 import com.mikuac.shiro.dto.action.response.LoginInfoResp;
 import com.mikuac.shiro.dto.action.response.VersionInfoResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -72,20 +73,26 @@ public class StatusPlugin extends BasePlugin {
     private static final File TEMP_BG_FILE = new File("config/status_plugin/temp.png");
 
     private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "status"
+            "status", "状态"
     );
 
     /**
      * 获取帮助信息
      *
-     * @param type 帮助类型
+     * @param type    帮助类型
+     * @param groupId 群组ID
      */
+    @Nonnull
     @Override
-    protected String getHelpInfo(String type) {
-        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
-
+    public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
+        List<String> result = new ArrayList<>();
+        if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            result.add("获取框架及系统状态：\n" +
+                    BaniraUtils.getInsPrefixWithSpace() +
+                    globalConfig.get().instConfig().base().status()
+            );
         }
-        return null;
+        return result;
     }
 
     @AnyMessageHandler
@@ -134,7 +141,7 @@ public class StatusPlugin extends BasePlugin {
                                 .setScreenshotOptions(new Page.ScreenshotOptions()
                                         .setFullPage(true)
                                 )
-                                .setInterval(RANDOM.nextInt(750, 2500))
+                                .setInterval(RANDOM.nextInt(250, 1750))
                 );
                 String msg = MsgUtils.builder()
                         .img(render.getByte())

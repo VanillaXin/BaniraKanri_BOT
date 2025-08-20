@@ -7,6 +7,7 @@ import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import com.mikuac.shiro.dto.event.message.MessageEvent;
 import com.mikuac.shiro.dto.event.message.PrivateMessageEvent;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.kanri.KanriHandler;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.*;
 
@@ -40,14 +42,16 @@ public class KanriPlugin extends BasePlugin {
     /**
      * 获取帮助信息
      *
-     * @param type 帮助类型
+     * @param type    帮助类型
+     * @param groupId 群组ID
      */
+    @Nonnull
     @Override
-    protected String getHelpInfo(String type) {
-        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
-
-        }
-        return null;
+    public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
+        return this.handlers.stream()
+                .map(h -> h.getHelpInfo(type))
+                .filter(StringUtils::isNotNullOrEmpty)
+                .sorted().toList();
     }
 
     @GroupMessageHandler

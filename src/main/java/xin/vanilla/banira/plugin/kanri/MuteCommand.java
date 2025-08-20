@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
+import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.Objects;
@@ -20,6 +22,28 @@ public class MuteCommand implements KanriHandler {
 
     @Resource
     private Supplier<GlobalConfig> globalConfig;
+
+    @Nonnull
+    @Override
+    public String getHelpInfo(String type) {
+        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            return "禁言群成员：\n\n" +
+                    "用法1：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    "<QQ号|艾特> ... " + "<禁言秒数>" + "\n\n" +
+                    "用法2：(回复要禁言的成员)\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    "<禁言秒数>" + "\n\n" +
+                    "用法3：(全员禁言)\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    "@全体成员"
+                    ;
+        }
+        return "";
+    }
 
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {
@@ -45,7 +69,7 @@ public class MuteCommand implements KanriHandler {
         Set<Long> targets = getQQsWithReplay(context, args);
 
         // 解析时长
-        int duration = (int) (StringUtils.toDouble(args[args.length - 1]) * 60);
+        int duration = (int) (StringUtils.toDouble(CollectionUtils.getLast(args)) * 60);
 
         // 全体禁言
         if (targets.contains(233L)) {

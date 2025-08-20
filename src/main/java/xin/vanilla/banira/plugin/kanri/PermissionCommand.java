@@ -10,6 +10,7 @@ import xin.vanilla.banira.config.entity.basic.PermissionConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.HashSet;
 import java.util.Objects;
@@ -26,6 +27,34 @@ public class PermissionCommand implements KanriHandler {
     private Supplier<GlobalConfig> globalConfig;
     @Resource
     private Supplier<GroupConfig> groupConfig;
+
+    @Nonnull
+    @Override
+    public String getHelpInfo(String type) {
+        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            return "设置管家或女仆的权限：\n\n" +
+                    "增加权限：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    globalConfig.get().instConfig().base().add() + " " +
+                    "<QQ号|艾特> ..." +
+                    "<权限别称> ..." + "\n\n" +
+                    "删除权限：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    globalConfig.get().instConfig().base().del() + " " +
+                    "<QQ号|艾特> ..." +
+                    "<权限别称> ..." + "\n\n" +
+                    "权限别称列表：\n" +
+                    EnumPermission.getAll().stream()
+                            .sorted()
+                            .map(op -> op.name() + "：" + op.getDesc())
+                            .reduce((a, b) -> a + "\n" + b)
+                            .orElse("")
+                    ;
+        }
+        return "";
+    }
 
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {

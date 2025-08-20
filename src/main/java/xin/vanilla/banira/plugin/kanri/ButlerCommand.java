@@ -8,6 +8,7 @@ import xin.vanilla.banira.config.entity.basic.PermissionConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.Objects;
 import java.util.Set;
@@ -21,6 +22,26 @@ public class ButlerCommand implements KanriHandler {
 
     @Resource
     private Supplier<GlobalConfig> globalConfig;
+
+    @Nonnull
+    @Override
+    public String getHelpInfo(String type) {
+        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            return "增删管家：\n\n" +
+                    "增加：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace()
+                    + this.getAction() + " "
+                    + globalConfig.get().instConfig().base().add() + " "
+                    + "<QQ号|艾特> ..." + "\n\n" +
+                    "删除：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace()
+                    + this.getAction() + " "
+                    + globalConfig.get().instConfig().base().del() + " "
+                    + "<QQ号|艾特> ..." + "\n\n"
+                    ;
+        }
+        return "";
+    }
 
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {

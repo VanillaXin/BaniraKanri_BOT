@@ -9,6 +9,7 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.Objects;
 import java.util.Set;
@@ -24,6 +25,23 @@ public class GroupNameCommand implements KanriHandler {
     private Supplier<GlobalConfig> globalConfig;
     @Resource
     private BaniraCodeHandler codeHandler;
+
+    @Nonnull
+    @Override
+    public String getHelpInfo(String type) {
+        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            return "设置群名称：\n\n" +
+                    "用法1：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    "<群名称>" + "\n\n" +
+                    "用法2：(回复要设置的内容)\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction()
+                    ;
+        }
+        return "";
+    }
 
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {
@@ -44,24 +62,24 @@ public class GroupNameCommand implements KanriHandler {
     @Override
     public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
         // 解析内容
-        String tag;
+        String name;
         if (args.length == 0) {
             if (BaniraUtils.hasReply(context.event().getArrayMsg())) {
-                tag = BaniraUtils.getReplyContentString(context.bot(), context.event().getArrayMsg());
+                name = BaniraUtils.getReplyContentString(context.bot(), context.event().getArrayMsg());
             } else {
-                tag = "";
+                name = "";
             }
         } else {
-            tag = context.content();
+            name = context.content();
         }
-        if (tag == null) return FAIL;
+        if (name == null) return FAIL;
 
         BaniraCodeContext codeContext = new BaniraCodeContext(context.bot(), context.event().getArrayMsg());
 
         BaniraCodeContext code = codeHandler.decode(
                 codeContext.setSender(context.sender())
                         .setGroup(context.group())
-                        .setMsg(tag)
+                        .setMsg(name)
         );
         context.bot().setGroupName(context.group(), code.getMsg());
 

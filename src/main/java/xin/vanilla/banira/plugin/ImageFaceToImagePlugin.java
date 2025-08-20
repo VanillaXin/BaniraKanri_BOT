@@ -11,11 +11,13 @@ import com.mikuac.shiro.dto.action.response.LoginInfoResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.enums.MsgTypeEnum;
 import com.mikuac.shiro.model.ArrayMsg;
+import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,20 +33,26 @@ import java.util.Set;
 public class ImageFaceToImagePlugin extends BasePlugin {
 
     private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "getface"
+            "getface", "getimage", "获取表情", "获取图片"
     );
 
     /**
      * 获取帮助信息
      *
-     * @param type 帮助类型
+     * @param type    帮助类型
+     * @param groupId 群组ID
      */
+    @Nonnull
     @Override
-    protected String getHelpInfo(String type) {
-        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
-
+    public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
+        List<String> result = new ArrayList<>();
+        if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            result.add("获取被回复消息中的所有图片：\n" +
+                    BaniraUtils.getInsPrefixWithSpace() +
+                    globalConfig.get().otherConfig().imageFaceToImage()
+            );
         }
-        return null;
+        return result;
     }
 
     @AnyMessageHandler

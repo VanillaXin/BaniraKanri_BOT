@@ -28,7 +28,8 @@ public record BaseInstructionsConfig(
         Set<String> global,
         Set<String> that,
         Set<String> atAll,
-        Set<String> status
+        Set<String> status,
+        Set<String> help
 ) {
 
     public static BaseInstructionsConfig preset() {
@@ -41,7 +42,8 @@ public record BaseInstructionsConfig(
                 BaniraUtils.mutableSetOf("全局", "all", "global"),
                 BaniraUtils.mutableSetOf("当前", "that", "this", "here"),
                 BaniraUtils.mutableSetOf("@全体成员", "@全体", "@所有人", "@all", "@All", "@ALL"),
-                BaniraUtils.mutableSetOf("统计", "状态", "status", "statistics", "stats")
+                BaniraUtils.mutableSetOf("统计", "状态", "status", "statistics", "stats"),
+                BaniraUtils.mutableSetOf("帮助", "指令帮助", "help", "tips")
         );
     }
 

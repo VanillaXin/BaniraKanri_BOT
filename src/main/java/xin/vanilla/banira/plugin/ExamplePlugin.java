@@ -8,6 +8,7 @@ import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -33,11 +34,13 @@ public class ExamplePlugin extends BasePlugin {
     /**
      * 获取帮助信息
      *
-     * @param type 帮助类型
+     * @param type    帮助类型
+     * @param groupId 群组ID
      */
+    @Nonnull
     @Override
-    protected String getHelpInfo(String type) {
-        return null;
+    public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
+        return List.of();
     }
 
     /**

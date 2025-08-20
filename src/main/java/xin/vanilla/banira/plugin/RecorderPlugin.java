@@ -7,6 +7,7 @@ import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.response.GetForwardMsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -17,6 +18,7 @@ import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -37,14 +39,13 @@ public class RecorderPlugin extends BasePlugin {
     /**
      * 获取帮助信息
      *
-     * @param type 帮助类型
+     * @param type    帮助类型
+     * @param groupId 群组ID
      */
+    @Nonnull
     @Override
-    protected String getHelpInfo(String type) {
-        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
-
-        }
-        return null;
+    public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
+        return List.of();
     }
 
     @AnyMessageHandler

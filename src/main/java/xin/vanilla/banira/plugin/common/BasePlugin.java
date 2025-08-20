@@ -1,5 +1,7 @@
 package xin.vanilla.banira.plugin.common;
 
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import org.springframework.context.event.EventListener;
 import xin.vanilla.banira.config.ConfigReloadedEvent;
@@ -11,6 +13,7 @@ import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.RegUtils;
 
+import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -236,8 +239,10 @@ public abstract class BasePlugin {
     /**
      * 获取帮助信息
      *
-     * @param type 帮助类型
+     * @param type    帮助类型
+     * @param groupId 群组ID
      */
-    protected abstract String getHelpInfo(String type);
+    @Nonnull
+    public abstract List<String> getHelpInfo(@Nonnull String type, @Nullable Long groupId);
 
 }

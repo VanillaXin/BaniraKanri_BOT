@@ -760,6 +760,32 @@ public class BaniraUtils {
 
     // endregion 权限判断
 
+    // region 指令
+
+    public static String getInsPrefix() {
+        String prefix = getGlobalConfig().instConfig().prefix();
+        return StringUtils.isNotNullOrEmpty(prefix) ? prefix : "";
+    }
+
+    public static String getInsPrefixWithSpace() {
+        return getInsPrefix().trim() + " ";
+    }
+
+    public static String getKanriInsPrefix() {
+        String prefix = getInsPrefixWithSpace();
+        GlobalConfig globalConfig = getGlobalConfig();
+        if (CollectionUtils.isNotNullOrEmpty(globalConfig.instConfig().kanri().prefix())) {
+            prefix += CollectionUtils.getRandomElement(globalConfig.instConfig().kanri().prefix());
+        }
+        return prefix;
+    }
+
+    public static String getKanriInsPrefixWithSpace() {
+        return getKanriInsPrefix().trim() + " ";
+    }
+
+    // endregion 指令
+
     // region 其他
 
     public static boolean isVailidUrl(String url) {

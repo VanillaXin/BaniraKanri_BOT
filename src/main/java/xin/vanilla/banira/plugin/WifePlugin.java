@@ -21,6 +21,7 @@ import com.mikuac.shiro.dto.action.common.MsgId;
 import com.mikuac.shiro.dto.action.response.GroupMemberInfoResp;
 import com.mikuac.shiro.dto.action.response.LoginInfoResp;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
+import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -35,8 +36,8 @@ import xin.vanilla.banira.util.*;
 
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -67,20 +68,55 @@ public class WifePlugin extends BasePlugin {
     ).getBufferedImage().createGraphics().getFontMetrics();
 
     private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "wife"
+            "wife", "老婆", "抽老婆"
     );
 
     /**
      * 获取帮助信息
      *
-     * @param type 帮助类型
+     * @param type    帮助类型
+     * @param groupId 群组ID
      */
+    @Nonnull
     @Override
-    protected String getHelpInfo(String type) {
-        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
-
+    public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
+        List<String> result = new ArrayList<>();
+        if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            Set<WifeConfig> wifeConfig = getWifeConfig(groupId);
+            result.add("每日抽老婆：\n" +
+                    wifeConfig.stream().map(WifeConfig::reg).sorted().toList()
+            );
+            result.add("抽老婆年度统计：\n" +
+                    BaniraUtils.getInsPrefixWithSpace() +
+                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
+                    globalConfig.get().instConfig().base().status()
+            );
+            result.add("设置抽老婆规则：\n\n" +
+                    "启用：\n" +
+                    BaniraUtils.getInsPrefixWithSpace() +
+                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
+                    globalConfig.get().instConfig().base().enable() + "\n\n" +
+                    "禁用：\n" +
+                    BaniraUtils.getInsPrefixWithSpace() +
+                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
+                    globalConfig.get().instConfig().base().disable() + "\n\n" +
+                    "添加规则：\n" +
+                    BaniraUtils.getInsPrefixWithSpace() +
+                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
+                    globalConfig.get().instConfig().base().add() + "\n" +
+                    "<正则表达式>\n" + "[<昵称表达式>]\n" + "[<抽取成功提示>]\n" + "[<抽取失败提示>]" + "\n\n" +
+                    "删除规则：\n" +
+                    BaniraUtils.getInsPrefixWithSpace() +
+                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
+                    globalConfig.get().instConfig().base().del() + "\n" +
+                    "<正则表达式>\n" + "[<昵称表达式>]\n" + "[<抽取成功提示>]\n" + "[<抽取失败提示>]" + "\n\n" +
+                    "查询规则：\n" +
+                    BaniraUtils.getInsPrefixWithSpace() +
+                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
+                    globalConfig.get().instConfig().base().list()
+            );
         }
-        return null;
+        return result;
     }
 
     /**
@@ -658,7 +694,7 @@ public class WifePlugin extends BasePlugin {
     }
 
 
-    private Set<WifeConfig> getWifeConfig(long groupId) {
+    private Set<WifeConfig> getWifeConfig(Long groupId) {
         Set<WifeConfig> wifeConfig = BaniraUtils.mutableSetOf();
         OtherConfig othersConfig = BaniraUtils.getOthersConfig(groupId);
         if (CollectionUtils.isNotNullOrEmpty(othersConfig.wifeConfig())) {

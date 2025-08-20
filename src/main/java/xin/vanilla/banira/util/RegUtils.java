@@ -1,6 +1,6 @@
 package xin.vanilla.banira.util;
 
-import jakarta.validation.constraints.NotNull;
+import jakarta.annotation.Nonnull;
 import lombok.Getter;
 
 import java.util.Collection;
@@ -147,7 +147,7 @@ public class RegUtils {
         return processGroup(cols);
     }
 
-    @NotNull
+    @Nonnull
     private RegUtils processGroup(Collection<?>[] cols) {
         Collection<Object> collection = new HashSet<>();
         for (Collection<?> col : cols) {

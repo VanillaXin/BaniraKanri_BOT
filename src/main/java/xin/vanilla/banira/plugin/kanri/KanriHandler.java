@@ -22,6 +22,9 @@ public interface KanriHandler {
      */
     Set<Long> nop = BaniraUtils.mutableSetOf();
 
+    @Nonnull
+    String getHelpInfo(String type);
+
     /**
      * 机器人是否有权限执行
      *
@@ -50,6 +53,10 @@ public interface KanriHandler {
      * @return 命令执行结果
      */
     int execute(@Nonnull KanriContext context, @Nonnull String[] args);
+
+    default String getKanriCommand() {
+        return BaniraUtils.getInsPrefixWithSpace() + String.join("|", getAction());
+    }
 
     default void clearFail() {
         nop.clear();

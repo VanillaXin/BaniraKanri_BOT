@@ -6,6 +6,7 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
+import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
@@ -21,6 +22,23 @@ public class KickCommand implements KanriHandler {
 
     @Resource
     private Supplier<GlobalConfig> globalConfig;
+
+    @Nonnull
+    @Override
+    public String getHelpInfo(String type) {
+        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+            return "踢出群成员：\n\n" +
+                    "用法1：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    "<QQ号|艾特> ..." + "\n\n" +
+                    "用法2：(回复要踢的成员)\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction()
+                    ;
+        }
+        return "";
+    }
 
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {
