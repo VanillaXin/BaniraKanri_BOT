@@ -1,0 +1,380 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="xin.vanilla.banira.mapper.IKeywordRecordDao">
+
+    <resultMap id="resultMap" type="xin.vanilla.banira.domain.KeywordRecord">
+        <id property="id" column="id"/>
+        <result property="botId" column="bot_id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="creatorId" column="creator_id"/>
+        <result property="time" column="time"/>
+        <result property="keywordType" column="keyword_type"/>
+        <result property="keyword" column="keyword"/>
+        <result property="replyMsg" column="reply_msg"/>
+        <result property="enable" column="enable"/>
+    </resultMap>
+
+    <sql id="allColumn">
+        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.keyword_type, t.keyword, t.reply_msg, t.enable
+    </sql>
+
+    <sql id="baseColumn">
+        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.keyword_type, t.keyword, t.reply_msg, t.enable
+    </sql>
+
+    <sql id="whereSql">
+        <trim prefix="WHERE" prefixOverrides="AND | OR ">
+            <include refid="whereSqlInner"/>
+        </trim>
+    </sql>
+
+    <sql id="whereSqlInner">
+        <if test="id_null != null">
+            AND t.id IS NULL
+        </if>
+        <if test="id != null">
+            AND t.id = #{id}
+        </if>
+        <if test="id_array != null">
+            AND t.id IN
+            <foreach collection="id_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="id_list != null">
+            AND t.id IN
+            <foreach collection="id_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="id_array_or != null">
+            AND
+            <foreach collection="id_array_or" item="item" open="(" separator="OR" close=")">
+                (t.id = #{item})
+            </foreach>
+        </if>
+        <if test="id_list_or != null">
+            AND
+            <foreach collection="id_list_or" item="item" open="(" separator="OR" close=")">
+                (t.id = #{item})
+            </foreach>
+        </if>
+        <if test="id_lt != null">
+            <![CDATA[ AND t.id < #{id_lt} ]]>
+        </if>
+        <if test="id_lt_eq != null">
+            <![CDATA[ AND t.id <= #{id_lt_eq} ]]>
+        </if>
+        <if test="id_gt != null">
+            <![CDATA[ AND t.id > #{id_gt} ]]>
+        </if>
+        <if test="id_gt_eq != null">
+            <![CDATA[ AND t.id >= #{id_gt_eq} ]]>
+        </if>
+
+        <if test="botId_null != null">
+            AND t.bot_id IS NULL
+        </if>
+        <if test="botId != null">
+            AND t.bot_id = #{botId}
+        </if>
+        <if test="botId_array != null">
+            AND t.bot_id IN
+            <foreach collection="botId_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="botId_list != null">
+            AND t.bot_id IN
+            <foreach collection="botId_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="botId_array_or != null">
+            AND
+            <foreach collection="botId_array_or" item="item" open="(" separator="OR" close=")">
+                (t.bot_id = #{item})
+            </foreach>
+        </if>
+        <if test="botId_list_or != null">
+            AND
+            <foreach collection="botId_list_or" item="item" open="(" separator="OR" close=")">
+                (t.bot_id = #{item})
+            </foreach>
+        </if>
+        <if test="botId_lt != null">
+            <![CDATA[ AND t.bot_id < #{botId_lt} ]]>
+        </if>
+        <if test="botId_lt_eq != null">
+            <![CDATA[ AND t.bot_id <= #{botId_lt_eq} ]]>
+        </if>
+        <if test="botId_gt != null">
+            <![CDATA[ AND t.bot_id > #{botId_gt} ]]>
+        </if>
+        <if test="botId_gt_eq != null">
+            <![CDATA[ AND t.bot_id >= #{botId_gt_eq} ]]>
+        </if>
+
+        <if test="groupId_null != null">
+            AND t.group_id IS NULL
+        </if>
+        <if test="groupId != null">
+            AND t.group_id = #{groupId}
+        </if>
+        <if test="groupId_array != null">
+            AND t.group_id IN
+            <foreach collection="groupId_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="groupId_list != null">
+            AND t.group_id IN
+            <foreach collection="groupId_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="groupId_array_or != null">
+            AND
+            <foreach collection="groupId_array_or" item="item" open="(" separator="OR" close=")">
+                (t.group_id = #{item})
+            </foreach>
+        </if>
+        <if test="groupId_list_or != null">
+            AND
+            <foreach collection="groupId_list_or" item="item" open="(" separator="OR" close=")">
+                (t.group_id = #{item})
+            </foreach>
+        </if>
+        <if test="groupId_lt != null">
+            <![CDATA[ AND t.group_id < #{groupId_lt} ]]>
+        </if>
+        <if test="groupId_lt_eq != null">
+            <![CDATA[ AND t.group_id <= #{groupId_lt_eq} ]]>
+        </if>
+        <if test="groupId_gt != null">
+            <![CDATA[ AND t.group_id > #{groupId_gt} ]]>
+        </if>
+        <if test="groupId_gt_eq != null">
+            <![CDATA[ AND t.group_id >= #{groupId_gt_eq} ]]>
+        </if>
+
+        <if test="creatorId_null != null">
+            AND t.creator_id IS NULL
+        </if>
+        <if test="creatorId != null">
+            AND t.creator_id = #{creatorId}
+        </if>
+        <if test="creatorId_array != null">
+            AND t.creator_id IN
+            <foreach collection="creatorId_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="creatorId_list != null">
+            AND t.creator_id IN
+            <foreach collection="creatorId_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="creatorId_array_or != null">
+            AND
+            <foreach collection="creatorId_array_or" item="item" open="(" separator="OR" close=")">
+                (t.creator_id = #{item})
+            </foreach>
+        </if>
+        <if test="creatorId_list_or != null">
+            AND
+            <foreach collection="creatorId_list_or" item="item" open="(" separator="OR" close=")">
+                (t.creator_id = #{item})
+            </foreach>
+        </if>
+        <if test="creatorId_lt != null">
+            <![CDATA[ AND t.creator_id < #{creatorId_lt} ]]>
+        </if>
+        <if test="creatorId_lt_eq != null">
+            <![CDATA[ AND t.creator_id <= #{creatorId_lt_eq} ]]>
+        </if>
+        <if test="creatorId_gt != null">
+            <![CDATA[ AND t.creator_id > #{creatorId_gt} ]]>
+        </if>
+        <if test="creatorId_gt_eq != null">
+            <![CDATA[ AND t.creator_id >= #{creatorId_gt_eq} ]]>
+        </if>
+
+        <if test="time_null != null">
+            AND t.time IS NULL
+        </if>
+        <if test="time != null">
+            AND t.time = #{time}
+        </if>
+        <if test="time_array != null">
+            AND t.time IN
+            <foreach collection="time_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="time_list != null">
+            AND t.time IN
+            <foreach collection="time_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="time_array_or != null">
+            AND
+            <foreach collection="time_array_or" item="item" open="(" separator="OR" close=")">
+                (t.time = #{item})
+            </foreach>
+        </if>
+        <if test="time_list_or != null">
+            AND
+            <foreach collection="time_list_or" item="item" open="(" separator="OR" close=")">
+                (t.time = #{item})
+            </foreach>
+        </if>
+        <if test="time_lt != null">
+            <![CDATA[ AND t.time < #{time_lt} ]]>
+        </if>
+        <if test="time_lt_eq != null">
+            <![CDATA[ AND t.time <= #{time_lt_eq} ]]>
+        </if>
+        <if test="time_gt != null">
+            <![CDATA[ AND t.time > #{time_gt} ]]>
+        </if>
+        <if test="time_gt_eq != null">
+            <![CDATA[ AND t.time >= #{time_gt_eq} ]]>
+        </if>
+
+        <if test="keywordType_null != null">
+            AND t.keyword_type IS NULL
+        </if>
+        <if test="keywordType != null">
+            AND t.keyword_type LIKE #{keywordType}
+        </if>
+        <if test="keywordType_array != null">
+            AND t.keyword_type IN
+            <foreach collection="keywordType_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="keywordType_list != null">
+            AND t.keyword_type IN
+            <foreach collection="keywordType_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="keywordType_array_or != null">
+            AND
+            <foreach collection="keywordType_array_or" item="item" open="(" separator="OR" close=")">
+                (t.keyword_type LIKE #{item})
+            </foreach>
+        </if>
+        <if test="keywordType_list_or != null">
+            AND
+            <foreach collection="keywordType_list_or" item="item" open="(" separator="OR" close=")">
+                (t.keyword_type LIKE #{item})
+            </foreach>
+        </if>
+
+        <if test="keyword_null != null">
+            AND t.keyword IS NULL
+        </if>
+        <if test="keyword != null">
+            AND t.keyword LIKE #{keyword}
+        </if>
+        <if test="keyword_array != null">
+            AND t.keyword IN
+            <foreach collection="keyword_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="keyword_list != null">
+            AND t.keyword IN
+            <foreach collection="keyword_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="keyword_array_or != null">
+            AND
+            <foreach collection="keyword_array_or" item="item" open="(" separator="OR" close=")">
+                (t.keyword LIKE #{item})
+            </foreach>
+        </if>
+        <if test="keyword_list_or != null">
+            AND
+            <foreach collection="keyword_list_or" item="item" open="(" separator="OR" close=")">
+                (t.keyword LIKE #{item})
+            </foreach>
+        </if>
+
+        <if test="replyMsg_null != null">
+            AND t.reply_msg IS NULL
+        </if>
+        <if test="replyMsg != null">
+            AND t.reply_msg LIKE #{replyMsg}
+        </if>
+        <if test="replyMsg_array != null">
+            AND t.reply_msg IN
+            <foreach collection="replyMsg_array" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="replyMsg_list != null">
+            AND t.reply_msg IN
+            <foreach collection="replyMsg_list" item="item" open="(" separator="," close=")">#{item}</foreach>
+        </if>
+        <if test="replyMsg_array_or != null">
+            AND
+            <foreach collection="replyMsg_array_or" item="item" open="(" separator="OR" close=")">
+                (t.reply_msg LIKE #{item})
+            </foreach>
+        </if>
+        <if test="replyMsg_list_or != null">
+            AND
+            <foreach collection="replyMsg_list_or" item="item" open="(" separator="OR" close=")">
+                (t.reply_msg LIKE #{item})
+            </foreach>
+        </if>
+
+        <if test="enable_null != null">
+            AND t.enable IS NULL
+        </if>
+        <if test="replyMsg != null">
+            AND t.enable = #{enable}
+        </if>
+
+        <if test="_KEY_WORD_ != null">
+            AND (
+            t.keyword LIKE #{_KEY_WORD_}
+            OR t.keyword_type LIKE #{_KEY_WORD_}
+            OR t.reply_msg LIKE #{_KEY_WORD_}
+            )
+        </if>
+
+    </sql>
+
+    <sql id="orderSql">
+        <trim prefix="ORDER BY" suffixOverrides=",">
+            <if test="_ORDER_ != null">
+                <foreach collection="_ORDER_" item="item" open="" separator="," close="">
+                    <include refid="orderSqlInner"/>
+                </foreach>
+            </if>
+        </trim>
+    </sql>
+
+    <sql id="orderSqlInner">
+        <if test="item == 'id_asc'">t.id ASC</if>
+        <if test="item == 'id_desc'">t.id DESC</if>
+        <if test="item == 'botId_asc'">t.bot_id ASC</if>
+        <if test="item == 'botId_desc'">t.bot_id DESC</if>
+        <if test="item == 'groupId_asc'">t.group_id ASC</if>
+        <if test="item == 'groupId_desc'">t.group_id DESC</if>
+        <if test="item == 'creatorId_asc'">t.creator_id ASC</if>
+        <if test="item == 'creatorId_desc'">t.creator_id DESC</if>
+        <if test="item == 'time_asc'">t.time ASC</if>
+        <if test="item == 'time_desc'">t.time DESC</if>
+        <if test="item == 'keywordType_asc'">t.keyword_type ASC</if>
+        <if test="item == 'keywordType_desc'">t.keyword_type DESC</if>
+        <if test="item == 'keyword_asc'">t.keyword ASC</if>
+        <if test="item == 'keyword_desc'">t.keyword DESC</if>
+        <if test="item == 'replyMsg_asc'">t.reply_msg ASC</if>
+        <if test="item == 'replyMsg_desc'">t.reply_msg DESC</if>
+        <if test="item == 'enable_asc'">t.enable ASC</if>
+        <if test="item == 'enable_desc'">t.enable DESC</if>
+    </sql>
+
+    <delete id="deleteByParam" parameterType="java.util.Map">
+        DELETE FROM keyword_record t
+        <include refid="whereSql"/>
+    </delete>
+
+    <select id="selectCountByParam" parameterType="java.util.Map" resultType="int">
+        SELECT COUNT(*) FROM keyword_record t
+        <include refid="whereSql"/>
+    </select>
+
+    <select id="selectByParam" parameterType="java.util.Map" resultMap="resultMap">
+        SELECT
+        <if test="_ALL_FIELDS_">
+            <include refid="allColumn"/>
+        </if>
+        <if test="!_ALL_FIELDS_">
+            <include refid="baseColumn"/>
+        </if>
+        FROM keyword_record t
+        <include refid="whereSql"/>
+        <include refid="orderSql"/>
+    </select>
+
+</mapper>

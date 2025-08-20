@@ -10,6 +10,7 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import xin.vanilla.banira.event.ConfigReloadedEvent;
 import xin.vanilla.banira.util.DateUtils;
 
 import java.io.IOException;

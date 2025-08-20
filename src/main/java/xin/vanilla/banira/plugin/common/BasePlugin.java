@@ -4,7 +4,7 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import org.springframework.context.event.EventListener;
-import xin.vanilla.banira.config.ConfigReloadedEvent;
+import xin.vanilla.banira.event.ConfigReloadedEvent;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;

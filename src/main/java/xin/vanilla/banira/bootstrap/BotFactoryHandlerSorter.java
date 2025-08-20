@@ -8,7 +8,7 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
-import xin.vanilla.banira.config.ConfigReloadedEvent;
+import xin.vanilla.banira.event.ConfigReloadedEvent;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.basic.BaseConfig;
 import xin.vanilla.banira.plugin.RecorderPlugin;

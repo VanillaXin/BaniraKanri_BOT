@@ -44,7 +44,7 @@ public class ExamplePlugin extends BasePlugin {
     }
 
     /**
-     * 被AT时触发回复
+     * 发送 /hello 触发回复 Hello Excel!
      *
      * @param tob   机器人实例
      * @param event 消息事件

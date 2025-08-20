@@ -1,4 +1,4 @@
-package xin.vanilla.banira.config;
+package xin.vanilla.banira.event;
 
 import lombok.Getter;
 import org.springframework.context.ApplicationEvent;
