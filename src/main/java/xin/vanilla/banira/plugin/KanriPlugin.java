@@ -36,7 +36,7 @@ public class KanriPlugin extends BasePlugin {
     private ToGroupCode toGroupCode;
 
     private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "kanri"
+            "kanri", "群管"
     );
 
     /**
@@ -48,10 +48,17 @@ public class KanriPlugin extends BasePlugin {
     @Nonnull
     @Override
     public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
+        String finalType;
+        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
+            finalType = "";
+        } else {
+            finalType = type;
+        }
         return this.handlers.stream()
-                .map(h -> h.getHelpInfo(type))
+                .map(h -> h.getHelpInfo(finalType))
                 .filter(StringUtils::isNotNullOrEmpty)
                 .sorted().toList();
+
     }
 
     @GroupMessageHandler

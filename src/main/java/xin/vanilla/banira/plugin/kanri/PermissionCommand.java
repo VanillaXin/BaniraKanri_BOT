@@ -37,13 +37,13 @@ public class PermissionCommand implements KanriHandler {
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction() + " " +
                     globalConfig.get().instConfig().base().add() + " " +
-                    "<QQ号|艾特> ..." +
+                    "<QQ号|艾特> ..." + " " +
                     "<权限别称> ..." + "\n\n" +
                     "删除权限：\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction() + " " +
                     globalConfig.get().instConfig().base().del() + " " +
-                    "<QQ号|艾特> ..." +
+                    "<QQ号|艾特> ..." + " " +
                     "<权限别称> ..." + "\n\n" +
                     "权限别称列表：\n" +
                     EnumPermission.getAll().stream()
