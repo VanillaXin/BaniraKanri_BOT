@@ -99,6 +99,8 @@ public class StatusPlugin extends BasePlugin {
             // 限制访问
             if (System.currentTimeMillis() - lastRenderTime < 1000 * 60)
                 return bot.setMsgEmojiLikeNo(event.getMessageId());
+            else
+                bot.setMsgEmojiLikeOk(event.getMessageId());
 
             try {
                 if (!HTML_FILE.exists()) {
