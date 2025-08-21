@@ -309,7 +309,7 @@
         <if test="enable_null != null">
             AND t.enable IS NULL
         </if>
-        <if test="replyMsg != null">
+        <if test="enable != null">
             AND t.enable = #{enable}
         </if>
 
