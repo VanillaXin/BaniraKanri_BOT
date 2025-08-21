@@ -87,7 +87,8 @@ public class StatusPlugin extends BasePlugin {
     public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
         List<String> result = new ArrayList<>();
         if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("获取框架及系统状态：\n" +
+            result.add("框架状态：\n" +
+                    "获取框架及系统状态信息总览。\n\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
                     globalConfig.get().instConfig().base().status()
             );

@@ -4,11 +4,11 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import org.springframework.context.event.EventListener;
-import xin.vanilla.banira.event.ConfigReloadedEvent;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.KeyInstructionsConfig;
+import xin.vanilla.banira.event.ConfigReloadedEvent;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.RegUtils;
@@ -185,11 +185,11 @@ public abstract class BasePlugin {
                                     .groupIgByName("keywordTargetSpace", RegUtils.REG_SEPARATOR).appendIg("?")
                                     .groupIgByName("keywordType", keywordTypes)
                                     .groupIgByName("keywordTypeSpace", RegUtils.REG_SEPARATOR)
-                                    .groupIgByName("keywordKey", RegUtils.REG_NOT_SEPARATOR)
+                                    .groupIgByName("keywordKey", "[.\\s]*?")
                                     .groupIgByName("keywordKeySpace", RegUtils.REG_SEPARATOR)
                                     .groupByName("actionEnd", kv.getKey())
                                     .groupIgByName("actionEndSpace", RegUtils.REG_SEPARATOR)
-                                    .groupIgByName("keywordValue", ".*")
+                                    .groupIgByName("keywordValue", "[.\\s]*")
                                     .end()
                                     .compile()
                     ));

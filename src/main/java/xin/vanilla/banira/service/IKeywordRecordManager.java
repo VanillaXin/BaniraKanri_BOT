@@ -22,9 +22,9 @@ public interface IKeywordRecordManager {
 
     PageResult<KeywordRecord> getKeywordRecordPagedList(KeywordRecordQueryParam param);
 
-    void deleteKeywordRecord(long id);
+    int deleteKeywordRecord(long id);
 
-    void deleteKeywordRecordList(KeywordRecordQueryParam param);
+    int deleteKeywordRecordList(KeywordRecordQueryParam param);
 
     void modifyKeywordRecord(KeywordRecord record);
 

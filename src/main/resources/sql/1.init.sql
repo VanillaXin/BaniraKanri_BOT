@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS "keyword_record"
     `time`         INTEGER NOT NULL,
     `keyword_type` TEXT    NOT NULL,
     `keyword`      TEXT    NOT NULL,
-    `replyMsg`     TEXT    NOT NULL,
+    `reply_msg`    TEXT    NOT NULL,
     `enable`       BOOLEAN NOT NULL DEFAULT TRUE
 );
 CREATE INDEX IF NOT EXISTS id_index ON "keyword_record" (`id`);

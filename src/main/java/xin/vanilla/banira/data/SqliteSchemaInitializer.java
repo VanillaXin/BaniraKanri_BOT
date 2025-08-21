@@ -2,9 +2,11 @@ package xin.vanilla.banira.data;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.context.ApplicationContext;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.event.DatabaseInitializedEvent;
 
 import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
@@ -20,6 +22,9 @@ public class SqliteSchemaInitializer implements ApplicationRunner {
     @jakarta.annotation.Resource
     private DataSource dataSource;
 
+    @jakarta.annotation.Resource
+    private ApplicationContext applicationContext;
+
     @Override
     public void run(ApplicationArguments args) throws Exception {
         Resource resource = new ClassPathResource("sql/1.init.sql");
@@ -33,5 +38,6 @@ public class SqliteSchemaInitializer implements ApplicationRunner {
                 }
             }
         }
+        applicationContext.publishEvent(new DatabaseInitializedEvent(this));
     }
 }

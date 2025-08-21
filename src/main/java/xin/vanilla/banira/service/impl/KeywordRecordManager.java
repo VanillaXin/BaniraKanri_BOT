@@ -55,22 +55,26 @@ public class KeywordRecordManager implements IKeywordRecordManager {
     }
 
     @Override
-    public void deleteKeywordRecord(long id) {
+    public int deleteKeywordRecord(long id) {
+        int result = 0;
         KeywordRecord record = keywordRecordDao.selectById(id);
         if (record != null) {
-            keywordRecordDao.deleteById(id);
+            result = keywordRecordDao.deleteById(id);
             eventPublisher.publishEvent(new KeywordChangedEvent(this, record, EnumDataOperateType.REMOVE));
         }
+        return result;
     }
 
     @Override
-    public void deleteKeywordRecordList(KeywordRecordQueryParam param) {
+    public int deleteKeywordRecordList(KeywordRecordQueryParam param) {
         if (param == null) param = new KeywordRecordQueryParam();
+        int result = 0;
         List<KeywordRecord> records = keywordRecordDao.selectByParam(param);
         if (CollectionUtils.isNotNullOrEmpty(records)) {
-            keywordRecordDao.deleteByParam(param);
+            result = keywordRecordDao.deleteByParam(param);
             eventPublisher.publishEvent(new KeywordChangedEvent(this, records, EnumDataOperateType.REMOVE));
         }
+        return result;
     }
 
     @Override

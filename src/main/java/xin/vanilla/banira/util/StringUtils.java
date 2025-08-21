@@ -524,6 +524,10 @@ public class StringUtils {
         }
     }
 
+    public static String orDefault(String s, String defaultValue) {
+        return StringUtils.isNullOrEmptyEx(s) ? defaultValue : s;
+    }
+
     /**
      * 将字节数组转换为十六进制字符串
      *

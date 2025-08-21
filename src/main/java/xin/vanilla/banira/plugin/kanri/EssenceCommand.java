@@ -14,8 +14,7 @@ import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 
 /**
@@ -29,28 +28,33 @@ public class EssenceCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public String getHelpInfo(String type) {
+    public List<String> getHelpInfo(String type) {
+        List<String> result = new ArrayList<>();
         if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            return "设置群精华消息：\n\n" +
+            result.add("群管 - 群精华消息 - 添加：\n\n" +
                     "用法1：\n" +
-                    "添加：\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction() + " " +
                     globalConfig.get().instConfig().base().add() + " " +
-                    "<精华消息>" +
-                    "<QQ号|艾特> ... " + "<名片>" + "\n\n" +
-                    "用法2：(回复要设置的内容)\n" +
-                    "添加：\n" +
+                    "<精华消息>" + "\n\n" +
+                    "用法2：(回复要添加的内容)：\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction() +
-                    globalConfig.get().instConfig().base().add() +
-                    "删除：\n" +
+                    globalConfig.get().instConfig().base().add()
+            );
+            result.add("群管 - 群精华消息 - 删除：\n\n" +
+                    "用法1：\n" +
+                    BaniraUtils.getKanriInsPrefixWithSpace() +
+                    this.getAction() + " " +
+                    globalConfig.get().instConfig().base().add() + " " +
+                    "<精华消息>" + "\n\n" +
+                    "用法2：(回复要删除的内容)\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction() + " " +
                     globalConfig.get().instConfig().base().del()
-                    ;
+            );
         }
-        return "";
+        return result;
     }
 
     @Override
@@ -83,10 +87,26 @@ public class EssenceCommand implements KanriHandler {
 
         // 解析目标
         int target;
-        if (BaniraUtils.hasReply(context.event().getArrayMsg()) && args.length == 0) {
-            target = (int) BaniraUtils.getReplyQQ(context.bot(), context.group(), context.event().getArrayMsg());
-        } else if (args.length > 0) {
-            ActionData<MsgId> msgId = context.bot().sendGroupMsg(context.group(), context.content(), false);
+        // 有回复
+        if (BaniraUtils.hasReply(context.event().getArrayMsg())) {
+            // 没有参数 或 参数只有添加/删除
+            if (args.length == 0 || (args.length == 1 && operate != null)) {
+                target = BaniraUtils.getReplyId(context.event().getArrayMsg()).intValue();
+            } else {
+                return FAIL;
+            }
+        }
+        // 没有回复 且 有内容
+        else if (args.length > 0) {
+            String content;
+            if (Boolean.TRUE.equals(operate)) {
+                content = String.join("", Arrays.copyOfRange(args, 1, args.length));
+            } else if (operate == null) {
+                content = context.content();
+            } else {
+                return FAIL;
+            }
+            ActionData<MsgId> msgId = context.bot().sendGroupMsg(context.group(), content, false);
             if (context.bot().isActionDataMsgIdNotEmpty(msgId)) {
                 target = context.bot().getActionDataMsgId(msgId);
                 operate = true;
@@ -130,7 +150,7 @@ public class EssenceCommand implements KanriHandler {
             }
         }
 
-        return target > 0 ? FAIL : SUCCESS;
+        return target > 0 ? SUCCESS : FAIL;
     }
 
 }

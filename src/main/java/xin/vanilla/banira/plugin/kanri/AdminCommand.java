@@ -9,6 +9,8 @@ import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -24,9 +26,10 @@ public class AdminCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public String getHelpInfo(String type) {
+    public List<String> getHelpInfo(String type) {
+        List<String> result = new ArrayList<>();
         if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            return "增删群管理员：\n\n" +
+            result.add("群管 - 增删群管理员：\n\n" +
                     "增加：\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace()
                     + this.getAction() + " "
@@ -36,10 +39,10 @@ public class AdminCommand implements KanriHandler {
                     BaniraUtils.getKanriInsPrefixWithSpace()
                     + this.getAction() + " "
                     + globalConfig.get().instConfig().base().del() + " "
-                    + "<QQ号|艾特> ..." + "\n\n"
-                    ;
+                    + "<QQ号|艾特> ..."
+            );
         }
-        return "";
+        return result;
     }
 
     @Override

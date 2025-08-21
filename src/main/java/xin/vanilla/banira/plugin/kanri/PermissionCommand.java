@@ -12,9 +12,7 @@ import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
 
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Supplier;
 
 /**
@@ -30,9 +28,10 @@ public class PermissionCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public String getHelpInfo(String type) {
+    public List<String> getHelpInfo(String type) {
+        List<String> result = new ArrayList<>();
         if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            return "设置管家或女仆的权限：\n\n" +
+            result.add("群管 - 设置管家或女仆的权限：\n\n" +
                     "增加权限：\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction() + " " +
@@ -51,9 +50,9 @@ public class PermissionCommand implements KanriHandler {
                             .map(op -> op.name() + "：" + op.getDesc())
                             .reduce((a, b) -> a + "\n" + b)
                             .orElse("")
-                    ;
+            );
         }
-        return "";
+        return result;
     }
 
     @Override

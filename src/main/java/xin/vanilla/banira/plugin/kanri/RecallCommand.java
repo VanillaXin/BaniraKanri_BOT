@@ -12,6 +12,8 @@ import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -29,9 +31,10 @@ public class RecallCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public String getHelpInfo(String type) {
+    public List<String> getHelpInfo(String type) {
+        List<String> result = new ArrayList<>();
         if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            return "撤回消息：\n\n" +
+            result.add("群管 - 撤回消息：\n\n" +
                     "用法1：(回复要撤回的消息)\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction() + "\n\n" +
@@ -47,9 +50,9 @@ public class RecallCommand implements KanriHandler {
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction() + " " +
                     "<n+m> ..."
-                    ;
+            );
         }
-        return "";
+        return result;
     }
 
     @Override

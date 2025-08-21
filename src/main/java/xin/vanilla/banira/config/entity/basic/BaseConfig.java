@@ -36,6 +36,7 @@ public record BaseConfig(
                         , ImageFaceToImagePlugin.class.getName(), 99
                         , WifePlugin.class.getName(), 99
                         , StatusPlugin.class.getName(), 99
+                        , KeywordPlugin.class.getName(), 2
                 )
         );
     }

@@ -16,6 +16,10 @@ public class BaniraCodeContext implements Cloneable {
      */
     private final List<ArrayMsg> originalMsg;
     /**
+     * 权限获取目标
+     */
+    private Long opId = 0L;
+    /**
      * 群组(若有)
      */
     private Long group;
@@ -31,6 +35,10 @@ public class BaniraCodeContext implements Cloneable {
      * 消息内容
      */
     private String msg;
+    /**
+     * 发送时间
+     */
+    private Long time;
 
     public BaniraCodeContext clone() {
         try {

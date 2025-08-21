@@ -47,7 +47,8 @@ public class ImageFaceToImagePlugin extends BasePlugin {
     public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
         List<String> result = new ArrayList<>();
         if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("获取被回复消息中的所有图片：\n" +
+            result.add("表情转图片：\n" +
+                    "使用指令回复带有图片的消息以获得其中的图片详情。\n\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
                     globalConfig.get().otherConfig().imageFaceToImage()
             );

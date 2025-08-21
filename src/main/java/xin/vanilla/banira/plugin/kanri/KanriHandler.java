@@ -7,6 +7,7 @@ import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
 
+import java.util.List;
 import java.util.Set;
 
 public interface KanriHandler {
@@ -23,7 +24,7 @@ public interface KanriHandler {
     Set<Long> nop = BaniraUtils.mutableSetOf();
 
     @Nonnull
-    String getHelpInfo(String type);
+    List<String> getHelpInfo(String type);
 
     /**
      * 机器人是否有权限执行

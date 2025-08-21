@@ -1,6 +1,5 @@
 package xin.vanilla.banira.service.impl;
 
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.Getter;
 import org.springframework.context.event.EventListener;
@@ -8,6 +7,7 @@ import org.springframework.stereotype.Service;
 import xin.vanilla.banira.domain.KeywordRecord;
 import xin.vanilla.banira.enums.EnumDataOperateType;
 import xin.vanilla.banira.enums.EnumKeywordType;
+import xin.vanilla.banira.event.DatabaseInitializedEvent;
 import xin.vanilla.banira.event.KeywordChangedEvent;
 import xin.vanilla.banira.mapper.param.KeywordRecordQueryParam;
 import xin.vanilla.banira.service.IKeywordCacheManager;
@@ -28,8 +28,8 @@ public class KeywordCacheManager implements IKeywordCacheManager {
     @Resource
     private IKeywordRecordManager keywordRecordManager;
 
-    @PostConstruct
-    public void init() {
+    @EventListener
+    public void init(DatabaseInitializedEvent event) {
         this.loadKeywords();
     }
 

@@ -10,6 +10,8 @@ import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -25,9 +27,10 @@ public class KickCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public String getHelpInfo(String type) {
+    public List<String> getHelpInfo(String type) {
+        List<String> result = new ArrayList<>();
         if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            return "踢出群成员：\n\n" +
+            result.add("群管 - 踢出群成员：\n\n" +
                     "用法1：\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction() + " " +
@@ -35,9 +38,9 @@ public class KickCommand implements KanriHandler {
                     "用法2：(回复要踢的成员)\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction()
-                    ;
+            );
         }
-        return "";
+        return result;
     }
 
     @Override

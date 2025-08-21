@@ -256,4 +256,9 @@ public class KeywordRecordQueryParam extends BaniraQueryParam {
         return this;
     }
 
+    @Override
+    public KeywordRecordQueryParam addOrderBy(String name, boolean asc) {
+        super.addOrderBy(name, asc);
+        return this;
+    }
 }

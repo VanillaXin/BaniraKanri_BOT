@@ -83,15 +83,16 @@ public class WifePlugin extends BasePlugin {
         List<String> result = new ArrayList<>();
         if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             Set<WifeConfig> wifeConfig = getWifeConfig(groupId);
-            result.add("每日抽老婆：\n" +
+            result.add("抽老婆：\n" +
+                    "抽取每日群友老婆喵。\n\n" +
                     wifeConfig.stream().map(WifeConfig::reg).sorted().toList()
             );
-            result.add("抽老婆年度统计：\n" +
+            result.add("抽老婆 - 年度统计：\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
                     globalConfig.get().otherConfig().wifeInsConfig() + " " +
                     globalConfig.get().instConfig().base().status()
             );
-            result.add("设置抽老婆规则：\n\n" +
+            result.add("抽老婆 - 设置规则：\n" +
                     "启用：\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
                     globalConfig.get().otherConfig().wifeInsConfig() + " " +

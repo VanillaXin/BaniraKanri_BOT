@@ -19,6 +19,7 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.kanri.KanriHandler;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.*;
@@ -56,9 +57,10 @@ public class KanriPlugin extends BasePlugin {
         }
         return this.handlers.stream()
                 .map(h -> h.getHelpInfo(finalType))
+                .filter(CollectionUtils::isNotNullOrEmpty)
+                .flatMap(List::stream)
                 .filter(StringUtils::isNotNullOrEmpty)
                 .sorted().toList();
-
     }
 
     @GroupMessageHandler

@@ -20,9 +20,7 @@ import org.springframework.core.ResolvableType;
 import xin.vanilla.banira.config.YamlConfigManager;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
-import xin.vanilla.banira.config.entity.basic.BaseConfig;
-import xin.vanilla.banira.config.entity.basic.OtherConfig;
-import xin.vanilla.banira.config.entity.basic.PermissionConfig;
+import xin.vanilla.banira.config.entity.basic.*;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
@@ -148,6 +146,16 @@ public class BaniraUtils {
             otherConfig = getGlobalConfig().otherConfig();
         }
         return otherConfig;
+    }
+
+    public static BaseInstructionsConfig getBaseIns() {
+        BaseInstructionsConfig base = getGlobalConfig().instConfig().base();
+        return base != null ? base : BaseInstructionsConfig.preset();
+    }
+
+    public static KeyInstructionsConfig getKeyIns() {
+        KeyInstructionsConfig key = getGlobalConfig().instConfig().key();
+        return key != null ? key : KeyInstructionsConfig.preset();
     }
 
     // endregion 配置管理
