@@ -124,14 +124,14 @@ public class CollectionUtils {
     }
 
     public static <T> T getOrDefault(Collection<T> elements, int index, T defaultValue) {
-        if (elements == null || elements.isEmpty()) {
+        if (elements == null || elements.isEmpty() || index >= elements.size()) {
             return defaultValue;
         }
         return getNthElement(elements, index);
     }
 
     public static <T> T getOrDefault(T[] elements, int index, T defaultValue) {
-        if (elements == null || elements.length == 0) {
+        if (elements == null || elements.length == 0 || index >= elements.length) {
             return defaultValue;
         }
         return elements[index];

@@ -89,7 +89,7 @@ public class AdminCommand implements KanriHandler {
         ) return NO_OP;
 
         // 解析目标
-        Set<Long> targets = getQQsWithReplay(context, args);
+        Set<Long> targets = getQQsWithReply(context, args);
 
         for (Long targetId : targets) {
             boolean add = Objects.requireNonNullElseGet(operate, () -> !context.bot().isGroupAdmin(context.group(), targetId));

@@ -99,7 +99,7 @@ public class PermissionCommand implements KanriHandler {
         ) return NO_OP;
 
         // 解析目标
-        Set<Long> targets = getQQsWithReplay(context, args);
+        Set<Long> targets = getQQsWithReply(context, args);
 
         // 解析内容
         Set<EnumPermission> ops = EnumPermission.valueFrom(args);

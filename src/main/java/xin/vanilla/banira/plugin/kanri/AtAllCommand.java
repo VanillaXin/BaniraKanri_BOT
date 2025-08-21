@@ -56,20 +56,20 @@ public class AtAllCommand implements KanriHandler {
 
     @Override
     public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
-        int replayId = -1;
+        int replyId = -1;
         if (BaniraUtils.hasReply(context.event().getArrayMsg())) {
-            replayId = BaniraUtils.getReplyId(context.event().getArrayMsg()).intValue();
+            replyId = BaniraUtils.getReplyId(context.event().getArrayMsg()).intValue();
         }
-        if (replayId < 0) {
-            replayId = context.msgId();
+        if (replyId < 0) {
+            replyId = context.msgId();
         }
-        if (replayId < 0) {
+        if (replyId < 0) {
             return FAIL;
         }
 
         context.bot().sendGroupMsg(context.group()
                 , MsgUtils.builder()
-                        .reply(replayId)
+                        .reply(replyId)
                         .atAll()
                         .build()
                 , false

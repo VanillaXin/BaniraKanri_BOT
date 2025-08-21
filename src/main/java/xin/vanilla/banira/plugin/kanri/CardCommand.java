@@ -67,7 +67,7 @@ public class CardCommand implements KanriHandler {
     @Override
     public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
         // 解析目标
-        Set<Long> targets = getQQsWithReplay(context, args);
+        Set<Long> targets = getQQsWithReply(context, args);
 
         // 解析内容
         String card;

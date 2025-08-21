@@ -9,6 +9,7 @@ import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.MsgId;
 import com.mikuac.shiro.dto.action.response.GetForwardMsgResp;
 import com.mikuac.shiro.dto.action.response.LoginInfoResp;
+import com.mikuac.shiro.dto.action.response.MsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.dto.event.message.MessageEvent;
 import jakarta.annotation.Nonnull;
@@ -169,39 +170,21 @@ public class KeywordPlugin extends BasePlugin {
                         .setKeyword(keyword)
                         .setReplyMsg(reply);
                 keywordRecordManager.addKeywordRecord(keywordRecord);
-                if (keywordRecord.getId() != 0) {
-                    forwardMsg.add(
-                            ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                                    , "关键词编号：\n" + keywordRecord.getId()
-                            )
-                    );
-                }
-                forwardMsg.add(
-                        ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                                , "关键词类型：\n" + keywordType.getDesc()
-                        )
-                );
-                forwardMsg.add(
-                        ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                                , "群号：\n" + keywordRecord.getGroupId()
-                        )
-                );
-                forwardMsg.add(
-                        ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                                , "触发内容：\n" + keywordRecord.getKeyword()
-                        )
-                );
-                forwardMsg.add(
-                        ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                                , "回复内容：\n" + keywordRecord.getReplyMsg()
-                        )
-                );
+                forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                        , (keywordRecord.getId() != 0 ? "关键词编号：" + keywordRecord.getId() + "\n" : "") +
+                                "关键词类型：" + keywordType.getDesc() + "\n" +
+                                "群号：" + keywordRecord.getGroupId()
+                ));
+                forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                        , "触发内容：\n" + keywordRecord.getKeyword()
+                ));
+                forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                        , "回复内容：\n" + keywordRecord.getReplyMsg()
+                ));
                 if (keywordRecord.getId() == 0) {
-                    forwardMsg.add(
-                            ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                                    , "添加失败"
-                            )
-                    );
+                    forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                            , "添加失败"
+                    ));
                 }
             }
             // 删除
@@ -212,6 +195,7 @@ public class KeywordPlugin extends BasePlugin {
                 param.setKeywordType(keywordType.name());
                 param.setKeyword(keyword);
                 param.setReplyMsg(reply);
+                param.setEnable(true);
                 List<KeywordRecord> recordList = keywordRecordManager.getKeywordRecordList(param);
                 if (CollectionUtils.isNotNullOrEmpty(recordList)) {
                     for (KeywordRecord record : recordList) {
@@ -219,11 +203,9 @@ public class KeywordPlugin extends BasePlugin {
                         this.buildForwardMsg(bot, loginInfoEx, forwardMsg, record, b);
                     }
                 } else {
-                    forwardMsg.add(
-                            ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                                    , "未找到目标关键词"
-                            )
-                    );
+                    forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                            , "未找到目标关键词"
+                    ));
                 }
             }
             // 其他
@@ -250,10 +232,13 @@ public class KeywordPlugin extends BasePlugin {
                     if (BaniraUtils.getReplyQQ(bot, event.getGroupId(), event.getArrayMsg()) != bot.getSelfId()) {
                         return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                     }
-                    if (!BaniraUtils.hasForward(bot.getReplayContent(event.getArrayMsg()))) {
+                    Long replyId = BaniraUtils.getReplyId(event.getArrayMsg());
+                    if (replyId == null) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                    ActionData<MsgResp> replyMsgData = bot.getMsg(replyId.intValue());
+                    if (!bot.isActionDataNotEmpty(replyMsgData) || !BaniraUtils.hasForward(replyMsgData.getData().getArrayMsg())) {
                         return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                     } else {
-                        ActionData<GetForwardMsgResp> forwardMsgResp = bot.getForwardMsg(event.getMessageId());
+                        ActionData<GetForwardMsgResp> forwardMsgResp = bot.getForwardMsg(event.getGroupId(), replyMsgData.getData().getUserId(), replyId.intValue());
                         if (!bot.isActionDataNotEmpty(forwardMsgResp)) {
                             return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                         } else {
@@ -266,7 +251,9 @@ public class KeywordPlugin extends BasePlugin {
                                     .map(MessageEvent::getMessage)
                                     .filter(StringUtils::isNotNullOrEmpty)
                                     .filter(data -> data.startsWith("关键词编号："))
-                                    .map(data -> StringUtils.toLong(data.split("：")[1].strip()))
+                                    .map(data -> CollectionUtils.getOrDefault(data.split("关键词编号："), 1, "").strip())
+                                    .map(data -> CollectionUtils.getFirst(data.split("\\s")))
+                                    .map(StringUtils::toLong)
                                     .filter(data -> data > 0).findFirst().orElse(0L);
                             KeywordRecord record = keywordRecordManager.getKeywordRecord(id);
                             boolean b = keywordRecordManager.deleteKeywordRecord(id) > 0;
@@ -303,10 +290,16 @@ public class KeywordPlugin extends BasePlugin {
                     if (ids.length == 0) {
                         return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                     } else {
-                        List<KeywordRecord> recordList = keywordRecordManager.getKeywordRecordList(new KeywordRecordQueryParam().setId(ids));
-                        for (KeywordRecord record : recordList) {
-                            boolean b = keywordRecordManager.deleteKeywordRecord(record.getId()) > 0;
-                            this.buildForwardMsg(bot, loginInfoEx, forwardMsg, record, b);
+                        List<KeywordRecord> recordList = keywordRecordManager.getKeywordRecordList(new KeywordRecordQueryParam().setId(ids).setEnable(true));
+                        if (!recordList.isEmpty()) {
+                            for (KeywordRecord record : recordList) {
+                                boolean b = keywordRecordManager.deleteKeywordRecord(record.getId()) > 0;
+                                this.buildForwardMsg(bot, loginInfoEx, forwardMsg, record, b);
+                            }
+                        } else {
+                            forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                                    , "未找到目标关键词"
+                            ));
                         }
                     }
                     ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, forwardMsg);
@@ -342,10 +335,10 @@ public class KeywordPlugin extends BasePlugin {
                         ));
                         for (KeywordRecord record : pageList.getRecords()) {
                             forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                                    , "关键词编号：\n" + record.getId() + "\n" +
-                                            "关键词类型：\n" + record.getKeywordType().getDesc() + "\n" +
-                                            "群号：\n" + record.getGroupId() + "\n" +
-                                            "触发内容：\n" + record.getKeyword() +
+                                    , "关键词编号：" + record.getId() + "\n" +
+                                            "关键词类型：" + record.getKeywordType().getDesc() + "\n" +
+                                            "群号：" + record.getGroupId() + "\n\n" +
+                                            "触发内容：\n" + record.getKeyword() + "\n\n" +
                                             "回复内容：\n" + record.getReplyMsg()
                             ));
                         }
@@ -389,24 +382,18 @@ public class KeywordPlugin extends BasePlugin {
             , KeywordRecord record
             , boolean success
     ) {
-        forwardMsg.add(
-                ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                        , "关键词编号：\n" + record.getId() + "\n" +
-                                "关键词类型：\n" + record.getKeywordType().getDesc() + "\n" +
-                                "群号：\n" + record.getGroupId() + "\n" +
-                                "删除" + (success ? "成功" : "失败")
-                )
-        );
-        forwardMsg.add(
-                ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                        , "触发内容：\n" + record.getKeyword()
-                )
-        );
-        forwardMsg.add(
-                ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                        , "回复内容：\n" + record.getReplyMsg()
-                )
-        );
+        forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                , "关键词编号：" + record.getId() + "\n" +
+                        "关键词类型：" + record.getKeywordType().getDesc() + "\n" +
+                        "群号：" + record.getGroupId() + "\n" +
+                        "删除" + (success ? "成功" : "失败") + (record.getEnable() ? "" : "\n关键词未启用")
+        ));
+        forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                , "触发内容：\n" + record.getKeyword()
+        ));
+        forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                , "回复内容：\n" + record.getReplyMsg()
+        ));
     }
 
     private BaniraCodeContext searchReply(BaniraCodeContext context) {

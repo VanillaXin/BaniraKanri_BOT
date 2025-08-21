@@ -17,6 +17,7 @@ import jakarta.annotation.Nullable;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.enums.EnumPermission;
+import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.start.SpringContextHolder;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -266,13 +267,19 @@ public class BaniraBot extends Bot {
                     .setMsgType(EnumMessageType.GROUP);
 
             ActionData<GetForwardMsgResp> forwardMsg = getForwardMsg(msgId);
+            List<MsgResp> msgRespList;
             if (isActionDataNotEmpty(forwardMsg)) {
-                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, forwardMsg.getData().getMessages());
-                record.setMsgRaw(JsonUtils.toJSONString(arrayMsg))
-                        .setMsgRecode(arrayMsg.toCQCode());
+                msgRespList = forwardMsg.getData().getMessages();
             } else {
+                msgRespList = BaniraUtils.encodeSendForwardMsg(msg);
+            }
+            if (msgRespList.isEmpty()) {
                 record.setMsgRaw(String.format("[CQ:forward,id=%s]", msgId))
                         .setMsgRecode(String.format("[CQ:forward,id=%s]", msgId));
+            } else {
+                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, msgRespList);
+                record.setMsgRaw(JsonUtils.toJSONString(List.of(arrayMsg)))
+                        .setMsgRecode(arrayMsg.toCQCode());
             }
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
@@ -300,13 +307,19 @@ public class BaniraBot extends Bot {
                     .setMsgType(EnumMessageType.FRIEND);
 
             ActionData<GetForwardMsgResp> forwardMsg = getForwardMsg(msgId);
+            List<MsgResp> msgRespList;
             if (isActionDataNotEmpty(forwardMsg)) {
-                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, forwardMsg.getData().getMessages());
-                record.setMsgRaw(JsonUtils.toJSONString(arrayMsg))
-                        .setMsgRecode(arrayMsg.toCQCode());
+                msgRespList = forwardMsg.getData().getMessages();
             } else {
+                msgRespList = BaniraUtils.encodeSendForwardMsg(msg);
+            }
+            if (msgRespList.isEmpty()) {
                 record.setMsgRaw(String.format("[CQ:forward,id=%s]", msgId))
                         .setMsgRecode(String.format("[CQ:forward,id=%s]", msgId));
+            } else {
+                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, msgRespList);
+                record.setMsgRaw(JsonUtils.toJSONString(List.of(arrayMsg)))
+                        .setMsgRecode(arrayMsg.toCQCode());
             }
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
@@ -334,13 +347,19 @@ public class BaniraBot extends Bot {
                     .setMsgType(EnumMessageType.getType(event));
 
             ActionData<GetForwardMsgResp> forwardMsg = getForwardMsg(msgId);
+            List<MsgResp> msgRespList;
             if (isActionDataNotEmpty(forwardMsg)) {
-                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, forwardMsg.getData().getMessages());
-                record.setMsgRaw(JsonUtils.toJSONString(arrayMsg))
-                        .setMsgRecode(arrayMsg.toCQCode());
+                msgRespList = forwardMsg.getData().getMessages();
             } else {
+                msgRespList = BaniraUtils.encodeSendForwardMsg(msg);
+            }
+            if (msgRespList.isEmpty()) {
                 record.setMsgRaw(String.format("[CQ:forward,id=%s]", msgId))
                         .setMsgRecode(String.format("[CQ:forward,id=%s]", msgId));
+            } else {
+                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, msgRespList);
+                record.setMsgRaw(JsonUtils.toJSONString(List.of(arrayMsg)))
+                        .setMsgRecode(arrayMsg.toCQCode());
             }
             if (record.getMsgType() != EnumMessageType.GROUP) {
                 record.setTargetId(event.getUserId());
@@ -374,13 +393,19 @@ public class BaniraBot extends Bot {
                     .setMsgType(EnumMessageType.GROUP);
 
             ActionData<GetForwardMsgResp> forwardMsg = getForwardMsg(msgId);
+            List<MsgResp> msgRespList;
             if (isActionDataNotEmpty(forwardMsg)) {
-                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, forwardMsg.getData().getMessages());
-                record.setMsgRaw(JsonUtils.toJSONString(arrayMsg))
-                        .setMsgRecode(arrayMsg.toCQCode());
+                msgRespList = forwardMsg.getData().getMessages();
             } else {
+                msgRespList = BaniraUtils.encodeSendForwardMsg(msg);
+            }
+            if (msgRespList.isEmpty()) {
                 record.setMsgRaw(String.format("[CQ:forward,id=%s]", msgId))
                         .setMsgRecode(String.format("[CQ:forward,id=%s]", msgId));
+            } else {
+                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, msgRespList);
+                record.setMsgRaw(JsonUtils.toJSONString(List.of(arrayMsg)))
+                        .setMsgRecode(arrayMsg.toCQCode());
             }
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
@@ -411,13 +436,19 @@ public class BaniraBot extends Bot {
                     .setMsgType(EnumMessageType.FRIEND);
 
             ActionData<GetForwardMsgResp> forwardMsg = getForwardMsg(msgId);
+            List<MsgResp> msgRespList;
             if (isActionDataNotEmpty(forwardMsg)) {
-                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, forwardMsg.getData().getMessages());
-                record.setMsgRaw(JsonUtils.toJSONString(arrayMsg))
-                        .setMsgRecode(arrayMsg.toCQCode());
+                msgRespList = forwardMsg.getData().getMessages();
             } else {
+                msgRespList = BaniraUtils.encodeSendForwardMsg(msg);
+            }
+            if (msgRespList.isEmpty()) {
                 record.setMsgRaw(String.format("[CQ:forward,id=%s]", msgId))
                         .setMsgRecode(String.format("[CQ:forward,id=%s]", msgId));
+            } else {
+                ArrayMsg arrayMsg = BaniraUtils.packForwardMsg(null, msgRespList);
+                record.setMsgRaw(JsonUtils.toJSONString(List.of(arrayMsg)))
+                        .setMsgRecode(arrayMsg.toCQCode());
             }
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
@@ -428,6 +459,37 @@ public class BaniraBot extends Bot {
 
 
     // region ex
+
+    /**
+     * 获取合并转发消息
+     */
+    public ActionData<GetForwardMsgResp> getForwardMsg(Long groupId, Long senderId, int msgId) {
+        ActionData<GetForwardMsgResp> result = null;
+        IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
+        List<MessageRecord> list = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam(true)
+                .setBotId(this.getSelfId())
+                .setGroupId(0L, groupId)
+                .setSenderId(0L, senderId)
+                .setMsgId(msgId)
+        );
+        if (CollectionUtils.isNotNullOrEmpty(list)) {
+            MessageRecord messageRecord = list.stream()
+                    .filter(recode -> BaniraUtils.hasForward(recode.getMsgRecode()))
+                    .findFirst()
+                    .orElse(null);
+            if (messageRecord != null) {
+                result = new ActionData<>();
+                GetForwardMsgResp data = new GetForwardMsgResp();
+                List<MsgResp> msgResps = BaniraUtils.getForwardContentFirst(messageRecord.getMsgRecode());
+                data.setMessages(msgResps);
+                result.setData(data);
+            }
+        }
+        if (result == null) {
+            result = super.getForwardMsg(msgId);
+        }
+        return result;
+    }
 
     /**
      * 设置消息表情回复
@@ -630,15 +692,15 @@ public class BaniraBot extends Bot {
         return BaniraUtils.hasAnyPermissions(this, groupId, qq, permissions);
     }
 
-    public List<ArrayMsg> getReplayContentById(Long replayId) {
-        return BaniraUtils.getReplayContentById(this, replayId);
+    public List<ArrayMsg> getReplyContentById(Long replyId) {
+        return BaniraUtils.getReplyContentById(this, replyId);
     }
 
-    public List<ArrayMsg> getReplayContent(List<ArrayMsg> arrayMsg) {
-        return BaniraUtils.getReplayContent(this, arrayMsg);
+    public List<ArrayMsg> getReplyContent(List<ArrayMsg> arrayMsg) {
+        return BaniraUtils.getReplyContent(this, arrayMsg);
     }
 
-    public String getReplayContentString(List<ArrayMsg> arrayMsg) {
+    public String getReplyContentString(List<ArrayMsg> arrayMsg) {
         return BaniraUtils.getReplyContentString(this, arrayMsg);
     }
 

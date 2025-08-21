@@ -65,8 +65,8 @@ public class ImageFaceToImagePlugin extends BasePlugin {
                 && globalConfig.get().otherConfig().imageFaceToImage().contains(super.replaceCommand(message))
         ) {
             if (BaniraUtils.hasReply(event.getArrayMsg())) {
-                List<ArrayMsg> replayContent = bot.getReplayContent(event.getArrayMsg());
-                List<String> urls = replayContent.stream()
+                List<ArrayMsg> replyContent = bot.getReplyContent(event.getArrayMsg());
+                List<String> urls = replyContent.stream()
                         .filter(msg -> msg.getType() == MsgTypeEnum.image)
                         .map(msg -> msg.getStringData("url"))
                         .toList();

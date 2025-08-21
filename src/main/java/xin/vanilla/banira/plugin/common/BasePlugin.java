@@ -31,7 +31,7 @@ public abstract class BasePlugin {
     private final Set<Pattern> TIMER_COMMAND_PATTERN = BaniraUtils.mutableSetOf();
     private final Set<Pattern> KEYWORD_COMMAND_PATTERN = BaniraUtils.mutableSetOf();
 
-    public static String replaceReplay(String msg) {
+    public static String replaceReply(String msg) {
         return BaniraUtils.replaceReply(msg);
     }
 
@@ -52,7 +52,7 @@ public abstract class BasePlugin {
      */
     public boolean isCommand(String msg) {
         return baseCommand()
-                .matcher(replaceReplay(msg))
+                .matcher(replaceReply(msg))
                 .find();
     }
 
@@ -61,7 +61,7 @@ public abstract class BasePlugin {
      */
     public String replaceCommand(String msg) {
         return baseCommand()
-                .matcher(replaceReplay(msg))
+                .matcher(replaceReply(msg))
                 .replaceAll("");
     }
 
@@ -87,14 +87,14 @@ public abstract class BasePlugin {
      * 是否是群管指令
      */
     public boolean isKanriCommand(String msg) {
-        return kanriCommand().matcher(replaceReplay(msg)).find();
+        return kanriCommand().matcher(replaceReply(msg)).find();
     }
 
     /**
      * 删除群管指令前缀
      */
     public String replaceKanriCommand(String msg) {
-        return kanriCommand().matcher(replaceReplay(msg)).replaceAll("");
+        return kanriCommand().matcher(replaceReply(msg)).replaceAll("");
     }
 
 
@@ -128,7 +128,7 @@ public abstract class BasePlugin {
     public boolean isTimerCommand(String msg) {
         return timerCommand().stream()
                 .anyMatch(pattern ->
-                        pattern.matcher(replaceReplay(msg)).find()
+                        pattern.matcher(replaceReply(msg)).find()
                 );
     }
 
@@ -138,11 +138,11 @@ public abstract class BasePlugin {
     public Matcher getTimerCommandMatcher(String msg) {
         return timerCommand().stream()
                 .filter(pattern ->
-                        pattern.matcher(replaceReplay(msg)).find()
+                        pattern.matcher(replaceReply(msg)).find()
                 )
                 .findFirst()
                 .map(pattern ->
-                        pattern.matcher(replaceReplay(msg))
+                        pattern.matcher(replaceReply(msg))
                 )
                 .orElse(null);
     }
@@ -203,7 +203,7 @@ public abstract class BasePlugin {
     public boolean isKeywordCommand(String msg) {
         return keywordCommand().stream()
                 .anyMatch(pattern ->
-                        pattern.matcher(replaceReplay(msg)).find()
+                        pattern.matcher(replaceReply(msg)).find()
                 );
     }
 
@@ -213,11 +213,11 @@ public abstract class BasePlugin {
     public Matcher getKeywordCommandMatcher(String msg) {
         return keywordCommand().stream()
                 .filter(pattern ->
-                        pattern.matcher(replaceReplay(msg)).find()
+                        pattern.matcher(replaceReply(msg)).find()
                 )
                 .findFirst()
                 .map(pattern ->
-                        pattern.matcher(replaceReplay(msg))
+                        pattern.matcher(replaceReply(msg))
                 )
                 .orElse(null);
     }

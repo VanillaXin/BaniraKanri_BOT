@@ -97,7 +97,7 @@ public interface KanriHandler {
     }
 
     @Nonnull
-    default Set<Long> getQQsWithoutReplay(@Nonnull KanriContext context, @Nonnull String[] args) {
+    default Set<Long> getQQsWithoutReply(@Nonnull KanriContext context, @Nonnull String[] args) {
         Set<Long> result = BaniraUtils.mutableSetOf();
         result.addAll(ShiroUtils.getAtList(context.event().getArrayMsg()));
         result.addAll(getQQs(args));
@@ -105,14 +105,14 @@ public interface KanriHandler {
     }
 
     @Nonnull
-    default Set<Long> getQQsWithReplay(@Nonnull KanriContext context, @Nonnull String[] args) {
+    default Set<Long> getQQsWithReply(@Nonnull KanriContext context, @Nonnull String[] args) {
         Set<Long> result = BaniraUtils.mutableSetOf();
         if (BaniraUtils.hasReply(context.event().getArrayMsg())) {
             result.add(BaniraUtils.getReplyQQ(context.bot(), context.group(), context.event().getArrayMsg()));
         } else if (BaniraUtils.hasAtAll(context.event().getArrayMsg())) {
             result.add(233L);
         }
-        result.addAll(getQQsWithoutReplay(context, args));
+        result.addAll(getQQsWithoutReply(context, args));
         return result;
     }
 

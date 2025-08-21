@@ -69,7 +69,7 @@ public class MuteCommand implements KanriHandler {
         if (args.length < 1) return FAIL;
 
         // 解析目标
-        Set<Long> targets = getQQsWithReplay(context, args);
+        Set<Long> targets = getQQsWithReply(context, args);
 
         // 解析时长
         int duration = (int) (StringUtils.toDouble(CollectionUtils.getLast(args)) * 60);

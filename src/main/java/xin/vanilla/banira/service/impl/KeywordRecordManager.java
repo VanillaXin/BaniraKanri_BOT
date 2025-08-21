@@ -45,14 +45,14 @@ public class KeywordRecordManager implements IKeywordRecordManager {
     @Nonnull
     @Override
     public List<KeywordRecord> getKeywordRecordList(KeywordRecordQueryParam param) {
-        if (param == null) param = new KeywordRecordQueryParam();
+        if (param == null) param = new KeywordRecordQueryParam().setEnable(true);
         List<KeywordRecord> records = keywordRecordDao.selectByParam(param);
         return CollectionUtils.isNotNullOrEmpty(records) ? records : new ArrayList<>();
     }
 
     @Override
     public PageResult<KeywordRecord> getKeywordRecordPagedList(KeywordRecordQueryParam param) {
-        if (param == null) param = new KeywordRecordQueryParam();
+        if (param == null) param = new KeywordRecordQueryParam().setEnable(true);
         PageResult<KeywordRecord> result = new PageResult<>(keywordRecordDao.selectByParam(param));
         if (!result.isEmpty()) {
             result.setTotal(keywordRecordDao.selectCountByParam(param));
@@ -64,7 +64,7 @@ public class KeywordRecordManager implements IKeywordRecordManager {
     public int deleteKeywordRecord(long id) {
         int result = 0;
         KeywordRecord record = keywordRecordDao.selectById(id);
-        if (record != null) {
+        if (record != null && record.getEnable()) {
             record.setEnable(false);
             result = keywordRecordDao.updateById(record);
             eventPublisher.publishEvent(new KeywordChangedEvent(this, record, EnumDataOperateType.REMOVE));
@@ -74,16 +74,17 @@ public class KeywordRecordManager implements IKeywordRecordManager {
 
     @Override
     public int deleteKeywordRecordList(KeywordRecordQueryParam param) {
-        if (param == null) param = new KeywordRecordQueryParam();
+        if (param == null) param = new KeywordRecordQueryParam().setEnable(true);
         int result = 0;
         List<KeywordRecord> records = keywordRecordDao.selectByParam(param);
         if (CollectionUtils.isNotNullOrEmpty(records)) {
-            records.forEach(record -> record.setEnable(false));
-            List<BatchResult> batchResults = keywordRecordDao.updateById(records);
+            List<KeywordRecord> list = records.stream().filter(KeywordRecord::getEnable).toList();
+            list.forEach(record -> record.setEnable(false));
+            List<BatchResult> batchResults = keywordRecordDao.updateById(list);
             result = batchResults.stream()
                     .map(r -> Arrays.stream(r.getUpdateCounts()).reduce(0, Integer::sum))
                     .reduce(0, Integer::sum);
-            eventPublisher.publishEvent(new KeywordChangedEvent(this, records, EnumDataOperateType.REMOVE));
+            eventPublisher.publishEvent(new KeywordChangedEvent(this, list, EnumDataOperateType.REMOVE));
         }
         return result;
     }

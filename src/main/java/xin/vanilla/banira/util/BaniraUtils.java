@@ -1,8 +1,12 @@
 package xin.vanilla.banira.util;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.JsonUtils;
 import com.mikuac.shiro.common.utils.MessageConverser;
+import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.response.GroupMemberInfoResp;
@@ -285,10 +289,10 @@ public class BaniraUtils {
                 .orElse(null);
     }
 
-    public static List<ArrayMsg> getReplayContentById(BaniraBot bot, Long replayId) {
+    public static List<ArrayMsg> getReplyContentById(BaniraBot bot, Long replyId) {
         List<ArrayMsg> result = null;
-        if (replayId != null) {
-            ActionData<MsgResp> msgData = bot.getMsg(replayId.intValue());
+        if (replyId != null) {
+            ActionData<MsgResp> msgData = bot.getMsg(replyId.intValue());
             if (bot.isActionDataNotEmpty(msgData)) {
                 result = msgData.getData().getArrayMsg();
             }
@@ -296,12 +300,12 @@ public class BaniraUtils {
         return result;
     }
 
-    public static List<ArrayMsg> getReplayContent(BaniraBot bot, List<ArrayMsg> arrayMsg) {
-        return getReplayContentById(bot, getReplyId(arrayMsg));
+    public static List<ArrayMsg> getReplyContent(BaniraBot bot, List<ArrayMsg> arrayMsg) {
+        return getReplyContentById(bot, getReplyId(arrayMsg));
     }
 
     public static String getReplyContentString(BaniraBot bot, List<ArrayMsg> arrayMsg) {
-        return MessageConverser.arraysToString(getReplayContent(bot, arrayMsg));
+        return MessageConverser.arraysToString(getReplyContent(bot, arrayMsg));
     }
 
     public static long getReplyQQ(BaniraBot bot, Long groupId, List<ArrayMsg> arrayMsg) {
@@ -310,10 +314,11 @@ public class BaniraUtils {
                 .findFirst()
                 .map(e -> e.getLongData("qq"))
                 .orElse(0L);
-        if (qq == 0) {
+        Long replyId = getReplyId(arrayMsg);
+        if (qq == 0 && replyId != null) {
             IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
             List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
-                    .setMsgId(String.valueOf(getReplyId(arrayMsg)))
+                    .setMsgId(String.valueOf(replyId))
                     .setBotId(bot.getSelfId())
                     .setTargetId(groupId)
             );
@@ -321,6 +326,12 @@ public class BaniraUtils {
                     .findFirst()
                     .map(MessageRecord::getSenderId)
                     .orElse(0L);
+        }
+        if (qq == 0 && replyId != null) {
+            ActionData<MsgResp> msgData = bot.getMsg(replyId.intValue());
+            if (bot.isActionDataNotEmpty(msgData)) {
+                qq = StringUtils.toLong(msgData.getData().getSender().getUserId());
+            }
         }
         return qq;
     }
@@ -338,13 +349,13 @@ public class BaniraUtils {
     }
 
     public static List<ArrayMsg> getReplyContent(BaniraBot bot, String msg) {
-        Long replayId = getReplyId(msg);
-        return getReplayContentById(bot, replayId);
+        Long replyId = getReplyId(msg);
+        return getReplyContentById(bot, replyId);
     }
 
     public static String getReplyContentString(BaniraBot bot, String msg) {
-        Long replayId = getReplyId(msg);
-        return MessageConverser.arraysToString(getReplayContentById(bot, replayId));
+        Long replyId = getReplyId(msg);
+        return MessageConverser.arraysToString(getReplyContentById(bot, replyId));
     }
 
     public static long getReplyQQ(BaniraBot bot, Long groupId, String msg) {
@@ -457,8 +468,25 @@ public class BaniraUtils {
 
     // region 合并转发
 
+    private static boolean hasForward(JsonNode node) {
+        boolean result = false;
+        if (node != null && node.has("data")) {
+            JsonNode data = node.get("data");
+            if (data.getNodeType() == JsonNodeType.STRING) {
+                Optional<JsonNode> rootNode = JsonUtils.parseObject(data.asText());
+                if (rootNode.isPresent() && rootNode.get().has("app")) {
+                    JsonNode appNode = rootNode.get().get("app");
+                    result = appNode.getNodeType() == JsonNodeType.STRING
+                            && "com.tencent.multimsg".equalsIgnoreCase(appNode.asText());
+                }
+            }
+        }
+        return result;
+    }
+
     public static boolean hasForward(List<ArrayMsg> arrayMsg) {
-        return arrayMsg.stream().anyMatch(e -> e.getType() == MsgTypeEnum.forward);
+        return arrayMsg.stream()
+                .anyMatch(e -> e.getType() == MsgTypeEnum.forward || hasForward(e.getData()));
     }
 
     public static Long getForwardId(List<ArrayMsg> arrayMsg) {
@@ -497,12 +525,12 @@ public class BaniraUtils {
         return result;
     }
 
-    public static boolean hsaForward(String msg) {
+    public static boolean hasForward(String msg) {
         return StringUtils.isNotNullOrEmpty(msg) && msg.contains("[CQ:forward,");
     }
 
     public static Long getForwardId(String msg) {
-        return hsaForward(msg) ?
+        return hasForward(msg) ?
                 ID_PATTERN.matcher(msg).results()
                         .map(m -> m.group("id"))
                         .map(Long::parseLong)
@@ -512,7 +540,7 @@ public class BaniraUtils {
 
     public static List<MsgResp> getForwardContentFirst(String msg) {
         List<MsgResp> result = new ArrayList<>();
-        if (hsaForward(msg)) {
+        if (hasForward(msg)) {
             List<ArrayMsg> arrayMsg = decodeForwardMsg(msg);
             if (CollectionUtils.isNotNullOrEmpty(arrayMsg)) {
                 result = getForwardContentFirst(arrayMsg.toArray(new ArrayMsg[]{}));
@@ -523,7 +551,7 @@ public class BaniraUtils {
 
     public static List<List<MsgResp>> getForwardContent(String msg) {
         List<List<MsgResp>> result = new ArrayList<>();
-        if (hsaForward(msg)) {
+        if (hasForward(msg)) {
             List<ArrayMsg> arrayMsg = decodeForwardMsg(msg);
             if (CollectionUtils.isNotNullOrEmpty(arrayMsg)) {
                 result = getForwardContent(arrayMsg);
@@ -533,7 +561,8 @@ public class BaniraUtils {
     }
 
     public static ArrayMsg packForwardMsg(Long forwardId, List<MsgResp> forwardMsg) {
-        Map<String, Object> forwardData = BaniraUtils.mutableMapOf("id", forwardId, "content", forwardMsg);
+        Map<String, Object> forwardData = BaniraUtils.mutableMapOf("content", forwardMsg);
+        if (forwardId != null) forwardData.put("id", forwardId);
         return new ArrayMsg().setType(MsgTypeEnum.forward).setData(forwardData);
     }
 
@@ -543,6 +572,37 @@ public class BaniraUtils {
 
     public static List<ArrayMsg> decodeForwardMsg(String forwardMsg) {
         return MessageConverser.stringToArray(forwardMsg);
+    }
+
+    public static List<MsgResp> encodeSendForwardMsg(@Nonnull List<Map<String, Object>> msg) {
+        List<MsgResp> result = new ArrayList<>();
+        for (Map<String, Object> node : msg) {
+            JsonObject jsonObject = xin.vanilla.banira.util.JsonUtils.GSON.toJsonTree(node).getAsJsonObject();
+            if (xin.vanilla.banira.util.JsonUtils.getString(jsonObject, "type").equalsIgnoreCase("node")) {
+                JsonObject data = xin.vanilla.banira.util.JsonUtils.getJsonObject(jsonObject, "data");
+                MsgResp msgResp = new MsgResp();
+                msgResp.setPostType("message");
+                if (data.has("id")) {
+                    msgResp.setMessage(MsgUtils.builder().forward(xin.vanilla.banira.util.JsonUtils.getString(data, "id")).build());
+                    msgResp.setRawMessage(msgResp.getMessage());
+                    msgResp.setArrayMsg(MessageConverser.stringToArray(msgResp.getMessage()));
+                } else {
+                    MsgResp.Sender sender = new MsgResp.Sender();
+                    sender.setUserId(xin.vanilla.banira.util.JsonUtils.getString(data, "uin", null));
+                    sender.setNickname(xin.vanilla.banira.util.JsonUtils.getString(data, "name", null));
+                    sender.setCard(sender.getNickname());
+                    msgResp.setSender(sender);
+                    msgResp.setUserId(StringUtils.toLong(sender.getUserId()));
+
+                    msgResp.setMessage(xin.vanilla.banira.util.JsonUtils.getString(data, "content", null));
+                    msgResp.setRawMessage(msgResp.getMessage());
+                    msgResp.setArrayMsg(MessageConverser.stringToArray(msgResp.getMessage()));
+                    msgResp.setTime(StringUtils.toLong(xin.vanilla.banira.util.JsonUtils.getString(data, "time", "0")));
+                }
+                result.add(msgResp);
+            }
+        }
+        return result;
     }
 
     // endregion 合并转发

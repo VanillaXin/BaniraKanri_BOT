@@ -65,7 +65,7 @@ public class LoudCommand implements KanriHandler {
     @Override
     public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
         // 解析目标
-        Set<Long> targets = getQQsWithReplay(context, args);
+        Set<Long> targets = getQQsWithReply(context, args);
 
         // 全体解禁
         if (targets.contains(233L)) {

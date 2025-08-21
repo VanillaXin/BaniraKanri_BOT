@@ -5,6 +5,7 @@ import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.mapper.common.BaniraQueryParam;
 import xin.vanilla.banira.util.lambda.LambdaUtils;
 
+import java.util.Arrays;
 import java.util.Collection;
 
 /**
@@ -110,6 +111,11 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
         return this;
     }
 
+    public MessageRecordQueryParam setMsgId(Number msgId) {
+        addParam(QUERY_MSG_ID, String.valueOf(msgId.longValue()));
+        return this;
+    }
+
     public MessageRecordQueryParam setMsgId(String msgId) {
         addParam(QUERY_MSG_ID, msgId);
         return this;
@@ -122,6 +128,11 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
 
     public MessageRecordQueryParam setMsgId(String... msgIds) {
         addParamByArray(QUERY_MSG_ID, msgIds);
+        return this;
+    }
+
+    public MessageRecordQueryParam setMsgId(Long... msgIds) {
+        addParamByArray(QUERY_MSG_ID, Arrays.stream(msgIds).map(String::valueOf).toArray(String[]::new));
         return this;
     }
 

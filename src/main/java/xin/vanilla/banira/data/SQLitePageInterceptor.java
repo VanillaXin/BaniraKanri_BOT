@@ -23,11 +23,11 @@ public class SQLitePageInterceptor implements Interceptor {
 
         Object paramObject = metaObject.getValue("delegate.boundSql.parameterObject");
         if (paramObject instanceof java.util.Map<?, ?> paramMap) {
-            Object pageObj = paramMap.get(BaniraQueryParam.PAGE);
-            Object sizeObj = paramMap.get(BaniraQueryParam.SIZE);
+            Object pageObj = paramMap.getOrDefault(BaniraQueryParam.PAGE, null);
+            Object sizeObj = paramMap.getOrDefault(BaniraQueryParam.SIZE, null);
 
-            Object limitObj = paramMap.get(BaniraQueryParam.LIMIT);
-            Object offsetObj = paramMap.get(BaniraQueryParam.OFFSET);
+            Object limitObj = paramMap.getOrDefault(BaniraQueryParam.LIMIT, null);
+            Object offsetObj = paramMap.getOrDefault(BaniraQueryParam.OFFSET, null);
 
             if (((pageObj instanceof Number page) && page.longValue() >= 1)
                     && ((sizeObj instanceof Number size) && size.longValue() > 0)
