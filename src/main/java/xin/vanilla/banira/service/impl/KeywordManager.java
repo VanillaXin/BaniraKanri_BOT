@@ -67,8 +67,12 @@ public class KeywordManager implements IKeywordManager {
                 break;
             }
         }
-        matches.removeIf(keyword -> (BaniraUtils.isFriendIdValid(botId) && !keyword.getBotId().equals(botId))
-                || (BaniraUtils.isGroupIdValid(groupId) && !keyword.getGroupId().equals(groupId))
+        matches.removeIf(keyword -> (BaniraUtils.isFriendIdValid(botId)
+                && BaniraUtils.isFriendIdValid(keyword.getBotId())
+                && !keyword.getBotId().equals(botId))
+                || (BaniraUtils.isGroupIdValid(groupId)
+                && BaniraUtils.isGroupIdValid(keyword.getGroupId())
+                && !keyword.getGroupId().equals(groupId))
         );
         if (matches.isEmpty()) return null;
 

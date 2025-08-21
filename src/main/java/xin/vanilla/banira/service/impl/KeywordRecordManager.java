@@ -2,6 +2,7 @@ package xin.vanilla.banira.service.impl;
 
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
+import org.apache.ibatis.executor.BatchResult;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import xin.vanilla.banira.service.IKeywordRecordManager;
 import xin.vanilla.banira.util.CollectionUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Transactional
@@ -28,7 +30,11 @@ public class KeywordRecordManager implements IKeywordRecordManager {
 
     @Override
     public long addKeywordRecord(KeywordRecord record) {
-        return keywordRecordDao.insert(record);
+        int insert = keywordRecordDao.insert(record);
+        if (insert > 0) {
+            eventPublisher.publishEvent(new KeywordChangedEvent(this, record, EnumDataOperateType.ADD));
+        }
+        return insert;
     }
 
     @Override
@@ -59,7 +65,8 @@ public class KeywordRecordManager implements IKeywordRecordManager {
         int result = 0;
         KeywordRecord record = keywordRecordDao.selectById(id);
         if (record != null) {
-            result = keywordRecordDao.deleteById(id);
+            record.setEnable(false);
+            result = keywordRecordDao.updateById(record);
             eventPublisher.publishEvent(new KeywordChangedEvent(this, record, EnumDataOperateType.REMOVE));
         }
         return result;
@@ -71,7 +78,11 @@ public class KeywordRecordManager implements IKeywordRecordManager {
         int result = 0;
         List<KeywordRecord> records = keywordRecordDao.selectByParam(param);
         if (CollectionUtils.isNotNullOrEmpty(records)) {
-            result = keywordRecordDao.deleteByParam(param);
+            records.forEach(record -> record.setEnable(false));
+            List<BatchResult> batchResults = keywordRecordDao.updateById(records);
+            result = batchResults.stream()
+                    .map(r -> Arrays.stream(r.getUpdateCounts()).reduce(0, Integer::sum))
+                    .reduce(0, Integer::sum);
             eventPublisher.publishEvent(new KeywordChangedEvent(this, records, EnumDataOperateType.REMOVE));
         }
         return result;

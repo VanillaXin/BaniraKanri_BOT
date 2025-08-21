@@ -91,7 +91,7 @@ public class KeywordCacheManager implements IKeywordCacheManager {
         /**
          * 群组ID
          */
-        private final Long groupId = 0L;
+        private final Long groupId;
         /**
          * 添加人
          */
@@ -116,6 +116,7 @@ public class KeywordCacheManager implements IKeywordCacheManager {
         public CachedKeyword(KeywordRecord keywordRecord) {
             this.id = keywordRecord.getId();
             this.botId = keywordRecord.getBotId();
+            this.groupId = keywordRecord.getGroupId();
             this.creatorId = keywordRecord.getCreatorId();
             this.time = keywordRecord.getTime();
             this.keywordType = keywordRecord.getKeywordType();
@@ -133,6 +134,10 @@ public class KeywordCacheManager implements IKeywordCacheManager {
                     .setKeywordType(keywordType)
                     .setKeyword(keyword)
                     .setReplyMsg(replyMsg);
+        }
+
+        public Long getGroupId() {
+            return this.groupId != null ? this.groupId : 0L;
         }
     }
 

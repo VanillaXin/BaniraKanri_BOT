@@ -62,7 +62,7 @@ public class KeywordRecord {
         return this;
     }
 
-    public Boolean isEnable() {
+    public Boolean getEnable() {
         return enable != null && enable;
     }
 

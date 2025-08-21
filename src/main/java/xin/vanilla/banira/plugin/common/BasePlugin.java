@@ -114,7 +114,7 @@ public abstract class BasePlugin {
                                     .groupIgByName("timerKey", RegUtils.REG_NOT_SEPARATOR)
                                     .groupByName("actionEnd", kv.getKey())
                                     .groupIgByName("actionEndSpace", RegUtils.REG_SEPARATOR)
-                                    .groupIgByName("timerValue", ".*")
+                                    .groupIgByName("timerValue", "[\\s\\S]*")
                                     .end()
                                     .compile()
                     ));
@@ -185,11 +185,11 @@ public abstract class BasePlugin {
                                     .groupIgByName("keywordTargetSpace", RegUtils.REG_SEPARATOR).appendIg("?")
                                     .groupIgByName("keywordType", keywordTypes)
                                     .groupIgByName("keywordTypeSpace", RegUtils.REG_SEPARATOR)
-                                    .groupIgByName("keywordKey", "[.\\s]*?")
+                                    .groupIgByName("keywordKey", "[\\s\\S]*?")
                                     .groupIgByName("keywordKeySpace", RegUtils.REG_SEPARATOR)
-                                    .groupByName("actionEnd", kv.getKey())
+                                    .groupByName("actionEnd", kv.getValue())
                                     .groupIgByName("actionEndSpace", RegUtils.REG_SEPARATOR)
-                                    .groupIgByName("keywordValue", "[.\\s]*")
+                                    .groupIgByName("keywordValue", "[\\s\\S]*")
                                     .end()
                                     .compile()
                     ));
