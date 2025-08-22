@@ -16,10 +16,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -36,7 +38,7 @@ public class HelpPlugin extends BasePlugin {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nonnull String type, @Nullable Long groupId) {
+    public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {
         return List.of();
     }
 
@@ -53,29 +55,49 @@ public class HelpPlugin extends BasePlugin {
                 String argString = super.replaceCommand(message);
                 String[] split = argString.split("\\s+");
 
-                long page = StringUtils.toLong(CollectionUtils.getLast(split), 1L);
+                long page = StringUtils.toLong(CollectionUtils.getLast(split), -1);
 
-                String type;
+                String[] type;
                 if (split.length == 1) {
-                    type = "";
-                } else if (split.length == 2 && page != StringUtils.toLong(split[1])) {
-                    type = split[1];
-                } else if (split.length == 3) {
-                    type = split[1];
+                    type = new String[]{};
+                } else if (split.length == 2) {
+                    if (page != StringUtils.toLong(CollectionUtils.getLast(split))) {
+                        type = Arrays.copyOfRange(split, 1, split.length);
+                    } else {
+                        type = new String[]{};
+                    }
+                } else if (split.length >= 3) {
+                    int len;
+                    if (page != StringUtils.toLong(CollectionUtils.getLast(split))) {
+                        len = split.length;
+                    } else {
+                        len = split.length - 1;
+                    }
+                    type = Arrays.copyOfRange(split, 1, len);
                 } else {
                     return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                 }
+                if (page <= 0) page = 1;
 
                 LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
                 List<Map<String, Object>> msg = new ArrayList<>();
                 msg.add(ShiroUtils.generateSingleMsg(event.getUserId(), event.getSender().getNickname(), event.getMessage()));
+                msg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                        , "指令帮助：" + "\n\n" +
+                                BaniraUtils.getInsPrefixWithSpace() +
+                                globalConfig.get().instConfig().base().help() + " " +
+                                "[<指令类型>]" + " " + "[<页数>]" + "\n\n" +
+                                "例子：" + "\n" +
+                                BaniraUtils.getInsPrefixWithSpace() +
+                                globalConfig.get().instConfig().base().help().getFirst() + " keyword"
+                ));
 
                 plugins.stream()
-                        .map(plugin -> plugin.getHelpInfo(type, event.getGroupId()))
+                        .map(plugin -> plugin.getHelpInfo(event.getGroupId(), type))
                         .flatMap(List::stream)
                         .sorted()
-                        .skip((page - 1) * 99L)
-                        .limit(99L)
+                        .skip((page - 1) * 98L)
+                        .limit(98L)
                         .forEach(help -> msg.add(
                                 ShiroUtils.generateSingleMsg(
                                         bot.getSelfId()

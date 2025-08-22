@@ -6,9 +6,9 @@ import xin.vanilla.banira.config.entity.basic.BaseConfig;
 import xin.vanilla.banira.config.entity.basic.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.basic.PermissionConfig;
-import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.Set;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 全局配置
@@ -26,7 +26,7 @@ public record GlobalConfig(
         @Nonnull String wsUrl,
         @Nonnull Long owner,
         @Nonnull String botNick,
-        @Nonnull Set<PermissionConfig> butler,
+        @Nonnull List<PermissionConfig> butler,
         @Nonnull BaseConfig baseConfig,
         @Nonnull InstructionsConfig instConfig,
         @Nonnull OtherConfig otherConfig
@@ -38,7 +38,7 @@ public record GlobalConfig(
                 "ws://127.0.0.1:8080",
                 0L,
                 "香草酱",
-                BaniraUtils.mutableSetOf(),
+                Arrays.asList(),
                 BaseConfig.preset(),
                 InstructionsConfig.preset(),
                 OtherConfig.preset()

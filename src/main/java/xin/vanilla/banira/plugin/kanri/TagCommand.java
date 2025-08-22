@@ -31,8 +31,9 @@ public class TagCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String type) {
+    public List<String> getHelpInfo(String... types) {
         List<String> result = new ArrayList<>();
+        String type = CollectionUtils.getFirst(types);
         if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             result.add("群管 - 设置群头衔：\n\n" +
                     "用法1：\n" +
@@ -59,8 +60,8 @@ public class TagCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public Set<String> getAction() {
-        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().tag(), Set::of);
+    public List<String> getAction() {
+        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().tag(), List::of);
     }
 
     @Override

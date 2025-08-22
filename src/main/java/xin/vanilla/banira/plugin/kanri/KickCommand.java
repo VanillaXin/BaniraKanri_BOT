@@ -27,8 +27,9 @@ public class KickCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String type) {
+    public List<String> getHelpInfo(String... types) {
         List<String> result = new ArrayList<>();
+        String type = CollectionUtils.getFirst(types);
         if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             result.add("群管 - 踢出群成员：\n\n" +
                     "用法1：\n" +
@@ -55,8 +56,8 @@ public class KickCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public Set<String> getAction() {
-        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().kick(), Set::of);
+    public List<String> getAction() {
+        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().kick(), List::of);
     }
 
     @Override

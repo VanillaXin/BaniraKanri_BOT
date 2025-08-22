@@ -636,7 +636,7 @@ public class BaniraUtils {
      * 判断是否管家
      */
     public static boolean isButler(@Nonnull Long qq) {
-        Set<PermissionConfig> butler = getGlobalConfig().butler();
+        List<PermissionConfig> butler = getGlobalConfig().butler();
         return CollectionUtils.isNotNullOrEmpty(butler) && butler.stream().anyMatch(p -> qq.equals(p.id()));
     }
 
@@ -645,7 +645,7 @@ public class BaniraUtils {
      */
     public static boolean isServant(@Nullable Long groupId, @Nonnull Long qq) {
         if (groupId == null || !isGroupIdValid(groupId)) return false;
-        Set<PermissionConfig> servant = getGroupConfig().maid().get(groupId);
+        List<PermissionConfig> servant = getGroupConfig().maid().get(groupId);
         return CollectionUtils.isNotNullOrEmpty(servant) && servant.stream().anyMatch(e -> qq.equals(e.id()));
     }
 
@@ -743,7 +743,7 @@ public class BaniraUtils {
             permissions.addAll(EnumPermission.getGroupOwner());
         if (isGroupAdmin(bot, groupId, qq))
             permissions.addAll(EnumPermission.getGroupAdmin());
-        Set<PermissionConfig> butler = getGlobalConfig().butler();
+        List<PermissionConfig> butler = getGlobalConfig().butler();
         if (CollectionUtils.isNotNullOrEmpty(butler)) {
             butler.stream()
                     .filter(p -> qq.equals(p.id()))
@@ -751,7 +751,7 @@ public class BaniraUtils {
                     .ifPresent(p -> permissions.addAll(p.permissions()));
         }
         if (groupId != null && groupId > 0L) {
-            Set<PermissionConfig> servant = getGroupConfig().maid().getOrDefault(groupId, new HashSet<>());
+            List<PermissionConfig> servant = getGroupConfig().maid().getOrDefault(groupId, new ArrayList<>());
             servant.stream()
                     .filter(p -> qq.equals(p.id()))
                     .findFirst()
@@ -798,7 +798,7 @@ public class BaniraUtils {
     /**
      * 获取权限名称
      */
-    public static Set<String> getPermissionNames(EnumPermission permission) {
+    public static List<String> getPermissionNames(EnumPermission permission) {
         GlobalConfig globalConfig = getGlobalConfig();
         switch (permission) {
             case APER, RPER -> {
@@ -844,7 +844,7 @@ public class BaniraUtils {
                 return globalConfig.instConfig().kanri().butler();
             }
             default -> {
-                return Set.of();
+                return List.of();
             }
         }
     }

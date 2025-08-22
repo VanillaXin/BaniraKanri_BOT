@@ -24,7 +24,7 @@ public interface KanriHandler {
     Set<Long> nop = BaniraUtils.mutableSetOf();
 
     @Nonnull
-    List<String> getHelpInfo(String type);
+    List<String> getHelpInfo(String... types);
 
     /**
      * 机器人是否有权限执行
@@ -44,7 +44,7 @@ public interface KanriHandler {
      * 动作，如 "ban"
      */
     @Nonnull
-    Set<String> getAction();
+    List<String> getAction();
 
     /**
      * 执行命令

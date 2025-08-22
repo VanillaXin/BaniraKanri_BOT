@@ -10,6 +10,7 @@ import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
@@ -31,8 +32,9 @@ public class RecallCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String type) {
+    public List<String> getHelpInfo(String... types) {
         List<String> result = new ArrayList<>();
+        String type = CollectionUtils.getFirst(types);
         if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             result.add("群管 - 撤回消息：\n\n" +
                     "用法1：(回复要撤回的消息)\n" +
@@ -68,8 +70,8 @@ public class RecallCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public Set<String> getAction() {
-        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().withdraw(), Set::of);
+    public List<String> getAction() {
+        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().withdraw(), List::of);
     }
 
     @Override

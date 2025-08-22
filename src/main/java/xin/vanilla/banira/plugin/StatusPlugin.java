@@ -79,13 +79,14 @@ public class StatusPlugin extends BasePlugin {
     /**
      * 获取帮助信息
      *
-     * @param type    帮助类型
      * @param groupId 群组ID
+     * @param types   帮助类型
      */
     @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
+    public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
         List<String> result = new ArrayList<>();
+        String type = CollectionUtils.getFirst(types);
         if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             result.add("框架状态：\n" +
                     "获取框架及系统状态信息总览。\n\n" +

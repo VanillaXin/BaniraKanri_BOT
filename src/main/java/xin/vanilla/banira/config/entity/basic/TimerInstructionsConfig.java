@@ -2,9 +2,9 @@ package xin.vanilla.banira.config.entity.basic;
 
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.domain.KeyValue;
-import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.Set;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 定时任务指令配置
@@ -13,12 +13,12 @@ import java.util.Set;
  */
 @Accessors(chain = true)
 public record TimerInstructionsConfig(
-        Set<KeyValue<String, String>> locator
+        List<KeyValue<String, String>> locator
 ) {
 
     public static TimerInstructionsConfig preset() {
         return new TimerInstructionsConfig(
-                BaniraUtils.mutableSetOf(
+                Arrays.asList(
                         new KeyValue<>("定时", "回复")
                         , new KeyValue<>("time", "rep")
                         , new KeyValue<>("timer", "reply")

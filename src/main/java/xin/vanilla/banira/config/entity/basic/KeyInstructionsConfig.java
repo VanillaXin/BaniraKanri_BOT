@@ -3,9 +3,9 @@ package xin.vanilla.banira.config.entity.basic;
 
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.domain.KeyValue;
-import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.Set;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 关键词指令配置
@@ -18,25 +18,25 @@ import java.util.Set;
  */
 @Accessors(chain = true)
 public record KeyInstructionsConfig(
-        Set<KeyValue<String, String>> locator,
-        Set<String> exactly,
-        Set<String> contain,
-        Set<String> pinyin,
-        Set<String> regex
+        List<KeyValue<String, String>> locator,
+        List<String> exactly,
+        List<String> contain,
+        List<String> pinyin,
+        List<String> regex
 ) {
 
     public static KeyInstructionsConfig preset() {
         return new KeyInstructionsConfig(
-                BaniraUtils.mutableSetOf(
+                Arrays.asList(
                         new KeyValue<>("关键词", "回复")
                         , new KeyValue<>("start", "end")
                         , new KeyValue<>("key", "rep")
                         , new KeyValue<>("keyword", "reply")
                 ),
-                BaniraUtils.mutableSetOf("完全", "精准", "exactly", "perfect", "per"),
-                BaniraUtils.mutableSetOf("包含", "contain", "include", "inc"),
-                BaniraUtils.mutableSetOf("拼音", "pinyin", "pin"),
-                BaniraUtils.mutableSetOf("正则", "regex", "reg", "regexp")
+                Arrays.asList("完全", "精准", "exactly", "perfect", "per"),
+                Arrays.asList("包含", "contain", "include", "inc"),
+                Arrays.asList("拼音", "pinyin", "pin"),
+                Arrays.asList("正则", "regex", "reg", "regexp")
         );
     }
 

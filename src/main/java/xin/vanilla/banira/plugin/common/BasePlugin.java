@@ -239,10 +239,10 @@ public abstract class BasePlugin {
     /**
      * 获取帮助信息
      *
-     * @param type    帮助类型
      * @param groupId 群组ID
+     * @param types   帮助类型
      */
     @Nonnull
-    public abstract List<String> getHelpInfo(@Nonnull String type, @Nullable Long groupId);
+    public abstract List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types);
 
 }

@@ -10,6 +10,7 @@ import xin.vanilla.banira.config.entity.basic.PermissionConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.*;
@@ -28,8 +29,9 @@ public class PermissionCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String type) {
+    public List<String> getHelpInfo(String... types) {
         List<String> result = new ArrayList<>();
+        String type = CollectionUtils.getFirst(types);
         if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             result.add("群管 - 设置管家或女仆的权限：\n\n" +
                     "增加权限：\n" +
@@ -67,8 +69,8 @@ public class PermissionCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public Set<String> getAction() {
-        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().op(), Set::of);
+    public List<String> getAction() {
+        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().op(), List::of);
     }
 
     @Override
@@ -118,7 +120,7 @@ public class PermissionCommand implements KanriHandler {
                         .findFirst().orElse(new PermissionConfig(targetId, new HashSet<>()))
                         .permissions();
             } else if (maid) {
-                permissions = groupConfig.get().maid().getOrDefault(context.group(), new HashSet<>())
+                permissions = groupConfig.get().maid().getOrDefault(context.group(), new ArrayList<>())
                         .stream().filter(p -> targetId.equals(p.id()))
                         .findFirst().orElse(new PermissionConfig(targetId, new HashSet<>()))
                         .permissions();
@@ -143,8 +145,8 @@ public class PermissionCommand implements KanriHandler {
                 globalConfig.get().butler().removeIf(p -> targetId.equals(p.id()));
                 globalConfig.get().butler().add(new PermissionConfig(targetId, permissions));
             } else {
-                groupConfig.get().maid().getOrDefault(context.group(), new HashSet<>()).removeIf(p -> targetId.equals(p.id()));
-                groupConfig.get().maid().getOrDefault(context.group(), new HashSet<>()).add(new PermissionConfig(targetId, permissions));
+                groupConfig.get().maid().getOrDefault(context.group(), new ArrayList<>()).removeIf(p -> targetId.equals(p.id()));
+                groupConfig.get().maid().getOrDefault(context.group(), new ArrayList<>()).add(new PermissionConfig(targetId, permissions));
             }
         }
         BaniraUtils.saveConfig();

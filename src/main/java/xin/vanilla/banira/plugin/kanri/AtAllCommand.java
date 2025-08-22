@@ -8,12 +8,12 @@ import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Supplier;
 
 /**
@@ -27,8 +27,9 @@ public class AtAllCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String type) {
+    public List<String> getHelpInfo(String... types) {
         List<String> result = new ArrayList<>();
+        String type = CollectionUtils.getFirst(types);
         if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             result.add("群管 - AT全体成员：\n\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace()
@@ -50,8 +51,8 @@ public class AtAllCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public Set<String> getAction() {
-        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().base().atAll(), Set::of);
+    public List<String> getAction() {
+        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().base().atAll(), ArrayList::new);
     }
 
     @Override

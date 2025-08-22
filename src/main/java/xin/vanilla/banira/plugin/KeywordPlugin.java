@@ -54,76 +54,124 @@ public class KeywordPlugin extends BasePlugin {
     private BaniraCodeHandler codeHandler;
 
     private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "keyword", "keyWord", "关键词", "关键词回复"
+            "keyword", "key", "keyWord", "关键词", "关键词回复"
+    );
+
+    private static final Set<String> exampleOperate = BaniraUtils.mutableSetOf(
+            "example", "case", "例子", "实例", "栗子"
     );
 
     /**
      * 获取帮助信息
      *
-     * @param type    帮助类型
      * @param groupId 群组ID
+     * @param types   帮助类型
      */
     @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nonnull String type, @Nullable Long groupId) {
+    public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {
         List<String> result = new ArrayList<>();
+        String type = CollectionUtils.getFirst(types);
+        String operate = CollectionUtils.getOrDefault(types, 1, "");
         if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
             KeyInstructionsConfig keyIns = BaniraUtils.getKeyIns();
 
-            Set<String> keywordTargets = BaniraUtils.mutableSetOf("<\\d{5,10}>");
-            keywordTargets.addAll(baseIns.that());
-            keywordTargets.addAll(baseIns.global());
+            if (exampleOperate.contains(operate)) {
+                result.add("关键词回复 - 增加：\n\n" +
+                        "例子1：" + "\n" +
+                        BaniraUtils.getInsPrefixWithSpace() +
+                        keyIns.locator().getFirst().getKey() + " " +
+                        baseIns.add().getFirst() + " " +
+                        keyIns.exactly().getFirst() + " " +
+                        "关键词" + " " +
+                        keyIns.locator().getFirst().getValue() + " " +
+                        "回复内容" + "\n\n" +
+                        "例子2：" + "\n" +
+                        BaniraUtils.getInsPrefixWithSpace() +
+                        keyIns.locator().getLast().getKey() + " " +
+                        baseIns.add().getLast() + " " +
+                        baseIns.global().getFirst() + " " +
+                        keyIns.contain().getFirst() + " " +
+                        "关键词" + " " +
+                        keyIns.locator().getLast().getValue() + " " +
+                        "回复内容"
+                );
+                result.add("关键词回复 - 删除：\n\n" +
+                        "例子1：" + "\n" +
+                        BaniraUtils.getInsPrefixWithSpace() +
+                        keyIns.locator().getFirst().getKey() + " " +
+                        baseIns.del().getFirst() + " " +
+                        baseIns.global().getFirst() + " " +
+                        keyIns.pinyin().getFirst() + " " +
+                        "关键词" + " " +
+                        keyIns.locator().getFirst().getValue() + " " +
+                        "回复内容" + "\n\n" +
+                        "例子2：" + "\n" +
+                        BaniraUtils.getInsPrefixWithSpace() +
+                        keyIns.locator().getLast().getKey() + " " +
+                        baseIns.del().getLast() + " " +
+                        baseIns.global().getLast() + " " +
+                        keyIns.regex().getFirst() + " " +
+                        "关键词"
+                );
+            } else {
+                Set<String> keywordTargets = BaniraUtils.mutableSetOf("<\\d{5,10}>");
+                keywordTargets.addAll(baseIns.that());
+                keywordTargets.addAll(baseIns.global());
 
-            Set<String> keywordTypes = BaniraUtils.mutableSetOf();
-            keywordTypes.addAll(keyIns.exactly());
-            keywordTypes.addAll(keyIns.contain());
-            keywordTypes.addAll(keyIns.pinyin());
-            keywordTypes.addAll(keyIns.regex());
+                Set<String> keywordTypes = BaniraUtils.mutableSetOf();
+                keywordTypes.addAll(keyIns.exactly());
+                keywordTypes.addAll(keyIns.contain());
+                keywordTypes.addAll(keyIns.pinyin());
+                keywordTypes.addAll(keyIns.regex());
 
-            result.add("关键词回复 - 增加：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                    baseIns.add() + " " +
-                    String.format("[%s, %s, <群号>]"
-                            , String.join(", ", baseIns.global())
-                            , String.join(", ", baseIns.that())
-                    ) + " " +
-                    keywordTypes + " " +
-                    "<关键词>" + " " +
-                    keyIns.locator().stream().map(KeyValue::getValue).toList() + " " +
-                    "<回复内容>"
-            );
-            result.add("关键词回复 - 删除：\n" +
-                    "用法1：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                    baseIns.del() + " " +
-                    String.format("[%s, %s, <群号>]"
-                            , String.join(", ", baseIns.global())
-                            , String.join(", ", baseIns.that())
-                    ) + " " +
-                    keywordTypes + " " +
-                    "<关键词>" + " " +
-                    keyIns.locator().stream().map(KeyValue::getValue).toList() + " " +
-                    "<回复内容>" + "\n\n" +
-                    "用法2：(根据关键词编号删除)\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                    baseIns.del() + " " +
-                    "<关键词编号> ..." + "\n\n" +
-                    "用法3：(回复添加成功的响应消息)\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                    baseIns.del()
-            );
-            result.add("关键词回复 - 查询：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                    baseIns.list() + " " +
-                    "[<页数>]" + " " +
-                    "<关键词内容>"
-            );
+                result.add("关键词回复 - 增加：\n" +
+                        "增加关键词回复规则。可选帮助参数：" + exampleOperate + "\n\n" +
+                        BaniraUtils.getInsPrefixWithSpace() +
+                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
+                        baseIns.add() + " " +
+                        String.format("[%s, %s, <群号>]"
+                                , String.join(", ", baseIns.global())
+                                , String.join(", ", baseIns.that())
+                        ) + " " +
+                        keywordTypes + " " +
+                        "<关键词>" + " " +
+                        keyIns.locator().stream().map(KeyValue::getValue).toList() + " " +
+                        "<回复内容>"
+                );
+                result.add("关键词回复 - 删除：\n" +
+                        "删除关键词回复规则。可选帮助参数：" + exampleOperate + "\n\n" +
+                        "用法1：\n" +
+                        BaniraUtils.getInsPrefixWithSpace() +
+                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
+                        baseIns.del() + " " +
+                        String.format("[%s, %s, <群号>]"
+                                , String.join(", ", baseIns.global())
+                                , String.join(", ", baseIns.that())
+                        ) + " " +
+                        keywordTypes + " " +
+                        "<关键词>" + " " +
+                        keyIns.locator().stream().map(KeyValue::getValue).toList() + " " +
+                        "<回复内容>" + "\n\n" +
+                        "用法2：(根据关键词编号删除)\n" +
+                        BaniraUtils.getInsPrefixWithSpace() +
+                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
+                        baseIns.del() + " " +
+                        "<关键词编号> ..." + "\n\n" +
+                        "用法3：(回复添加成功的响应消息)\n" +
+                        BaniraUtils.getInsPrefixWithSpace() +
+                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
+                        baseIns.del()
+                );
+                result.add("关键词回复 - 查询：\n\n" +
+                        BaniraUtils.getInsPrefixWithSpace() +
+                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
+                        baseIns.list() + " " +
+                        "[<页数>]" + " " +
+                        "<关键词内容>"
+                );
+            }
         }
         return result;
     }
@@ -150,8 +198,8 @@ public class KeywordPlugin extends BasePlugin {
 
             BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
 
-            String action = StringUtils.orDefault(matcher.group("keywordAction"), baseIns.add().iterator().next());
-            String group = StringUtils.orDefault(matcher.group("keywordTarget"), baseIns.that().iterator().next());
+            String action = StringUtils.orDefault(matcher.group("keywordAction"), baseIns.add().getFirst());
+            String group = StringUtils.orDefault(matcher.group("keywordTarget"), baseIns.that().getFirst());
 
             if (baseIns.that().contains(group)) group = String.valueOf(event.getGroupId());
             if (baseIns.global().contains(group)) group = "0";

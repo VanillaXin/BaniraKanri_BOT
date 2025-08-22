@@ -39,12 +39,12 @@ public class RecorderPlugin extends BasePlugin {
     /**
      * 获取帮助信息
      *
-     * @param type    帮助类型
      * @param groupId 群组ID
+     * @param types   帮助类型
      */
     @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
+    public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
         return List.of();
     }
 

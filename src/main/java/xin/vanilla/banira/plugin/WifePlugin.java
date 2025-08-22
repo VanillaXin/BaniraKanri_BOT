@@ -74,25 +74,26 @@ public class WifePlugin extends BasePlugin {
     /**
      * 获取帮助信息
      *
-     * @param type    帮助类型
      * @param groupId 群组ID
+     * @param types   帮助类型
      */
     @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
+    public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
         List<String> result = new ArrayList<>();
+        String type = CollectionUtils.getFirst(types);
         if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            Set<WifeConfig> wifeConfig = getWifeConfig(groupId);
+            List<WifeConfig> wifeConfig = getWifeConfig(groupId);
             result.add("抽老婆：\n" +
                     "抽取每日群友老婆喵。\n\n" +
                     wifeConfig.stream().map(WifeConfig::reg).sorted().toList()
             );
-            result.add("抽老婆 - 年度统计：\n" +
+            result.add("抽老婆 - 年度统计：\n\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
                     globalConfig.get().otherConfig().wifeInsConfig() + " " +
                     globalConfig.get().instConfig().base().status()
             );
-            result.add("抽老婆 - 设置规则：\n" +
+            result.add("抽老婆 - 设置规则：\n\n" +
                     "启用：\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
                     globalConfig.get().otherConfig().wifeInsConfig() + " " +
@@ -127,7 +128,7 @@ public class WifePlugin extends BasePlugin {
     public boolean draw(Bot tob, GroupMessageEvent event) {
         BaniraBot bot = new BaniraBot(tob);
 
-        Set<WifeConfig> configs = getWifeConfig(event.getGroupId());
+        List<WifeConfig> configs = getWifeConfig(event.getGroupId());
         if (CollectionUtils.isNotNullOrEmpty(configs)) {
             String message = event.getMessage();
             Optional<WifeConfig> optional = configs.stream()
@@ -250,7 +251,7 @@ public class WifePlugin extends BasePlugin {
             }
             // 查询
             else if (globalConfig.get().instConfig().base().list().contains(operate)) {
-                Set<WifeConfig> wifeConfigs = groupConfig.get().otherConfig()
+                List<WifeConfig> wifeConfigs = groupConfig.get().otherConfig()
                         .computeIfAbsent(event.getGroupId(), k -> OtherConfig.empty())
                         .wifeConfig();
                 if (wifeConfigs.isEmpty()) {
@@ -695,8 +696,8 @@ public class WifePlugin extends BasePlugin {
     }
 
 
-    private Set<WifeConfig> getWifeConfig(Long groupId) {
-        Set<WifeConfig> wifeConfig = BaniraUtils.mutableSetOf();
+    private List<WifeConfig> getWifeConfig(Long groupId) {
+        List<WifeConfig> wifeConfig = new ArrayList<>();
         OtherConfig othersConfig = BaniraUtils.getOthersConfig(groupId);
         if (CollectionUtils.isNotNullOrEmpty(othersConfig.wifeConfig())) {
             wifeConfig = othersConfig.wifeConfig();
@@ -706,7 +707,7 @@ public class WifePlugin extends BasePlugin {
                             || (DISABLED.reg().equals(wife.reg()) && DISABLED.nick().equals(wife.nick()))
                     )
             ) {
-                return BaniraUtils.mutableSetOf();
+                return new ArrayList<>();
             }
         }
         // 全局配置
@@ -720,7 +721,7 @@ public class WifePlugin extends BasePlugin {
                                 || (DISABLED.reg().equals(wife.reg()) && DISABLED.nick().equals(wife.nick()))
                         )
                 ) {
-                    return BaniraUtils.mutableSetOf();
+                    return new ArrayList<>();
                 }
             }
         }

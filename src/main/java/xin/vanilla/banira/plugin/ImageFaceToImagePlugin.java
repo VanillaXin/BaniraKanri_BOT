@@ -17,6 +17,7 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
@@ -39,13 +40,14 @@ public class ImageFaceToImagePlugin extends BasePlugin {
     /**
      * 获取帮助信息
      *
-     * @param type    帮助类型
      * @param groupId 群组ID
+     * @param types   帮助类型
      */
     @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nonnull String type, Long groupId) {
+    public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
         List<String> result = new ArrayList<>();
+        String type = CollectionUtils.getFirst(types);
         if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             result.add("表情转图片：\n" +
                     "使用指令回复带有图片的消息以获得其中的图片详情。\n\n" +

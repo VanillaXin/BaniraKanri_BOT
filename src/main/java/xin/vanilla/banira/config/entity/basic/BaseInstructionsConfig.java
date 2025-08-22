@@ -1,9 +1,9 @@
 package xin.vanilla.banira.config.entity.basic;
 
 import lombok.experimental.Accessors;
-import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.Set;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 基础指令配置
@@ -20,30 +20,30 @@ import java.util.Set;
  */
 @Accessors(chain = true)
 public record BaseInstructionsConfig(
-        Set<String> add,
-        Set<String> del,
-        Set<String> list,
-        Set<String> enable,
-        Set<String> disable,
-        Set<String> global,
-        Set<String> that,
-        Set<String> atAll,
-        Set<String> status,
-        Set<String> help
+        List<String> add,
+        List<String> del,
+        List<String> list,
+        List<String> enable,
+        List<String> disable,
+        List<String> global,
+        List<String> that,
+        List<String> atAll,
+        List<String> status,
+        List<String> help
 ) {
 
     public static BaseInstructionsConfig preset() {
         return new BaseInstructionsConfig(
-                BaniraUtils.mutableSetOf("添加", "add", "put", "insert"),
-                BaniraUtils.mutableSetOf("删除", "del", "delete", "remove"),
-                BaniraUtils.mutableSetOf("查询", "list", "ls", "sel", "get"),
-                BaniraUtils.mutableSetOf("启用", "enable", "open"),
-                BaniraUtils.mutableSetOf("禁用", "disable", "close"),
-                BaniraUtils.mutableSetOf("全局", "all", "global"),
-                BaniraUtils.mutableSetOf("当前", "that", "this", "here"),
-                BaniraUtils.mutableSetOf("@全体成员", "@全体", "@所有人", "@all", "@All", "@ALL"),
-                BaniraUtils.mutableSetOf("统计", "状态", "status", "statistics", "stats"),
-                BaniraUtils.mutableSetOf("帮助", "指令帮助", "help", "tips")
+                Arrays.asList("添加", "add", "put", "insert"),
+                Arrays.asList("删除", "del", "delete", "remove"),
+                Arrays.asList("查询", "list", "ls", "sel", "get"),
+                Arrays.asList("启用", "enable", "open"),
+                Arrays.asList("禁用", "disable", "close"),
+                Arrays.asList("全局", "all", "global"),
+                Arrays.asList("当前", "that", "this", "here"),
+                Arrays.asList("@全体成员", "@全体", "@所有人", "@all", "@All", "@ALL"),
+                Arrays.asList("统计", "状态", "status", "statistics", "stats"),
+                Arrays.asList("帮助", "指令帮助", "help", "tips")
         );
     }
 

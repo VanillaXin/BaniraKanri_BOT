@@ -1,9 +1,9 @@
 package xin.vanilla.banira.config.entity.basic;
 
 import lombok.experimental.Accessors;
-import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.Set;
+import java.util.Arrays;
+import java.util.List;
 
 /**
  * 管理指令配置
@@ -25,40 +25,40 @@ import java.util.Set;
  */
 @Accessors(chain = true)
 public record KanriInstructionsConfig(
-        Set<String> prefix,
-        Set<String> tag,
-        Set<String> card,
-        Set<String> tap,
-        Set<String> mute,
-        Set<String> loud,
-        Set<String> withdraw,
-        Set<String> kick,
-        Set<String> essence,
-        Set<String> admin,
-        Set<String> butler,
-        Set<String> maid,
-        Set<String> op,
-        Set<String> groupName,
-        Set<String> approve
+        List<String> prefix,
+        List<String> tag,
+        List<String> card,
+        List<String> tap,
+        List<String> mute,
+        List<String> loud,
+        List<String> withdraw,
+        List<String> kick,
+        List<String> essence,
+        List<String> admin,
+        List<String> butler,
+        List<String> maid,
+        List<String> op,
+        List<String> groupName,
+        List<String> approve
 ) {
 
     public static KanriInstructionsConfig preset() {
         return new KanriInstructionsConfig(
-                BaniraUtils.mutableSetOf(),
-                BaniraUtils.mutableSetOf("头衔", "tag"),
-                BaniraUtils.mutableSetOf("群名片", "card"),
-                BaniraUtils.mutableSetOf("戳一戳", "戳", "tap", "slap"),
-                BaniraUtils.mutableSetOf("禁言", "mute", "ban"),
-                BaniraUtils.mutableSetOf("解除禁言", "解禁", "loud", "unmute", "unban"),
-                BaniraUtils.mutableSetOf("撤回", "withdraw", "recall", "rec"),
-                BaniraUtils.mutableSetOf("踢出群聊", "kick"),
-                BaniraUtils.mutableSetOf("精华", "essence"),
-                BaniraUtils.mutableSetOf("群管理", "admin", "gad", "ad"),
-                BaniraUtils.mutableSetOf("主管", "管家", "女仆长", "butler", "chief"),
-                BaniraUtils.mutableSetOf("仆人", "女仆", "妹抖", "servant", "maid"),
-                BaniraUtils.mutableSetOf("权限", "op", "permission"),
-                BaniraUtils.mutableSetOf("群名", "群名称", "groupname", "gname", "gn"),
-                BaniraUtils.mutableSetOf("审批", "审核", "approve")
+                Arrays.asList(),
+                Arrays.asList("头衔", "tag"),
+                Arrays.asList("群名片", "card"),
+                Arrays.asList("戳一戳", "戳", "tap", "slap"),
+                Arrays.asList("禁言", "mute", "ban"),
+                Arrays.asList("解除禁言", "解禁", "loud", "unmute", "unban"),
+                Arrays.asList("撤回", "withdraw", "recall", "rec"),
+                Arrays.asList("踢出群聊", "kick"),
+                Arrays.asList("精华", "essence"),
+                Arrays.asList("群管理", "admin", "gad", "ad"),
+                Arrays.asList("主管", "管家", "女仆长", "butler", "chief"),
+                Arrays.asList("仆人", "女仆", "妹抖", "servant", "maid"),
+                Arrays.asList("权限", "op", "permission"),
+                Arrays.asList("群名", "群名称", "groupname", "gname", "gn"),
+                Arrays.asList("审批", "审核", "approve")
         );
     }
 

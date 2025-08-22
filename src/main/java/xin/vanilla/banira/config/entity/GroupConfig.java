@@ -8,8 +8,8 @@ import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.basic.PermissionConfig;
 import xin.vanilla.banira.util.BaniraUtils;
 
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 群配置
@@ -20,7 +20,7 @@ import java.util.Set;
  */
 @Accessors(chain = true)
 public record GroupConfig(
-        @Nonnull Map<Long, Set<PermissionConfig>> maid,
+        @Nonnull Map<Long, List<PermissionConfig>> maid,
         @Nonnull Map<Long, BaseConfig> baseConfig,
         @Nonnull Map<Long, OtherConfig> otherConfig
 ) {
