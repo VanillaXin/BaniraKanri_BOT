@@ -644,7 +644,7 @@ public class BaniraUtils {
      * 判断是否仆人
      */
     public static boolean isServant(@Nullable Long groupId, @Nonnull Long qq) {
-        if (groupId == null || groupId <= 0L) return false;
+        if (groupId == null || !isGroupIdValid(groupId)) return false;
         Set<PermissionConfig> servant = getGroupConfig().maid().get(groupId);
         return CollectionUtils.isNotNullOrEmpty(servant) && servant.stream().anyMatch(e -> qq.equals(e.id()));
     }
@@ -660,18 +660,38 @@ public class BaniraUtils {
      * 判断是否群主
      */
     public static boolean isGroupOwner(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq) {
-        if (bot == null || groupId == null || groupId <= 0L) return false;
+        if (bot == null || !isGroupIdValid(groupId)) return false;
         ActionData<GroupMemberInfoResp> groupMemberInfo = bot.getGroupMemberInfo(groupId, qq, false);
-        return groupMemberInfo != null && "owner".equalsIgnoreCase(groupMemberInfo.getData().getRole());
+        return bot.isActionDataNotEmpty(groupMemberInfo) && "owner".equalsIgnoreCase(groupMemberInfo.getData().getRole());
     }
 
     /**
      * 判断是否群管理
      */
     public static boolean isGroupAdmin(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq) {
-        if (bot == null || groupId == null || groupId <= 0L) return false;
+        if (bot == null || !isGroupIdValid(groupId)) return false;
         ActionData<GroupMemberInfoResp> groupMemberInfo = bot.getGroupMemberInfo(groupId, qq, false);
-        return groupMemberInfo != null && "admin".equalsIgnoreCase(groupMemberInfo.getData().getRole());
+        return bot.isActionDataNotEmpty(groupMemberInfo) && "admin".equalsIgnoreCase(groupMemberInfo.getData().getRole());
+    }
+
+    /**
+     * 判断是否群成员
+     */
+    public static boolean isGroupMember(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq) {
+        if (bot == null || !isGroupIdValid(groupId)) return false;
+        ActionData<GroupMemberInfoResp> groupMemberInfo = bot.getGroupMemberInfo(groupId, qq, false);
+        if (!bot.isActionDataNotEmpty(groupMemberInfo)) return false;
+        String role = groupMemberInfo.getData().getRole();
+        return !"admin".equalsIgnoreCase(role) && !"owner".equalsIgnoreCase(role);
+    }
+
+    /**
+     * 判断是否在群内
+     */
+    public static boolean isInGroup(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq) {
+        if (bot == null || !isGroupIdValid(groupId)) return false;
+        ActionData<GroupMemberInfoResp> groupMemberInfo = bot.getGroupMemberInfo(groupId, qq, false);
+        return bot.isActionDataNotEmpty(groupMemberInfo);
     }
 
     /**
@@ -775,6 +795,9 @@ public class BaniraUtils {
         return getPermission(bot, groupId, qq).stream().anyMatch(permissions::contains);
     }
 
+    /**
+     * 获取权限名称
+     */
     public static Set<String> getPermissionNames(EnumPermission permission) {
         GlobalConfig globalConfig = getGlobalConfig();
         switch (permission) {
@@ -856,7 +879,7 @@ public class BaniraUtils {
 
     // region 其他
 
-    public static boolean isVailidUrl(String url) {
+    public static boolean isValidUrl(String url) {
         try {
             URI.create(url);
             return true;
@@ -865,7 +888,7 @@ public class BaniraUtils {
         }
     }
 
-    public static boolean isVailidPath(String path) {
+    public static boolean isValidPath(String path) {
         try {
             Path.of(path);
             return true;

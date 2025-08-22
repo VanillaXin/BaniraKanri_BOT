@@ -40,9 +40,9 @@ public class HtmlScreenshotConfig {
     private String url;
 
     public HtmlScreenshotConfig(String content) {
-        if (BaniraUtils.isVailidUrl(content)) {
+        if (BaniraUtils.isValidUrl(content)) {
             this.url = content;
-        } else if (BaniraUtils.isVailidPath(content)) {
+        } else if (BaniraUtils.isValidPath(content)) {
             this.url = toFileUrl(Path.of(content));
         } else {
             try {

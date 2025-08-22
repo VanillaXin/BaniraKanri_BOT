@@ -608,6 +608,20 @@ public class BaniraBot extends Bot {
     }
 
     /**
+     * 判断是否群成员
+     */
+    public boolean isGroupMember(@Nullable Long groupId, @Nonnull Long qq) {
+        return BaniraUtils.isGroupMember(this, groupId, qq);
+    }
+
+    /**
+     * 判断是否在群内
+     */
+    public boolean isInGroup(@Nullable Long groupId, @Nonnull Long qq) {
+        return BaniraUtils.isInGroup(this, groupId, qq);
+    }
+
+    /**
      * 判断机器人是否群主
      */
     public boolean isGroupOwner(@Nullable Long groupId) {

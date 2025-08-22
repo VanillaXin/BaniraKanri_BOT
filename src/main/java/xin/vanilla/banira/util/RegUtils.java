@@ -5,8 +5,11 @@ import lombok.Getter;
 
 import java.util.Collection;
 import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import static xin.vanilla.banira.util.RandomStringUtils.CharSource;
 
 @SuppressWarnings("unused")
 public class RegUtils {
@@ -380,6 +383,71 @@ public class RegUtils {
             return sb.toString();
         } catch (Exception e) {
             return paramExpr;
+        }
+    }
+
+
+    // 样本长度
+    private static final int SAMPLE_LENGTH = 20;
+    // 测试样本数量
+    private static final int SAMPLE_COUNT = 10;
+    // 宽泛性阈值
+    private static final float BROAD_THRESHOLD = 7.5f;
+
+    /**
+     * 检测正则表达式是否过于宽泛
+     *
+     * @param regex 要检测的正则表达式
+     * @return true表示过于宽泛，false表示相对具体
+     */
+    public static boolean isRegexTooBroad(String regex) {
+        try {
+            return getRegexBroadnessScore(regex) > BROAD_THRESHOLD;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    /**
+     * 获取正则表达式的宽泛性评分（0-10，越高越宽泛）
+     */
+    public static float getRegexBroadnessScore(String regex) {
+        try {
+            Pattern pattern = Pattern.compile(regex);
+            int matchCount = 0;
+            for (String testString : getTestStrings()) {
+                if (pattern.matcher(testString).matches()) {
+                    matchCount++;
+                }
+            }
+            return matchCount * 10f / getTestStrings().size();
+        } catch (Exception e) {
+            return 10f;
+        }
+    }
+
+    private static Set<String> getTestStrings() {
+        Set<String> strings = new HashSet<>();
+        for (CharSource value : CharSource.values()) {
+            strings.add(RandomStringUtils.generate(SAMPLE_LENGTH, value));
+        }
+        if (SAMPLE_COUNT > strings.size()) strings.add("");
+        if (SAMPLE_COUNT > strings.size()) strings.add(" ".repeat(SAMPLE_LENGTH));
+        for (int i = 0; i < SAMPLE_COUNT - strings.size(); i++) {
+            strings.add(RandomStringUtils.generate(SAMPLE_LENGTH, CharSource.ANY_CHARACTER));
+        }
+        return strings;
+    }
+
+    /**
+     * 在特定字符串上测试正则表达式
+     */
+    private static boolean testPatternOnString(Pattern pattern, String testString) {
+        try {
+            Matcher matcher = pattern.matcher(testString);
+            return matcher.find();
+        } catch (Exception e) {
+            return false;
         }
     }
 }

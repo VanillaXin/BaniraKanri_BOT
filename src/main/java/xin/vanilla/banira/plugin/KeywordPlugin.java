@@ -32,6 +32,7 @@ import xin.vanilla.banira.service.IKeywordManager;
 import xin.vanilla.banira.service.IKeywordRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
+import xin.vanilla.banira.util.RegUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.*;
@@ -169,9 +170,57 @@ public class KeywordPlugin extends BasePlugin {
                         .setKeywordType(keywordType)
                         .setKeyword(keyword)
                         .setReplyMsg(reply);
-                keywordRecordManager.addKeywordRecord(keywordRecord);
+
+                String reason = "";
+                // 权限及规则判断
+                {
+                    boolean owner = BaniraUtils.isOwner(event.getUserId());
+                    boolean butler = BaniraUtils.isButler(event.getUserId());
+                    boolean maid = BaniraUtils.isMaid(event.getGroupId(), event.getUserId());
+                    boolean inGroup = bot.isInGroup(keywordRecord.getGroupId(), event.getUserId());
+                    boolean groupOwner = inGroup && bot.isGroupOwner(event.getGroupId(), event.getUserId());
+                    boolean groupAdmin = inGroup && bot.isGroupAdmin(event.getGroupId(), event.getUserId());
+                    boolean globalOp = owner || butler;
+                    boolean groupOp = groupOwner || groupAdmin || maid;
+                    boolean op = globalOp || groupOp;
+                    boolean targetGroupIdValid = BaniraUtils.isGroupIdValid(keywordRecord.getGroupId());
+                    boolean groupIdEquals = keywordRecord.getGroupId().equals(event.getGroupId());
+                    if (!targetGroupIdValid && !globalOp) {
+                        reason = "添加失败：权限不足(全局关键词)";
+                    } else if (!groupIdEquals && !globalOp && !inGroup) {
+                        reason = "添加失败：权限不足(不在目标群)";
+                    } else if (keywordType == EnumKeywordType.PINYIN) {
+                        if (!op) {
+                            reason = "添加失败：权限不足(拼音匹配)";
+                        } else if (StringUtils.isNullOrEmptyEx(keywordRecord.getKeyword())) {
+                            reason = "添加失败：规则为空(拼音匹配)";
+                        }
+                    } else if (keywordType == EnumKeywordType.REGEX) {
+                        if (!op) {
+                            reason = "添加失败：权限不足(正则匹配)";
+                        } else if (RegUtils.isRegexTooBroad(keywordRecord.getKeyword())) {
+                            reason = "添加失败：触发规则过于宽泛(正则匹配)";
+                        }
+                    } else if (keywordType == EnumKeywordType.CONTAIN) {
+                        if (StringUtils.isNullOrEmptyEx(keywordRecord.getKeyword())) {
+                            reason = "添加失败：触发规则为空(拼音匹配)";
+                        }
+                    }
+                }
+
+                if (StringUtils.isNullOrEmptyEx(reason)) {
+                    try {
+                        keywordRecordManager.addKeywordRecord(keywordRecord);
+                        if (keywordRecord.getId() == 0) {
+                            reason = "添加失败";
+                        }
+                    } catch (Exception e) {
+                        reason = "添加失败：" + e.getMessage();
+                    }
+                }
+
                 forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                        , (keywordRecord.getId() != 0 ? "关键词编号：" + keywordRecord.getId() + "\n" : "") +
+                        , (keywordRecord.getId() != null && keywordRecord.getId() != 0 ? "关键词编号：" + keywordRecord.getId() + "\n" : "") +
                                 "关键词类型：" + keywordType.getDesc() + "\n" +
                                 "群号：" + keywordRecord.getGroupId()
                 ));
@@ -181,9 +230,9 @@ public class KeywordPlugin extends BasePlugin {
                 forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
                         , "回复内容：\n" + keywordRecord.getReplyMsg()
                 ));
-                if (keywordRecord.getId() == 0) {
+                if (StringUtils.isNotNullOrEmpty(reason)) {
                     forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                            , "添加失败"
+                            , reason
                     ));
                 }
             }
@@ -199,8 +248,7 @@ public class KeywordPlugin extends BasePlugin {
                 List<KeywordRecord> recordList = keywordRecordManager.getKeywordRecordList(param);
                 if (CollectionUtils.isNotNullOrEmpty(recordList)) {
                     for (KeywordRecord record : recordList) {
-                        boolean b = keywordRecordManager.deleteKeywordRecord(record.getId()) > 0;
-                        this.buildForwardMsg(bot, loginInfoEx, forwardMsg, record, b);
+                        this.deleteKeywordRecord(bot, event, record, loginInfoEx, forwardMsg);
                     }
                 } else {
                     forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
@@ -246,7 +294,7 @@ public class KeywordPlugin extends BasePlugin {
                             List<Map<String, Object>> forwardMsg = new ArrayList<>();
                             forwardMsg.add(ShiroUtils.generateSingleMsg(event.getUserId(), event.getSender().getNickname(), event.getMessage()));
 
-                            long id = forwardMsgResp.getData().getMessages().stream()
+                            List<Long> ids = forwardMsgResp.getData().getMessages().stream()
                                     .filter(data -> StringUtils.toLong(data.getSender().getUserId()) == bot.getSelfId())
                                     .map(MessageEvent::getMessage)
                                     .filter(StringUtils::isNotNullOrEmpty)
@@ -254,10 +302,11 @@ public class KeywordPlugin extends BasePlugin {
                                     .map(data -> CollectionUtils.getOrDefault(data.split("关键词编号："), 1, "").strip())
                                     .map(data -> CollectionUtils.getFirst(data.split("\\s")))
                                     .map(StringUtils::toLong)
-                                    .filter(data -> data > 0).findFirst().orElse(0L);
-                            KeywordRecord record = keywordRecordManager.getKeywordRecord(id);
-                            boolean b = keywordRecordManager.deleteKeywordRecord(id) > 0;
-                            this.buildForwardMsg(bot, loginInfoEx, forwardMsg, record, b);
+                                    .filter(data -> data > 0).toList();
+                            for (Long id : ids) {
+                                KeywordRecord record = keywordRecordManager.getKeywordRecord(id);
+                                this.deleteKeywordRecord(bot, event, record, loginInfoEx, forwardMsg);
+                            }
                             ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, forwardMsg);
                             return bot.isActionDataMsgIdNotEmpty(msgIdData);
                         }
@@ -292,8 +341,7 @@ public class KeywordPlugin extends BasePlugin {
                         List<KeywordRecord> recordList = keywordRecordManager.getKeywordRecordList(new KeywordRecordQueryParam().setId(ids).setEnable(true));
                         if (!recordList.isEmpty()) {
                             for (KeywordRecord record : recordList) {
-                                boolean b = keywordRecordManager.deleteKeywordRecord(record.getId()) > 0;
-                                this.buildForwardMsg(bot, loginInfoEx, forwardMsg, record, b);
+                                this.deleteKeywordRecord(bot, event, record, loginInfoEx, forwardMsg);
                             }
                         } else {
                             forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
@@ -375,17 +423,36 @@ public class KeywordPlugin extends BasePlugin {
     }
 
 
-    private void buildForwardMsg(BaniraBot bot
-            , LoginInfoResp loginInfoEx
-            , List<Map<String, Object>> forwardMsg
-            , KeywordRecord record
-            , boolean success
+    private void deleteKeywordRecord(BaniraBot bot, AnyMessageEvent event
+            , KeywordRecord record, LoginInfoResp loginInfoEx, List<Map<String, Object>> forwardMsg
     ) {
+        Long groupId = BaniraUtils.isGroupIdValid(record.getGroupId())
+                ? record.getGroupId()
+                : BaniraUtils.isGroupIdValid(event.getGroupId()) ? event.getGroupId() : null;
+        boolean hasOp = Objects.equals(event.getUserId(), record.getCreatorId())
+                || bot.isUpper(groupId, event.getUserId(), record.getCreatorId());
+        boolean enable = record.getEnable();
+        String reason = "";
+        if (!hasOp) {
+            reason = "\n删除失败：权限不足";
+        } else if (!enable) {
+            reason = "\n删除失败：关键词未启用";
+        }
+        if (StringUtils.isNullOrEmptyEx(reason)) {
+            try {
+                if (keywordRecordManager.deleteKeywordRecord(record.getId()) > 0) {
+                    reason = "\n删除成功";
+                } else {
+                    reason = "\n删除失败";
+                }
+            } catch (Exception e) {
+                reason = "\n删除失败：" + e.getMessage();
+            }
+        }
         forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
                 , "关键词编号：" + record.getId() + "\n" +
                         "关键词类型：" + record.getKeywordType().getDesc() + "\n" +
-                        "群号：" + record.getGroupId() + "\n" +
-                        "删除" + (success ? "成功" : "失败") + (record.getEnable() ? "" : "\n关键词未启用")
+                        "群号：" + record.getGroupId() + reason
         ));
         forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
                 , "触发内容：\n" + record.getKeyword()
