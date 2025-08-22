@@ -43,8 +43,7 @@ public class HelpPlugin extends BasePlugin {
     }
 
     @AnyMessageHandler
-    public boolean help(Bot tob, AnyMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
+    public boolean help(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
         if (super.isCommand(message)
                 && globalConfig.get().instConfig().base().help() != null

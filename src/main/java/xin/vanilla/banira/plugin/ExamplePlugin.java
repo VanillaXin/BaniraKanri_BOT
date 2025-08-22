@@ -5,7 +5,6 @@ import com.mikuac.shiro.annotation.GroupMessageHandler;
 import com.mikuac.shiro.annotation.MessageHandlerFilter;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.MsgUtils;
-import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import jakarta.annotation.Nonnull;
@@ -46,14 +45,13 @@ public class ExamplePlugin extends BasePlugin {
     /**
      * 发送 /hello 触发回复 Hello Excel!
      *
-     * @param tob   机器人实例
+     * @param bot   机器人实例
      * @param event 消息事件
      * @return 是否拦截事件传递
      */
     @AnyMessageHandler
     @MessageHandlerFilter(cmd = "/hello")
-    public boolean hello(Bot tob, AnyMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
+    public boolean hello(BaniraBot bot, AnyMessageEvent event) {
         // LOGGER.debug(event.getMessage());
         bot.sendMsg(event, "Hello Excel!", false);
         return false;
@@ -61,7 +59,7 @@ public class ExamplePlugin extends BasePlugin {
 
     @GroupMessageHandler
     @MessageHandlerFilter(cmd = "/bk test page")
-    public void testPage(Bot tob, GroupMessageEvent event) {
+    public void testPage(BaniraBot bot, GroupMessageEvent event) {
         MessageRecordQueryParam param = new MessageRecordQueryParam(false, 1, 10);
         List<MessageRecord> list = messageRecordManager.getMessageRecordList(param);
         System.out.println(list);
@@ -69,7 +67,7 @@ public class ExamplePlugin extends BasePlugin {
 
     @GroupMessageHandler
     @MessageHandlerFilter(cmd = "/bk test limit")
-    public void testLimit(Bot tob, GroupMessageEvent event) {
+    public void testLimit(BaniraBot bot, GroupMessageEvent event) {
         MessageRecordQueryParam param = new MessageRecordQueryParam();
         param.setLimit(5);
         param.setOffset(0);
@@ -79,8 +77,7 @@ public class ExamplePlugin extends BasePlugin {
 
     @GroupMessageHandler
     @MessageHandlerFilter(cmd = "/bk test face")
-    public void testFace(Bot tob, GroupMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
+    public void testFace(BaniraBot bot, GroupMessageEvent event) {
         bot.sendGroupMsg(event.getGroupId()
                 , MsgUtils.builder().face(123).build()
                 , false

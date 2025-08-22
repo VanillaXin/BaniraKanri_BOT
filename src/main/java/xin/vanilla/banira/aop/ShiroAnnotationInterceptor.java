@@ -1,6 +1,8 @@
 package xin.vanilla.banira.aop;
 
+import com.mikuac.shiro.core.BotContainer;
 import com.mikuac.shiro.core.BotPlugin;
+import com.mikuac.shiro.dto.event.Event;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -9,6 +11,7 @@ import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.plugin.RecorderPlugin;
+import xin.vanilla.banira.plugin.common.BaniraBot;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
@@ -17,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
- * 通过GlobalConfig.base.capability配置检查插件是否启用，并判断事件是否需要传递
+ * 通过GlobalConfig.base.capability配置检查插件是否启用，并手动设置BaniraBot参数
  */
 @Slf4j
 @Aspect
@@ -27,17 +30,22 @@ public class ShiroAnnotationInterceptor {
     private static final String TARGET_PACKAGE = "com.mikuac.shiro.annotation";
 
     private final Supplier<GlobalConfig> globalConfig;
+    private final BotContainer botContainer;
 
     private final Map<Method, Boolean> hasTargetAnnotationCache = new ConcurrentHashMap<>();
 
-    public ShiroAnnotationInterceptor(Supplier<GlobalConfig> globalConfig) {
+    public ShiroAnnotationInterceptor(Supplier<GlobalConfig> globalConfig
+            , BotContainer botContainer
+    ) {
         this.globalConfig = globalConfig;
+        this.botContainer = botContainer;
     }
 
     @Around("@within(com.mikuac.shiro.annotation.common.Shiro)")
     public Object aroundShiroClassMethods(ProceedingJoinPoint pjp) throws Throwable {
         MethodSignature sig = (MethodSignature) pjp.getSignature();
         Method method = sig.getMethod();
+        Object[] args = pjp.getArgs();
         Method actualMethod = resolveActualMethod(pjp, method);
         String className = pjp.getTarget().getClass().getName();
         String methodName = actualMethod.getName();
@@ -54,7 +62,17 @@ public class ShiroAnnotationInterceptor {
         } else {
             // 正常执行前置逻辑
             try {
-                result = pjp.proceed();
+                // 手动设置BaniraBot参数值
+                for (int i = 0; i < method.getParameterTypes().length; i++) {
+                    if (method.getParameterTypes()[i].getName().equalsIgnoreCase(BaniraBot.class.getName())) {
+                        for (int j = 0; j < args.length; j++) {
+                            if (args[j] instanceof Event a) {
+                                args[i] = botContainer.robots.get(a.getSelfId());
+                            }
+                        }
+                    }
+                }
+                result = pjp.proceed(args);
             } catch (Throwable e) {
                 LOGGER.error("Plugin {}#{} throws an exception", className, methodName, e);
                 result = defaultReturnValue(actualMethod);

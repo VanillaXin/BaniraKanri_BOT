@@ -4,7 +4,6 @@ import com.mikuac.shiro.annotation.AnyMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
-import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.MsgId;
 import com.mikuac.shiro.dto.action.response.LoginInfoResp;
@@ -59,8 +58,7 @@ public class ImageFaceToImagePlugin extends BasePlugin {
     }
 
     @AnyMessageHandler
-    public boolean convert(Bot tob, AnyMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
+    public boolean convert(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
         if (super.isCommand(message)
                 && globalConfig.get().otherConfig().imageFaceToImage() != null

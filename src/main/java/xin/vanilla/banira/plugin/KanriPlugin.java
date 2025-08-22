@@ -3,7 +3,6 @@ package xin.vanilla.banira.plugin;
 import com.mikuac.shiro.annotation.GroupMessageHandler;
 import com.mikuac.shiro.annotation.PrivateMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
-import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import com.mikuac.shiro.dto.event.message.MessageEvent;
 import com.mikuac.shiro.dto.event.message.PrivateMessageEvent;
@@ -65,9 +64,7 @@ public class KanriPlugin extends BasePlugin {
     }
 
     @GroupMessageHandler
-    public boolean group(Bot tob, GroupMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
-
+    public boolean group(BaniraBot bot, GroupMessageEvent event) {
         BaniraCodeContext code = toGroupCode.execute(new BaniraCodeContext(bot, event.getArrayMsg())
                 .setSender(event.getUserId())
                 .setGroup(event.getGroupId())
@@ -81,9 +78,7 @@ public class KanriPlugin extends BasePlugin {
     }
 
     @PrivateMessageHandler
-    public boolean friend(Bot tob, PrivateMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
-
+    public boolean friend(BaniraBot bot, PrivateMessageEvent event) {
         BaniraCodeContext code = toGroupCode.execute(new BaniraCodeContext(bot, event.getArrayMsg())
                 .setSender(event.getUserId())
                 .setTarget(event.getSelfId())

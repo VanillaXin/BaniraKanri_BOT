@@ -49,9 +49,7 @@ public class RecorderPlugin extends BasePlugin {
     }
 
     @AnyMessageHandler
-    public void recorder(Bot tob, AnyMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
-
+    public void recorder(BaniraBot bot, AnyMessageEvent event) {
         LOGGER.debug("String: {}", event.getMessage());
         LOGGER.debug("Raw: {}", event.getRawMessage());
         LOGGER.debug("Array: {}", event.getArrayMsg());

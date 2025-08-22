@@ -4,7 +4,6 @@ import com.mikuac.shiro.annotation.AnyMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.constant.ActionParams;
-import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.MsgId;
 import com.mikuac.shiro.dto.action.response.GetForwardMsgResp;
@@ -177,8 +176,7 @@ public class KeywordPlugin extends BasePlugin {
     }
 
     @AnyMessageHandler
-    public boolean config(Bot tob, AnyMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
+    public boolean config(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
         KeyInstructionsConfig keyIns = BaniraUtils.getKeyIns();
 
@@ -447,9 +445,7 @@ public class KeywordPlugin extends BasePlugin {
     }
 
     @AnyMessageHandler
-    public boolean reply(Bot tob, AnyMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
-
+    public boolean reply(BaniraBot bot, AnyMessageEvent event) {
         BaniraCodeContext context = this.searchReply(
                 new BaniraCodeContext(bot, event.getArrayMsg())
                         .setGroup(event.getGroupId())

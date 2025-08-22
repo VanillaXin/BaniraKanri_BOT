@@ -14,7 +14,6 @@ import com.mikuac.shiro.annotation.GroupMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
-import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.ActionList;
 import com.mikuac.shiro.dto.action.common.MsgId;
@@ -36,8 +35,8 @@ import xin.vanilla.banira.util.*;
 
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -125,9 +124,7 @@ public class WifePlugin extends BasePlugin {
      * 抽取
      */
     @GroupMessageHandler
-    public boolean draw(Bot tob, GroupMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
-
+    public boolean draw(BaniraBot bot, GroupMessageEvent event) {
         List<WifeConfig> configs = getWifeConfig(event.getGroupId());
         if (CollectionUtils.isNotNullOrEmpty(configs)) {
             String message = event.getMessage();
@@ -181,8 +178,7 @@ public class WifePlugin extends BasePlugin {
      * 配置
      */
     @GroupMessageHandler
-    public boolean config(Bot tob, GroupMessageEvent event) {
-        BaniraBot bot = new BaniraBot(tob);
+    public boolean config(BaniraBot bot, GroupMessageEvent event) {
         String message = event.getMessage();
         if (super.isCommand(message)
                 && globalConfig.get().otherConfig().wifeInsConfig() != null
