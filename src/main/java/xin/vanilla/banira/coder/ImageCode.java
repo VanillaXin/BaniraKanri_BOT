@@ -1,6 +1,8 @@
 package xin.vanilla.banira.coder;
 
 import com.google.gson.JsonObject;
+import com.mikuac.shiro.common.utils.MsgUtils;
+import com.mikuac.shiro.common.utils.ShiroUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.BaniraCoder;
@@ -14,26 +16,27 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 转发至好友
+ * 图片
  */
 @Component
-public class ToFriendCode implements BaniraCoder {
+public class ImageCode implements BaniraCoder {
 
     @Override
     public List<String> getExample() {
         return List.of(
-                CODE_START + "tf" + VAL_SEPARATOR + "123456789" + CODE_END
+                CODE_START + "image" + ARG_SEPARATOR + "value" + VAL_SEPARATOR + ShiroUtils.getUserAvatar(123456789, 0) + CODE_END
+                , CODE_START + "pic" + VAL_SEPARATOR + "pic/reimu.png" + CODE_END
         );
     }
 
     @Override
     public String getName() {
-        return "转发至好友";
+        return "图片";
     }
 
     @Override
     public String getDesc() {
-        return "将消息回复目标改为指定好友";
+        return "在消息中插入图片";
     }
 
     @Override
@@ -41,8 +44,8 @@ public class ToFriendCode implements BaniraCoder {
         return EnumCodeType.MSG;
     }
 
-    private static final Set<String> types = BaniraUtils.mutableSetOf(
-            "tf", "2f", "tofriend", "2friend"
+    private final Set<String> types = BaniraUtils.mutableSetOf(
+            "image", "pic", "img"
     );
 
     @Override
@@ -55,11 +58,10 @@ public class ToFriendCode implements BaniraCoder {
         if (notMatch(code)) return context;
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String friend = JsonUtils.getString(data, "value");
-        if (StringUtils.isNullOrEmptyEx(friend)) return fail(context, code, placeholder);
-        long friendId = StringUtils.toLong(friend);
-        if (!BaniraUtils.isFriendIdValid(friendId)) return fail(context, code, placeholder);
-        return context.setTarget(friendId).setMsg(context.getMsg().replace(placeholder, ""));
+        String url = JsonUtils.getString(data, "url");
+        if (StringUtils.isNullOrEmptyEx(url)) url = JsonUtils.getString(data, "value");
+        if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
+        return context.setMsg(context.getMsg().replace(placeholder, MsgUtils.builder().img(url).build()));
     }
 
 }

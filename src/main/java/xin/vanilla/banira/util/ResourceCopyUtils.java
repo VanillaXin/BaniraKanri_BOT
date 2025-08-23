@@ -14,7 +14,10 @@ import java.util.jar.JarFile;
 /**
  * 资源复制工具类
  */
-public class ResourceCopyUtils {
+public final class ResourceCopyUtils {
+
+    private ResourceCopyUtils() {
+    }
 
     /**
      * 递归复制 resources 下指定路径的文件到外部目录

@@ -7,7 +7,7 @@ import java.math.RoundingMode;
 /**
  * 存储单位换算
  **/
-public class StorageUnitUtils {
+public final class StorageUnitUtils {
 
     public static final BigDecimal UNIT = BigDecimal.valueOf(1024);
     public static final BigDecimal BIT = BigDecimal.valueOf(1);
@@ -31,6 +31,9 @@ public class StorageUnitUtils {
     public static final String[] UNIT_NAMES = {
             "DB", "NB", "BB", "YB", "ZB", "EB", "PB", "TB", "GB", "MB", "KB", "BYTE", "BIT"
     };
+
+    private StorageUnitUtils() {
+    }
 
     /**
      * 存储单位换算

@@ -32,12 +32,13 @@ public record BaseConfig(
                 BaniraUtils.mutableMapOf(
                         KanriPlugin.class.getName(), 1
                         , HelpPlugin.class.getName(), 2
+                        , KeywordPlugin.class.getName(), 2
+                        , TimerPlugin.class.getName(), 2
                         , ExamplePlugin.class.getName(), 99
                         , ImageFaceToImagePlugin.class.getName(), 99
                         , WifePlugin.class.getName(), 99
                         , StatusPlugin.class.getName(), 99
-                        , KeywordPlugin.class.getName(), 2
-                        , TimerPlugin.class.getName(), 2
+                        , McQueryPlugin.class.getName(), 99
                 )
         );
     }

@@ -1,4 +1,4 @@
-package xin.vanilla.banira.coder;
+package xin.vanilla.banira.coder.common;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -16,11 +16,23 @@ public class BaniraCodeHandler {
 
     public BaniraCodeContext decode(BaniraCodeContext context) {
         BaniraCodeContext clone = context.clone();
-        coders.stream()
+        List<BaniraCode> codeList = BaniraCodeUtils.getAllBaniraCode(clone.getMsg());
+        if (codeList.isEmpty()) return clone;
+        BaniraCode textCode = BaniraCodeUtils.getTextBaniraCode(codeList);
+        if (textCode == null) return clone;
+        clone.setMsg(textCode.getData().get("text").getAsString());
+
+        for (BaniraCoder coder : coders.stream()
                 .filter(coder -> !coder.isKanri())
-                .filter(coder -> coder.match(clone.getMsg()))
                 .sorted(Comparator.comparingInt(BaniraCoder::getPriority))
-                .forEach(coder -> coder.execute(clone));
+                .toList()) {
+            for (int i = 0; i < codeList.size(); i++) {
+                BaniraCode code = codeList.get(i);
+                if (coder.match(code.getType())) {
+                    clone = coder.execute(clone, code, BaniraCodeUtils.placeholder(i));
+                }
+            }
+        }
         return clone;
     }
 

@@ -11,7 +11,7 @@ import xin.vanilla.banira.config.entity.basic.KeyInstructionsConfig;
 import xin.vanilla.banira.event.ConfigReloadedEvent;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.RegUtils;
+import xin.vanilla.banira.util.RegexpHelper;
 
 import java.util.List;
 import java.util.Set;
@@ -39,9 +39,9 @@ public abstract class BasePlugin {
 
     private Pattern baseCommand() {
         if (BASE_COMMAND_PATTERN == null) {
-            BASE_COMMAND_PATTERN = RegUtils.start()
+            BASE_COMMAND_PATTERN = RegexpHelper.start()
                     .groupByName("prefix", globalConfig.get().instConfig().prefix())
-                    .groupIgByName("prefixSpace", RegUtils.REG_SEPARATOR)
+                    .groupIgByName("prefixSpace", RegexpHelper.REG_SEPARATOR)
                     .compile();
         }
         return BASE_COMMAND_PATTERN;
@@ -71,14 +71,14 @@ public abstract class BasePlugin {
 
     private Pattern kanriCommand() {
         if (KANRI_COMMAND_PATTERN == null) {
-            RegUtils regUtils = RegUtils.start()
+            RegexpHelper regexpHelper = RegexpHelper.start()
                     .groupByName("prefix", globalConfig.get().instConfig().prefix())
-                    .groupIgByName("prefixSpace", RegUtils.REG_SEPARATOR);
+                    .groupIgByName("prefixSpace", RegexpHelper.REG_SEPARATOR);
             if (CollectionUtils.isNotNullOrEmpty(globalConfig.get().instConfig().kanri().prefix())) {
-                regUtils.groupByName("action", globalConfig.get().instConfig().kanri().prefix())
-                        .groupIgByName("actionSpace", RegUtils.REG_SEPARATOR);
+                regexpHelper.groupByName("action", globalConfig.get().instConfig().kanri().prefix())
+                        .groupIgByName("actionSpace", RegexpHelper.REG_SEPARATOR);
             }
-            KANRI_COMMAND_PATTERN = regUtils.compile();
+            KANRI_COMMAND_PATTERN = regexpHelper.compile();
         }
         return KANRI_COMMAND_PATTERN;
     }
@@ -117,18 +117,18 @@ public abstract class BasePlugin {
 
             BaniraUtils.getTimerIns().locator()
                     .forEach(kv -> TIMER_COMMAND_PATTERN.add(
-                            RegUtils.start()
+                            RegexpHelper.start()
                                     .groupByName("prefix", globalConfig.get().instConfig().prefix())
-                                    .groupIgByName("prefixSpace", RegUtils.REG_SEPARATOR)
+                                    .groupIgByName("prefixSpace", RegexpHelper.REG_SEPARATOR)
                                     .groupByName("actionStart", kv.getKey())
-                                    .groupIgByName("actionStartSpace", RegUtils.REG_SEPARATOR)
+                                    .groupIgByName("actionStartSpace", RegexpHelper.REG_SEPARATOR)
                                     .groupByName("timerAction", timerActions)
-                                    .groupIgByName("timerActionSpace", RegUtils.REG_SEPARATOR)
+                                    .groupIgByName("timerActionSpace", RegexpHelper.REG_SEPARATOR)
                                     .groupIgByName("timerTarget", timerTargets).appendIg("?")
-                                    .groupIgByName("timerTargetSpace", RegUtils.REG_SEPARATOR).appendIg("?")
+                                    .groupIgByName("timerTargetSpace", RegexpHelper.REG_SEPARATOR).appendIg("?")
                                     .groupIgByName("timerKey", "[^\r\n]+")
                                     .groupByName("actionEnd", kv.getValue())
-                                    .groupIgByName("actionEndSpace", RegUtils.REG_SEPARATOR)
+                                    .groupIgByName("actionEndSpace", RegexpHelper.REG_SEPARATOR)
                                     .groupIgByName("timerValue", "[\\s\\S]*")
                                     .end()
                                     .compile()
@@ -189,21 +189,21 @@ public abstract class BasePlugin {
             // /bk key add <target> perfect a rep b
             keyInsConfig.locator()
                     .forEach(kv -> KEYWORD_COMMAND_PATTERN.add(
-                            RegUtils.start()
+                            RegexpHelper.start()
                                     .groupByName("prefix", globalConfig.get().instConfig().prefix())
-                                    .groupIgByName("prefixSpace", RegUtils.REG_SEPARATOR)
+                                    .groupIgByName("prefixSpace", RegexpHelper.REG_SEPARATOR)
                                     .groupByName("actionStart", kv.getKey())
-                                    .groupIgByName("actionStartSpace", RegUtils.REG_SEPARATOR)
+                                    .groupIgByName("actionStartSpace", RegexpHelper.REG_SEPARATOR)
                                     .groupByName("keywordAction", keywordActions)
-                                    .groupIgByName("keywordActionSpace", RegUtils.REG_SEPARATOR)
+                                    .groupIgByName("keywordActionSpace", RegexpHelper.REG_SEPARATOR)
                                     .groupIgByName("keywordTarget", keywordTargets).appendIg("?")
-                                    .groupIgByName("keywordTargetSpace", RegUtils.REG_SEPARATOR).appendIg("?")
+                                    .groupIgByName("keywordTargetSpace", RegexpHelper.REG_SEPARATOR).appendIg("?")
                                     .groupIgByName("keywordType", keywordTypes)
-                                    .groupIgByName("keywordTypeSpace", RegUtils.REG_SEPARATOR)
+                                    .groupIgByName("keywordTypeSpace", RegexpHelper.REG_SEPARATOR)
                                     .groupIgByName("keywordKey", "[\\s\\S]*?")
-                                    .groupIgByName("keywordKeySpace", RegUtils.REG_SEPARATOR)
+                                    .groupIgByName("keywordKeySpace", RegexpHelper.REG_SEPARATOR)
                                     .groupByName("actionEnd", kv.getValue())
-                                    .groupIgByName("actionEndSpace", RegUtils.REG_SEPARATOR)
+                                    .groupIgByName("actionEndSpace", RegexpHelper.REG_SEPARATOR)
                                     .groupIgByName("keywordValue", "[\\s\\S]*")
                                     .end()
                                     .compile()

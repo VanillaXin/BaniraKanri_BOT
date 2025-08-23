@@ -4,7 +4,7 @@ import com.mikuac.shiro.common.utils.MessageConverser;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.coder.BaniraCodeHandler;
+import xin.vanilla.banira.coder.common.BaniraCodeHandler;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.TimerRecord;
 import xin.vanilla.banira.plugin.common.BaniraBot;

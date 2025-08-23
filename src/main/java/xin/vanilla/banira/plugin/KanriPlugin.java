@@ -12,6 +12,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.ToGroupCode;
+import xin.vanilla.banira.coder.common.BaniraCode;
+import xin.vanilla.banira.coder.common.BaniraCodeUtils;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
@@ -65,28 +67,30 @@ public class KanriPlugin extends BasePlugin {
 
     @GroupMessageHandler
     public boolean group(BaniraBot bot, GroupMessageEvent event) {
-        BaniraCodeContext code = toGroupCode.execute(new BaniraCodeContext(bot, event.getArrayMsg())
-                .setSender(event.getUserId())
-                .setGroup(event.getGroupId())
-                .setMsg(event.getMessage())
+        BaniraCodeContext context = this.decodeToGroupCode(
+                new BaniraCodeContext(bot, event.getArrayMsg())
+                        .setSender(event.getUserId())
+                        .setGroup(event.getGroupId())
+                        .setMsg(event.getMessage())
         );
 
-        if (BaniraUtils.isGroupIdValid(code.getGroup())) {
-            return execute(bot, event, code.getMsg(), code.getGroup(), event.getMessageId());
+        if (BaniraUtils.isGroupIdValid(context.getGroup())) {
+            return execute(bot, event, context.getMsg(), context.getGroup(), event.getMessageId());
         }
         return false;
     }
 
     @PrivateMessageHandler
     public boolean friend(BaniraBot bot, PrivateMessageEvent event) {
-        BaniraCodeContext code = toGroupCode.execute(new BaniraCodeContext(bot, event.getArrayMsg())
-                .setSender(event.getUserId())
-                .setTarget(event.getSelfId())
-                .setMsg(event.getMessage())
+        BaniraCodeContext context = this.decodeToGroupCode(
+                new BaniraCodeContext(bot, event.getArrayMsg())
+                        .setSender(event.getUserId())
+                        .setTarget(event.getSelfId())
+                        .setMsg(event.getMessage())
         );
 
-        if (BaniraUtils.isGroupIdValid(code.getGroup())) {
-            return execute(bot, event, code.getMsg(), code.getGroup(), event.getMessageId());
+        if (BaniraUtils.isGroupIdValid(context.getGroup())) {
+            return execute(bot, event, context.getMsg(), context.getGroup(), event.getMessageId());
         }
         return false;
     }
@@ -141,6 +145,26 @@ public class KanriPlugin extends BasePlugin {
         }
 
         return emoji != null && bot.setMsgEmojiLike(msgId, emoji);
+    }
+
+    private BaniraCodeContext decodeToGroupCode(BaniraCodeContext context) {
+        BaniraCodeContext clone = context.clone();
+        List<BaniraCode> codeList = BaniraCodeUtils.getAllBaniraCode(clone.getMsg());
+        if (CollectionUtils.isNotNullOrEmpty(codeList)) {
+            BaniraCode textBaniraCode = BaniraCodeUtils.getTextBaniraCode(codeList);
+            if (textBaniraCode != null) {
+                clone.setMsg(textBaniraCode.getData().get("text").getAsString());
+                for (int i = 0; i < codeList.size(); i++) {
+                    String placeholder = BaniraCodeUtils.placeholder(i);
+                    BaniraCode code = codeList.get(i);
+                    clone = toGroupCode.execute(clone, code, placeholder);
+                    if (clone.getMsg().contains(placeholder)) {
+                        clone.setMsg(clone.getMsg().replace(placeholder, code.getRaw()));
+                    }
+                }
+            }
+        }
+        return clone;
     }
 
 }

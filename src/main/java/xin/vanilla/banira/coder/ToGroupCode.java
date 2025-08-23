@@ -1,14 +1,17 @@
 package xin.vanilla.banira.coder;
 
+import com.google.gson.JsonObject;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.coder.common.BaniraCode;
+import xin.vanilla.banira.coder.common.BaniraCoder;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumCodeType;
 import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.RegUtils;
+import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.StringUtils;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.List;
+import java.util.Set;
 
 /**
  * 转发至群组
@@ -16,38 +19,47 @@ import java.util.regex.Pattern;
 @Component
 public class ToGroupCode implements BaniraCoder {
 
-    private static final Pattern PATTERN = new RegUtils()
-            .append(MSG_CODE_START)
-            .groupNonIg("[tT][gG]|2[gG]|[tT]o[gG]roup|2[gG]roup")
-            .append(ARG_SEPARATOR)
-            .groupIgByName("group", "\\d{5,10}")
-            .append(MSG_CODE_END)
-            .compile();
+    @Override
+    public List<String> getExample() {
+        return List.of(
+                CODE_START + "tg" + VAL_SEPARATOR + "123456789" + CODE_END
+        );
+    }
+
+    @Override
+    public String getName() {
+        return "转发至群组";
+    }
+
+    @Override
+    public String getDesc() {
+        return "将消息回复目标改为指定群聊";
+    }
 
     @Override
     public EnumCodeType getType() {
         return EnumCodeType.MSG;
     }
 
+    private static final Set<String> types = BaniraUtils.mutableSetOf(
+            "tg", "2g", "togroup", "2group"
+    );
+
     @Override
     public boolean match(String msg) {
-        return PATTERN.matcher(msg).find();
+        return types.contains(msg);
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context) {
-        String msg = context.getMsg();
-        Matcher matcher = PATTERN.matcher(msg);
-        while (matcher.find()) {
-            String group = matcher.group("group");
-            long groupId = StringUtils.toLong(group);
-            if (BaniraUtils.isGroupIdValid(groupId)) {
-                context.setGroup(groupId);
-            }
-        }
-        context.setMsg(matcher.replaceAll(""));
-
-        return context;
+    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return context;
+        JsonObject data = code.getData();
+        if (data == null) return fail(context, code, placeholder);
+        String group = JsonUtils.getString(data, "value");
+        if (StringUtils.isNullOrEmptyEx(group)) return fail(context, code, placeholder);
+        long groupId = StringUtils.toLong(group);
+        if (!BaniraUtils.isGroupIdValid(groupId)) return fail(context, code, placeholder);
+        return context.setGroup(groupId).setMsg(context.getMsg().replace(placeholder, ""));
     }
 
 }

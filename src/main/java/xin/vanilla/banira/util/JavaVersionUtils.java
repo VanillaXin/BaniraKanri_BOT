@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
-public class JavaVersionUtils {
+public final class JavaVersionUtils {
 
     private static final Map<Integer, String> VERSION_MAP = new HashMap<>();
 
@@ -37,6 +37,9 @@ public class JavaVersionUtils {
         VERSION_MAP.put(67, "Java 23");
         VERSION_MAP.put(68, "Java 24");
         VERSION_MAP.put(69, "Java 25");
+    }
+
+    private JavaVersionUtils() {
     }
 
     /**

@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
 import static xin.vanilla.banira.util.RandomStringUtils.CharSource;
 
 @SuppressWarnings("unused")
-public class RegUtils {
+public class RegexpHelper {
     private final StringBuilder statement = new StringBuilder(512);
 
     @Getter
@@ -24,13 +24,13 @@ public class RegUtils {
     public static final String REG_SEPARATOR = "\\s";
     public static final String REG_NOT_SEPARATOR = "[^\\s]";
 
-    public static RegUtils start() {
-        RegUtils regStmt = new RegUtils();
+    public static RegexpHelper start() {
+        RegexpHelper regStmt = new RegexpHelper();
         regStmt.statement.append("^");
         return regStmt;
     }
 
-    public RegUtils end() {
+    public RegexpHelper end() {
         statement.append("$");
         return this;
     }
@@ -51,7 +51,7 @@ public class RegUtils {
      *
      * @param cols 多个由|分隔
      */
-    public RegUtils group(Collection<?>... cols) {
+    public RegexpHelper group(Collection<?>... cols) {
         statement.append("(");
         return processGroup(cols);
     }
@@ -63,7 +63,7 @@ public class RegUtils {
      *
      * @param objects 多个由|分隔
      */
-    public RegUtils group(Object... objects) {
+    public RegexpHelper group(Object... objects) {
         statement.append("(");
         processGroup(objects);
         statement.append(")");
@@ -77,7 +77,7 @@ public class RegUtils {
      *
      * @param cols 多个由|分隔
      */
-    public RegUtils groupByName(String name, Collection<?>... cols) {
+    public RegexpHelper groupByName(String name, Collection<?>... cols) {
         statement.append("(?<").append(name).append(">");
         return processGroup(cols);
     }
@@ -89,7 +89,7 @@ public class RegUtils {
      *
      * @param objects 多个由|分隔
      */
-    public RegUtils groupByName(String name, Object... objects) {
+    public RegexpHelper groupByName(String name, Object... objects) {
         statement.append("(?<").append(name).append(">");
         processGroup(objects);
         statement.append(")");
@@ -101,7 +101,7 @@ public class RegUtils {
      * <p>
      * 不进行特殊字符转义
      */
-    public RegUtils groupIg(String str) {
+    public RegexpHelper groupIg(String str) {
         statement.append("(").append(str).append(")");
         return this;
     }
@@ -111,7 +111,7 @@ public class RegUtils {
      * <p>
      * 不进行特殊字符转义
      */
-    public RegUtils groupIgByName(String name, String... str) {
+    public RegexpHelper groupIgByName(String name, String... str) {
         statement.append("(?<").append(name).append(">");
         for (int i = 0; i < str.length; i++) {
             if (i > 0) statement.append("|");
@@ -126,7 +126,7 @@ public class RegUtils {
      * <p>
      * 不进行特殊字符转义
      */
-    public RegUtils groupIgByName(String name, Collection<String> collection) {
+    public RegexpHelper groupIgByName(String name, Collection<String> collection) {
         statement.append("(?<").append(name).append(">");
         int i = 0;
         for (String s : collection) {
@@ -145,13 +145,13 @@ public class RegUtils {
      *
      * @param cols 多个由|分隔
      */
-    public RegUtils groupNon(Collection<?>... cols) {
+    public RegexpHelper groupNon(Collection<?>... cols) {
         statement.append("(?:");
         return processGroup(cols);
     }
 
     @Nonnull
-    private RegUtils processGroup(Collection<?>[] cols) {
+    private RegexpHelper processGroup(Collection<?>[] cols) {
         Collection<Object> collection = new HashSet<>();
         for (Collection<?> col : cols) {
             collection.addAll(col);
@@ -168,7 +168,7 @@ public class RegUtils {
      *
      * @param objects 多个由|分隔
      */
-    public RegUtils groupNon(Object... objects) {
+    public RegexpHelper groupNon(Object... objects) {
         statement.append("(?:");
         processGroup(objects);
         statement.append(")");
@@ -180,7 +180,7 @@ public class RegUtils {
      * <p>
      * 不进行特殊字符转义
      */
-    public RegUtils groupNonIg(Object str) {
+    public RegexpHelper groupNonIg(Object str) {
         statement.append("(?:").append(str).append(")");
         return this;
     }
@@ -190,7 +190,7 @@ public class RegUtils {
      * <p>
      * 不进行特殊字符转义
      */
-    public RegUtils groupNonIg(Object... objects) {
+    public RegexpHelper groupNonIg(Object... objects) {
         statement.append("(?:");
         for (int i = 0; i < objects.length; i++) {
             if (i > 0) statement.append("|");
@@ -203,7 +203,7 @@ public class RegUtils {
     /**
      * 字符集合
      */
-    public RegUtils characters(Collection<?>... cols) {
+    public RegexpHelper characters(Collection<?>... cols) {
         statement.append("[");
         for (Collection<?> col : cols) {
             for (Object o : col) {
@@ -217,7 +217,7 @@ public class RegUtils {
     /**
      * 字符集合
      */
-    public RegUtils characters(Object... objects) {
+    public RegexpHelper characters(Object... objects) {
         statement.append("[");
         for (Object object : objects) {
             statement.append(StringUtils.escapeExprSpecialWord(object.toString()));
@@ -229,7 +229,7 @@ public class RegUtils {
     /**
      * 否定字符集合
      */
-    public RegUtils charactersNon(Collection<?>... cols) {
+    public RegexpHelper charactersNon(Collection<?>... cols) {
         statement.append("[^");
         for (Collection<?> col : cols) {
             for (Object o : col) {
@@ -243,7 +243,7 @@ public class RegUtils {
     /**
      * 否定字符集合
      */
-    public RegUtils charactersNon(Object... objects) {
+    public RegexpHelper charactersNon(Object... objects) {
         statement.append("[^");
         for (Object object : objects) {
             statement.append(StringUtils.escapeExprSpecialWord(object.toString()));
@@ -257,7 +257,7 @@ public class RegUtils {
      * <p>
      * 不进行特殊字符转义
      */
-    public RegUtils appendIg(Object o) {
+    public RegexpHelper appendIg(Object o) {
         statement.append(o);
         return this;
     }
@@ -265,17 +265,17 @@ public class RegUtils {
     /**
      * 连接字符串
      */
-    public RegUtils append(Object o) {
+    public RegexpHelper append(Object o) {
         statement.append(StringUtils.escapeExprSpecialWord(o.toString()));
         return this;
     }
 
-    public RegUtils separator() {
+    public RegexpHelper separator() {
         statement.append(REG_SEPARATOR);
         return this;
     }
 
-    public RegUtils separator(String opr) {
+    public RegexpHelper separator(String opr) {
         statement.append(REG_SEPARATOR).append(opr);
         return this;
     }
@@ -319,7 +319,7 @@ public class RegUtils {
      * @return 空白字符在字符串s中的位置
      */
     public static int containsRegSeparator(String s) {
-        Matcher matcher = Pattern.compile(RegUtils.REG_SEPARATOR).matcher(s);
+        Matcher matcher = Pattern.compile(RegexpHelper.REG_SEPARATOR).matcher(s);
         if (matcher.find()) {
             return matcher.start();
         }

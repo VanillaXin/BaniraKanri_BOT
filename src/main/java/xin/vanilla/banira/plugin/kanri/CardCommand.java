@@ -3,7 +3,7 @@ package xin.vanilla.banira.plugin.kanri;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.coder.BaniraCodeHandler;
+import xin.vanilla.banira.coder.common.BaniraCodeHandler;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KanriContext;

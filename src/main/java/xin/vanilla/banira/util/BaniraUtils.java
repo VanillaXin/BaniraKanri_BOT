@@ -33,6 +33,7 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.start.SpringContextHolder;
 
+import java.net.InetAddress;
 import java.net.URI;
 import java.nio.file.Path;
 import java.util.*;
@@ -40,9 +41,12 @@ import java.util.function.Supplier;
 import java.util.regex.Pattern;
 
 @Slf4j
-public class BaniraUtils {
+public final class BaniraUtils {
 
     // region private
+
+    private BaniraUtils() {
+    }
 
     // endregion private
 
@@ -895,10 +899,18 @@ public class BaniraUtils {
         }
     }
 
-    public static boolean isValidUrl(String url) {
+    public static boolean isValidUri(String uri) {
         try {
-            URI.create(url);
+            URI.create(uri);
             return true;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public static boolean isValidNetAddress(String url) {
+        try {
+            return InetAddress.getAllByName(url) != null;
         } catch (Exception e) {
             return false;
         }

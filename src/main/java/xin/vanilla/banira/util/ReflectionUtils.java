@@ -7,7 +7,10 @@ import java.lang.reflect.Field;
 import java.util.Optional;
 
 @Slf4j
-public class ReflectionUtils {
+public final class ReflectionUtils {
+
+    private ReflectionUtils() {
+    }
 
     /**
      * 递归向上查找字段（包括父类）

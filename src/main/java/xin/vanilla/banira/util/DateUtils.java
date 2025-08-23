@@ -11,7 +11,7 @@ import java.time.format.TextStyle;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
-public class DateUtils {
+public final class DateUtils {
 
     public static final String HMS_FORMAT = "HH:mm:ss";
     public static final String ISO_MONTH_FORMAT = "yyyyMM";
@@ -25,6 +25,9 @@ public class DateUtils {
     public static final String CHINESE_DATE_FORMAT = "yyyy年MM月dd日";
 
     private static final int[] WEEKS = new int[]{1, 2, 3, 4, 5, 6, 7};
+
+    private DateUtils() {
+    }
 
     private static Locale getLocalFromLanguageTag(String languageTag) {
         if (StringUtils.isNullOrEmpty(languageTag)) {

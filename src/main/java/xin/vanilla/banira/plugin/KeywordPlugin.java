@@ -16,7 +16,7 @@ import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.coder.BaniraCodeHandler;
+import xin.vanilla.banira.coder.common.BaniraCodeHandler;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.KeyInstructionsConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
@@ -31,7 +31,7 @@ import xin.vanilla.banira.service.IKeywordManager;
 import xin.vanilla.banira.service.IKeywordRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.RegUtils;
+import xin.vanilla.banira.util.RegexpHelper;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.*;
@@ -244,7 +244,7 @@ public class KeywordPlugin extends BasePlugin {
                     } else if (keywordType == EnumKeywordType.REGEX) {
                         if (!op) {
                             reason = "添加失败：权限不足(正则匹配)";
-                        } else if (RegUtils.isRegexTooBroad(keywordRecord.getKeyword())) {
+                        } else if (RegexpHelper.isRegexTooBroad(keywordRecord.getKeyword())) {
                             reason = "添加失败：触发规则过于宽泛(正则匹配)";
                         }
                     } else if (keywordType == EnumKeywordType.CONTAIN) {

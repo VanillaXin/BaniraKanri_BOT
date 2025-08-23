@@ -11,12 +11,14 @@ import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class JsonUtils {
+public final class JsonUtils {
     public static final Gson GSON = new GsonBuilder().enableComplexMapKeySerialization().create();
     public static final Gson PRETTY_GSON = new GsonBuilder().setPrettyPrinting().enableComplexMapKeySerialization().create();
 
     private static final Pattern ARRAY_INDEX_PATTERN = Pattern.compile("^\\[(-?\\d+)]");
 
+    private JsonUtils() {
+    }
 
     private static JsonElement handleArrayAccess(JsonElement current, String key, Matcher matcher) {
         int index = Integer.parseInt(matcher.group(1));
@@ -351,8 +353,10 @@ public class JsonUtils {
         JsonElement element = getJsonElement(json, path);
         if (element.isJsonPrimitive() && element.getAsJsonPrimitive().isString()) {
             return element.getAsString();
-        } else {
+        } else if (!element.isJsonNull()) {
             return element.toString();
+        } else {
+            return null;
         }
     }
 

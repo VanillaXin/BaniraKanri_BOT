@@ -6,7 +6,10 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 @SuppressWarnings("unused")
-public class CollectionUtils {
+public final class CollectionUtils {
+
+    private CollectionUtils() {
+    }
 
     public static boolean isNullOrEmpty(Collection<?> list) {
         return list == null || list.isEmpty();

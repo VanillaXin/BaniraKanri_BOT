@@ -63,6 +63,8 @@ CREATE INDEX IF NOT EXISTS time_index ON "keyword_record" (`time`);
 CREATE INDEX IF NOT EXISTS keyword_type_index ON "keyword_record" (`keyword_type`);
 CREATE INDEX IF NOT EXISTS keyword_index ON "keyword_record" (`keyword`);
 CREATE INDEX IF NOT EXISTS enable_index ON "keyword_record" (`enable`);
+CREATE INDEX IF NOT EXISTS bot_id_enable_index ON "keyword_record" (`bot_id`, `enable`);
+CREATE INDEX IF NOT EXISTS bot_id_group_id_enable_index ON "keyword_record" (`bot_id`, `group_id`, `enable`);
 
 
 -- 定时任务记录
@@ -84,3 +86,34 @@ CREATE INDEX IF NOT EXISTS bot_id_group_id_index ON "timer_record" (`bot_id`, `g
 CREATE INDEX IF NOT EXISTS time_index ON "timer_record" (`time`);
 CREATE INDEX IF NOT EXISTS cron_index ON "timer_record" (`cron`);
 CREATE INDEX IF NOT EXISTS enable_index ON "timer_record" (`enable`);
+CREATE INDEX IF NOT EXISTS bot_id_enable_index ON "timer_record" (`bot_id`, `enable`);
+CREATE INDEX IF NOT EXISTS bot_id_group_id_enable_index ON "timer_record" (`bot_id`, `group_id`, `enable`);
+
+
+-- MC服务器记录
+CREATE TABLE IF NOT EXISTS "minecraft_record"
+(
+    `id`         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    `bot_id`     INTEGER NOT NULL,
+    `group_id`   INTEGER NOT NULL DEFAULT 0,
+    `creator_id` INTEGER NOT NULL,
+    `time`       INTEGER NOT NULL,
+    `name`       TEXT    NOT NULL,
+    `query_ip`   TEXT    NOT NULL,
+    `query_port` INTEGER NOT NULL,
+    `rcon_ip`    TEXT    NOT NULL,
+    `rcon_port`  INTEGER NOT NULL,
+    `rcon_psw`   TEXT    NOT NULL,
+    `enable`     BOOLEAN NOT NULL DEFAULT TRUE
+);
+CREATE INDEX IF NOT EXISTS id_index ON "minecraft_record" (`id`);
+CREATE INDEX IF NOT EXISTS bot_id_index ON "minecraft_record" (`bot_id`);
+CREATE INDEX IF NOT EXISTS group_id_index ON "minecraft_record" (`group_id`);
+CREATE INDEX IF NOT EXISTS bot_id_group_id_index ON "minecraft_record" (`bot_id`, `group_id`);
+CREATE INDEX IF NOT EXISTS time_index ON "minecraft_record" (`time`);
+CREATE INDEX IF NOT EXISTS name_index ON "minecraft_record" (`name`);
+CREATE INDEX IF NOT EXISTS group_id_name_index ON "minecraft_record" (`group_id`, `name`);
+CREATE INDEX IF NOT EXISTS bot_id_group_id_name_index ON "minecraft_record" (`bot_id`, `group_id`, `name`);
+CREATE INDEX IF NOT EXISTS enable_index ON "minecraft_record" (`enable`);
+CREATE INDEX IF NOT EXISTS bot_id_enable_index ON "minecraft_record" (`bot_id`, `enable`);
+CREATE INDEX IF NOT EXISTS bot_id_group_id_enable_index ON "minecraft_record" (`bot_id`, `group_id`, `enable`);

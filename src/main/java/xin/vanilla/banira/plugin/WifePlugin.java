@@ -136,7 +136,7 @@ public class WifePlugin extends BasePlugin {
                 WifeRecord wifeRecord = this.getWifeRecord(event.getGroupId(), event.getUserId());
 
                 Matcher matcher = this.getPattern(config).matcher(message);
-                String wifeNick = RegUtils.extractParams(matcher, config.nick());
+                String wifeNick = RegexpHelper.extractParams(matcher, config.nick());
 
                 if (wifeRecord == null) {
                     GroupMemberInfoResp wife = this.getRandomWife(bot, event.getGroupId());

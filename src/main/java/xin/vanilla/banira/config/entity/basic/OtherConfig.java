@@ -1,6 +1,7 @@
 package xin.vanilla.banira.config.entity.basic;
 
 import lombok.experimental.Accessors;
+import xin.vanilla.banira.config.entity.extended.McConfig;
 import xin.vanilla.banira.config.entity.extended.WifeConfig;
 
 import java.util.Arrays;
@@ -12,7 +13,8 @@ public record OtherConfig(
         List<WifeConfig> wifeConfig,
         List<String> wifeInsConfig,
         List<String> imageFaceToImage,
-        String statusBgUrl
+        String statusBgUrl,
+        McConfig mcConfig
 ) {
 
     public static OtherConfig empty() {
@@ -22,6 +24,7 @@ public record OtherConfig(
                 , Arrays.asList()
                 , Arrays.asList()
                 , ""
+                , McConfig.empty()
         );
     }
 
@@ -39,6 +42,8 @@ public record OtherConfig(
                 , Arrays.asList("获取表情", "获取图片", "获取表情图片", "getface", "getimage", "getimg")
 
                 , "bg.png"
+
+                , McConfig.preset()
         );
     }
 

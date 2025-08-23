@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC服务器信息卡片</title>
+    <style>
+        :root {
+            --primary-color: #ff6b9d;
+            --secondary-color: #ff9cc7;
+            --bg-gradient: linear-gradient(135deg, #fff0f5 0%, #ffe6ee 100%);
+            --card-bg: #ffffff;
+            --text-primary: #5a3d5c;
+            --text-secondary: #8e7490;
+            --border-radius: 20px;
+            --box-shadow: 0 10px 30px rgba(255, 107, 157, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            min-height: 100%;
+            width: 100%;
+            font-family: 'Poppins', "Segoe UI", sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-primary);
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            padding: 50px 0;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 900px;
+            position: relative;
+        }
+
+        .card {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            box-shadow: var(--box-shadow);
+            padding: 40px;
+            position: relative;
+            overflow: hidden;
+            z-index: 1;
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 8px;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .server-icon-title {
+            width: 60px;
+            height: 60px;
+            background: var(--primary-color);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 20px;
+            color: white;
+            font-size: 24px;
+        }
+
+        .server-icon {
+            display: flex;
+            margin-right: 20px;
+            font-size: 24px;
+            width: 60px;
+            height: 60px;
+            border: 4px solid var(--primary);
+            border-radius: 12px;
+            object-fit: cover;
+            align-items: center;
+            justify-content: center;
+            filter: drop-shadow(0 0 20px rgba(255, 107, 157, 0.75));
+            transition: all 0.3s ease;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        .server-icon:hover {
+            transform: scale(1.1) rotate(5deg);
+            box-shadow: 0 0 35px rgba(255, 107, 157, 0.8);
+        }
+
+        .server-title h2 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 5px;
+            color: var(--primary-color);
+        }
+
+        .server-address {
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+        }
+
+        .info-section {
+            margin: 25px 0;
+            padding: 20px;
+            background: rgba(255, 107, 157, 0.08);
+            border-radius: 15px;
+        }
+
+        .info-row {
+            display: flex;
+            margin-bottom: 15px;
+            align-items: center;
+        }
+
+        .info-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .info-label {
+            font-weight: 500;
+            width: 60px;
+            color: var(--primary-color);
+        }
+
+        .info-value {
+            flex: 1;
+        }
+
+        .players-section {
+            margin-top: 30px;
+        }
+
+        .players-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .players-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+
+        .player-count {
+            background: var(--primary-color);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 15px;
+        }
+
+        .player-card {
+            background: #fff8fa;
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            border: 1px solid #ffe6ee;
+        }
+
+        .player-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+
+        .player-avatar {
+            width: 32px;
+            height: 32px;
+            background: #ffcce0;
+            border-radius: 8px;
+            margin-right: 10px;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: #ff6b9d;
+        }
+
+        .player-name {
+            font-size: 14px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .footer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ffe6ee;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .footer-icon {
+            margin: 0 5px;
+            color: var(--secondary-color);
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                padding: 25px;
+            }
+
+            .players-grid {
+                grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            }
+
+            .info-row {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .info-label {
+                margin-bottom: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card" id="serverCard" style="background: linear-gradient(to bottom, #ffffff, #fff8fa);">
+        <div class="header">
+            <div id="serverIcon">
+                <div class="server-icon-title" id="serverIconTitle">MC</div>
+            </div>
+            <div class="server-title">
+                <h2 id="serverName">服务器名称</h2>
+                <div class="server-address" id="serverAddress"></div>
+            </div>
+        </div>
+
+        <div class="info-section">
+            <div class="info-row">
+                <div class="info-label">描述</div>
+                <div class="info-value" id="description"></div>
+            </div>
+        </div>
+
+        <div class="players-section">
+            <div class="players-header">
+                <div class="players-title">在线玩家</div>
+                <div class="player-count" id="playerCount"></div>
+            </div>
+            <div class="players-grid" id="playerGrid"></div>
+        </div>
+
+        <div class="footer">
+            <span class="footer-icon">❀</span>
+            <span class="footer-icon">❤</span>
+            <span class="footer-icon">❀</span>
+            <span>BaniraKanri MC状态面板 | 最后更新: <span id="update-time"></span></span>
+        </div>
+    </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+
+    if (configData.serverIcon) document.getElementById('serverIcon').innerHTML = '<img class="server-icon" src="' + configData.serverIcon + '" alt="ServerIcon">';
+    else document.getElementById("serverIconTitle").innerText = configData.serverName.substring(0, 2).toUpperCase();
+    document.getElementById("serverName").innerText = configData.serverName;
+    document.getElementById("serverAddress").innerText = configData.serverAddress;
+    document.getElementById("description").innerHTML = configData.description;
+    document.getElementById("playerCount").innerText = configData.onlinePlayers.length + " / " + configData.maxPlayers;
+
+    const grid = document.getElementById("playerGrid");
+    configData.onlinePlayers.forEach(player => {
+        const playerCard = document.createElement("div");
+        playerCard.className = "player-card";
+
+        const avatar = document.createElement("div");
+        avatar.className = "player-avatar";
+        avatar.innerText = player.name.charAt(0).toUpperCase();
+
+        const name = document.createElement("div");
+        name.className = "player-name";
+        name.innerText = player.name;
+
+        playerCard.appendChild(avatar);
+        playerCard.appendChild(name);
+        grid.appendChild(playerCard);
+    });
+
+    // 更新时间和日期
+    const now = new Date();
+    document.getElementById('update-time').textContent =
+        `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ` +
+        `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+</script>
+</body>
+</html>
