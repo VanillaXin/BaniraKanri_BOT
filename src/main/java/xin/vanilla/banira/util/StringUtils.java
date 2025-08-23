@@ -124,7 +124,7 @@ public class StringUtils {
      * 替换换行符
      */
     @NonNull
-    public static String replaceLine(String s) {
+    public static String replaceLineBreak(String s) {
         if (s == null) return "";
         return s.replaceAll("<br>", "\n")
                 .replaceAll("\\\\n", "\n")
@@ -136,7 +136,31 @@ public class StringUtils {
 
     public static int getLineCount(String s) {
         if (StringUtils.isNullOrEmpty(s)) return 0;
-        return StringUtils.replaceLine(s).split("\n").length;
+        return StringUtils.replaceLineBreak(s).split("\n").length;
+    }
+
+    /**
+     * 替换目标行内容
+     */
+    public static String replaceLine(String s, int line, String replacement) {
+        if (StringUtils.isNullOrEmpty(s)) return "";
+        String[] lines = StringUtils.replaceLineBreak(s).split("\n");
+        if (line <= 0 || line > lines.length) return s;
+        lines[line - 1] = replacement;
+        return String.join("\n", lines);
+    }
+
+    /**
+     * 替换目标行n至m的内容
+     */
+    public static String replaceLines(String s, int n, int m, String replacement) {
+        if (StringUtils.isNullOrEmpty(s)) return "";
+        String[] lines = StringUtils.replaceLineBreak(s).split("\n");
+        if (n <= 0 || n > lines.length || m <= 0 || m > lines.length || n > m) return s;
+        for (int i = n - 1; i <= m - 1; i++) {
+            lines[i] = replacement;
+        }
+        return String.join("\n", lines);
     }
 
     private static final String[] NUM = {"零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"};

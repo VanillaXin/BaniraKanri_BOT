@@ -301,7 +301,7 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
         return this;
     }
 
-    public MessageRecordQueryParam setParamByKeyWord(String keyWord) {
+    public MessageRecordQueryParam addKeyWord(String keyWord) {
         addParam(QUERY_KEY_WORD, keyWord);
         return this;
     }

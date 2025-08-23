@@ -401,13 +401,13 @@ public class KeywordPlugin extends BasePlugin {
                 // 查询
                 else if (baseIns.list().contains(split[1])) {
                     long page = StringUtils.toLong(CollectionUtils.getOrDefault(split, 2, ""), 0);
-                    String keyword = String.join("", Arrays.copyOfRange(split, page > 0 && split.length > 3 ? 3 : 2, split.length));
+                    String keyWord = String.join("", Arrays.copyOfRange(split, page > 0 && split.length > 3 ? 3 : 2, split.length));
                     if (page <= 0) page = 1;
                     PageResult<KeywordRecord> pageList = keywordRecordManager.getKeywordRecordPagedList(
                             new KeywordRecordQueryParam(true, page, 98)
                                     .setBotId(bot.getSelfId())
                                     .setGroupId(0L, event.getGroupId())
-                                    .setParamByKeyWord(String.format("%%%s%%", keyword))
+                                    .addKeyWord(String.format("%%%s%%", keyWord))
                                     .setEnable(true)
                                     .addOrderBy(KeywordRecordQueryParam.ORDER_ID, true)
                     );

@@ -67,7 +67,7 @@ public class ShiroAnnotationInterceptor {
                     if (method.getParameterTypes()[i].getName().equalsIgnoreCase(BaniraBot.class.getName())) {
                         for (int j = 0; j < args.length; j++) {
                             if (args[j] instanceof Event a) {
-                                args[i] = botContainer.robots.get(a.getSelfId());
+                                args[i] = new BaniraBot(botContainer.robots.get(a.getSelfId()));
                             }
                         }
                     }

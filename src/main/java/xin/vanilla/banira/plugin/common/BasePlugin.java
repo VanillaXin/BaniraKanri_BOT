@@ -104,15 +104,30 @@ public abstract class BasePlugin {
 
     private Set<Pattern> timerCommand() {
         if (TIMER_COMMAND_PATTERN.isEmpty()) {
-            globalConfig.get().instConfig().timer().locator()
+            BaseInstructionsConfig baseInsConfig = globalConfig.get().instConfig().base();
+
+            Set<String> timerActions = BaniraUtils.mutableSetOf();
+            timerActions.addAll(baseInsConfig.add());
+            timerActions.addAll(baseInsConfig.del());
+            timerActions.addAll(baseInsConfig.list());
+
+            Set<String> timerTargets = BaniraUtils.mutableSetOf("<\\d{5,10}>");
+            timerTargets.addAll(baseInsConfig.that());
+            timerTargets.addAll(baseInsConfig.global());
+
+            BaniraUtils.getTimerIns().locator()
                     .forEach(kv -> TIMER_COMMAND_PATTERN.add(
                             RegUtils.start()
                                     .groupByName("prefix", globalConfig.get().instConfig().prefix())
                                     .groupIgByName("prefixSpace", RegUtils.REG_SEPARATOR)
                                     .groupByName("actionStart", kv.getKey())
                                     .groupIgByName("actionStartSpace", RegUtils.REG_SEPARATOR)
-                                    .groupIgByName("timerKey", RegUtils.REG_NOT_SEPARATOR)
-                                    .groupByName("actionEnd", kv.getKey())
+                                    .groupByName("timerAction", timerActions)
+                                    .groupIgByName("timerActionSpace", RegUtils.REG_SEPARATOR)
+                                    .groupIgByName("timerTarget", timerTargets).appendIg("?")
+                                    .groupIgByName("timerTargetSpace", RegUtils.REG_SEPARATOR).appendIg("?")
+                                    .groupIgByName("timerKey", "[^\r\n]+")
+                                    .groupByName("actionEnd", kv.getValue())
                                     .groupIgByName("actionEndSpace", RegUtils.REG_SEPARATOR)
                                     .groupIgByName("timerValue", "[\\s\\S]*")
                                     .end()
@@ -153,7 +168,7 @@ public abstract class BasePlugin {
 
     private Set<Pattern> keywordCommand() {
         if (KEYWORD_COMMAND_PATTERN.isEmpty()) {
-            KeyInstructionsConfig keyInsConfig = globalConfig.get().instConfig().key();
+            KeyInstructionsConfig keyInsConfig = BaniraUtils.getKeyIns();
             BaseInstructionsConfig baseInsConfig = globalConfig.get().instConfig().base();
 
             Set<String> keywordActions = BaniraUtils.mutableSetOf();

@@ -64,6 +64,8 @@ dependencies {
     implementation 'com.kennycason:kumo-tokenizers:1.28'
     // Web Testing and Automation
     implementation 'com.microsoft.playwright:playwright:1.54.0'
+    // Quartz
+    implementation 'org.quartz-scheduler:quartz:2.5.0'
 
     implementation fileTree(dir: 'libs', include: ['*.jar'])
 

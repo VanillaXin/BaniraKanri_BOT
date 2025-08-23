@@ -8,10 +8,11 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
-import xin.vanilla.banira.event.ConfigReloadedEvent;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.basic.BaseConfig;
+import xin.vanilla.banira.event.ConfigReloadedEvent;
 import xin.vanilla.banira.plugin.RecorderPlugin;
+import xin.vanilla.banira.start.SpringContextHolder;
 import xin.vanilla.banira.util.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
@@ -27,11 +28,9 @@ import java.util.stream.Collectors;
 public class BotFactoryHandlerSorter implements ApplicationListener<ContextRefreshedEvent> {
 
     private final Supplier<GlobalConfig> globalConfig;
-    private final Object botFactory;
 
     public BotFactoryHandlerSorter(Supplier<GlobalConfig> globalConfig, org.springframework.context.ApplicationContext ctx) {
         this.globalConfig = globalConfig;
-        this.botFactory = ctx.getBean(com.mikuac.shiro.core.BotFactory.class);
     }
 
     @Override
@@ -47,7 +46,7 @@ public class BotFactoryHandlerSorter implements ApplicationListener<ContextRefre
     private void sortHandlers(String reason) {
         try {
             // 获取 annotationMethodContainer 字段
-            BotFactory.AnnotationMethodContainer container = ReflectionUtils.getFieldValue(botFactory
+            BotFactory.AnnotationMethodContainer container = ReflectionUtils.getFieldValue(SpringContextHolder.getBean(BotFactory.class)
                     , "annotationMethodContainer"
                     , BotFactory.AnnotationMethodContainer.class
             );

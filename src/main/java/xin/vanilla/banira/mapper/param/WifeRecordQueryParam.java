@@ -250,7 +250,7 @@ public class WifeRecordQueryParam extends BaniraQueryParam {
         return this;
     }
 
-    public WifeRecordQueryParam setParamByKeyWord(String keyWord) {
+    public WifeRecordQueryParam addKeyWord(String keyWord) {
         addParam(QUERY_KEY_WORD, keyWord);
         return this;
     }

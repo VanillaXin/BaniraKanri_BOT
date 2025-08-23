@@ -8,6 +8,7 @@ import com.mikuac.shiro.common.utils.JsonUtils;
 import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
+import com.mikuac.shiro.core.BotContainer;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.response.GroupMemberInfoResp;
 import com.mikuac.shiro.dto.action.response.MsgResp;
@@ -160,6 +161,11 @@ public class BaniraUtils {
     public static KeyInstructionsConfig getKeyIns() {
         KeyInstructionsConfig key = getGlobalConfig().instConfig().key();
         return key != null ? key : KeyInstructionsConfig.preset();
+    }
+
+    public static TimerInstructionsConfig getTimerIns() {
+        TimerInstructionsConfig timer = getGlobalConfig().instConfig().timer();
+        return timer != null ? timer : TimerInstructionsConfig.preset();
     }
 
     // endregion 配置管理
@@ -878,6 +884,16 @@ public class BaniraUtils {
     // endregion 指令
 
     // region 其他
+
+    @Nullable
+    public static BaniraBot getBot(Long botId) {
+        try {
+            return new BaniraBot(SpringContextHolder.getBean(BotContainer.class).robots.get(botId));
+        } catch (Exception e) {
+            LOGGER.error("Failed to get bot: {}", botId, e);
+            return null;
+        }
+    }
 
     public static boolean isValidUrl(String url) {
         try {

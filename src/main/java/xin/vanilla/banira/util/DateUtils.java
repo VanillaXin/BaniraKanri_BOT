@@ -787,6 +787,9 @@ public class DateUtils {
      * 获取10位时间戳
      */
     public static long getTimestamp(Date date) {
+        if (date == null) {
+            date = new Date();
+        }
         return date.getTime() / 1000L;
     }
 

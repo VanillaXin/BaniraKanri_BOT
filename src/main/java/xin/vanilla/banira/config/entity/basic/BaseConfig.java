@@ -37,6 +37,7 @@ public record BaseConfig(
                         , WifePlugin.class.getName(), 99
                         , StatusPlugin.class.getName(), 99
                         , KeywordPlugin.class.getName(), 2
+                        , TimerPlugin.class.getName(), 2
                 )
         );
     }

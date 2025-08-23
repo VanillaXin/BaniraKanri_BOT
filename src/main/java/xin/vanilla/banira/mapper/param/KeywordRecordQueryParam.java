@@ -251,7 +251,7 @@ public class KeywordRecordQueryParam extends BaniraQueryParam {
         return this;
     }
 
-    public KeywordRecordQueryParam setParamByKeyWord(String keyWord) {
+    public KeywordRecordQueryParam addKeyWord(String keyWord) {
         addParam(QUERY_KEY_WORD, keyWord);
         return this;
     }

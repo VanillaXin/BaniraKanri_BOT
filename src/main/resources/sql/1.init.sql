@@ -63,3 +63,24 @@ CREATE INDEX IF NOT EXISTS time_index ON "keyword_record" (`time`);
 CREATE INDEX IF NOT EXISTS keyword_type_index ON "keyword_record" (`keyword_type`);
 CREATE INDEX IF NOT EXISTS keyword_index ON "keyword_record" (`keyword`);
 CREATE INDEX IF NOT EXISTS enable_index ON "keyword_record" (`enable`);
+
+
+-- 定时任务记录
+CREATE TABLE IF NOT EXISTS "timer_record"
+(
+    `id`         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    `bot_id`     INTEGER NOT NULL,
+    `group_id`   INTEGER NOT NULL DEFAULT 0,
+    `creator_id` INTEGER NOT NULL,
+    `time`       INTEGER NOT NULL,
+    `cron`       TEXT    NOT NULL,
+    `reply_msg`  TEXT    NOT NULL,
+    `enable`     BOOLEAN NOT NULL DEFAULT TRUE
+);
+CREATE INDEX IF NOT EXISTS id_index ON "timer_record" (`id`);
+CREATE INDEX IF NOT EXISTS bot_id_index ON "timer_record" (`bot_id`);
+CREATE INDEX IF NOT EXISTS group_id_index ON "timer_record" (`group_id`);
+CREATE INDEX IF NOT EXISTS bot_id_group_id_index ON "timer_record" (`bot_id`, `group_id`);
+CREATE INDEX IF NOT EXISTS time_index ON "timer_record" (`time`);
+CREATE INDEX IF NOT EXISTS cron_index ON "timer_record" (`cron`);
+CREATE INDEX IF NOT EXISTS enable_index ON "timer_record" (`enable`);
