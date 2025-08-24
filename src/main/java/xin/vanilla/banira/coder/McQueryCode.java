@@ -30,7 +30,7 @@ public class McQueryCode implements BaniraCoder {
                 CODE_START + "mc" + VAL_SEPARATOR + ShiroUtils.getUserAvatar(123456789, 0) + CODE_END
                 , CODE_START + "mcquery" + ARG_SEPARATOR
                         + "name" + VAL_SEPARATOR + "server" + ARG_SEPARATOR
-                        + "ip" + VAL_SEPARATOR + "127.0.0.1" + ARG_SEPARATOR
+                        + "host" + VAL_SEPARATOR + "127.0.0.1" + ARG_SEPARATOR
                         + "port" + VAL_SEPARATOR + "25565" + CODE_END
         );
     }
@@ -65,7 +65,7 @@ public class McQueryCode implements BaniraCoder {
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
         String name = JsonUtils.getString(data, "name");
-        String ip = JsonUtils.getString(data, "ip");
+        String ip = JsonUtils.getString(data, "host");
         String port = JsonUtils.getString(data, "port");
         if (StringUtils.isNullOrEmptyEx(ip)) ip = JsonUtils.getString(data, "value");
         if (StringUtils.isNullOrEmptyEx(ip)) return fail(context, code, placeholder);

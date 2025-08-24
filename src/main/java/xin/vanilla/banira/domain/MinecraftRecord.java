@@ -39,7 +39,7 @@ public class MinecraftRecord {
     /**
      * 查询地址
      */
-    private String queryIp;
+    private String queryIp = "";
     /**
      * 查询端口
      */
@@ -47,7 +47,7 @@ public class MinecraftRecord {
     /**
      * RCON地址
      */
-    private String rconIp;
+    private String rconIp = "";
     /**
      * RCON端口
      */
@@ -55,7 +55,7 @@ public class MinecraftRecord {
     /**
      * RCON密码
      */
-    private String rconPsw;
+    private String rconPsw = "";
     /**
      * 启用状态
      */

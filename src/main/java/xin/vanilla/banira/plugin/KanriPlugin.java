@@ -50,7 +50,7 @@ public class KanriPlugin extends BasePlugin {
     @Nonnull
     @Override
     public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
-        String type = CollectionUtils.getFirst(types);
+        String type = CollectionUtils.getOrDefault(types, 0, "");
         String finalType;
         if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
             finalType = "";

@@ -910,7 +910,7 @@ public final class BaniraUtils {
 
     public static boolean isValidNetAddress(String url) {
         try {
-            return InetAddress.getAllByName(url) != null;
+            return InetAddress.getByName(url) != null;
         } catch (Exception e) {
             return false;
         }
