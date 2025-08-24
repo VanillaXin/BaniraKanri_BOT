@@ -8,6 +8,10 @@ plugins {
 group = 'xin.vanilla'
 version = '1.0.0'
 
+ext {
+    appMainClassName = 'xin.vanilla.banira.start.BaniraApplication'
+}
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -98,15 +102,34 @@ tasks.named('processResources') {
 }
 
 tasks.named('bootJar') {
+    excludes = ["*.jar"]
+
+    dependsOn clearJar
+    dependsOn copyJar
+
     manifest {
         attributes(
                 'Implementation-Title': project.name,
                 'Implementation-Version': project.version,
                 'Built-By': System.getProperty('user.name'),
-                'Created-By': "Gradle ${gradle.gradleVersion}"
+                'Created-By': "Gradle ${gradle.gradleVersion}",
+                "Manifest-Version": 1.0,
+                'Class-Path': configurations.compileClasspath.files.collect { "libs/$it.name" }.join(' ')
         )
     }
     duplicatesStrategy = DuplicatesStrategy.INCLUDE
+}
+
+// 清除现有的libs目录
+tasks.register('clearJar', Delete) {
+    delete "$buildDir\\libs\\libs"
+}
+
+// 将依赖包复制到libs目录
+tasks.register('copyJar', Copy) {
+    dependsOn 'clearJar'
+    from configurations.compileClasspath
+    into "$buildDir\\libs\\libs"
 }
 
 gitProperties {

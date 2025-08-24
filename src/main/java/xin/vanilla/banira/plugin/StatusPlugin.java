@@ -141,7 +141,7 @@ public class StatusPlugin extends BasePlugin {
                                 .setScreenshotOptions(new Page.ScreenshotOptions()
                                         .setFullPage(true)
                                 )
-                                .setInterval(RANDOM.nextInt(250, 1750))
+                                .setInterval(RANDOM.nextInt(450, 1750))
                 );
                 String msg = MsgUtils.builder()
                         .img(render.getByte())
@@ -315,23 +315,31 @@ public class StatusPlugin extends BasePlugin {
             JsonArray disksArray = new JsonArray();
             FileSystem fileSystem = FileSystems.getDefault();
             for (Path path : fileSystem.getRootDirectories()) {
-                FileStore fileStore = FileSystems.getDefault().provider().getFileStore(path);
                 JsonObject diskObject = new JsonObject();
+                try {
+                    FileStore fileStore = FileSystems.getDefault().provider().getFileStore(path);
 
-                JsonUtils.setString(diskObject, "label", path.toString());
-                JsonUtils.setDouble(diskObject, "percentage", BigDecimal.valueOf(fileStore.getTotalSpace())
-                        .subtract(BigDecimal.valueOf(fileStore.getUsableSpace()))
-                        .multiply(BigDecimal.valueOf(100))
-                        .divide(BigDecimal.valueOf(fileStore.getTotalSpace()), 2, RoundingMode.HALF_UP)
-                        .doubleValue()
-                );
-                JsonUtils.setString(diskObject, "used", StorageUnitUtils.convert(BigDecimal.valueOf(fileStore.getTotalSpace())
-                                .subtract(BigDecimal.valueOf(fileStore.getUsableSpace()))
-                        , StorageUnitUtils.BYTE, 2)
-                );
-                JsonUtils.setString(diskObject, "total",
-                        StorageUnitUtils.convert(BigDecimal.valueOf(fileStore.getTotalSpace()), StorageUnitUtils.BYTE, 2)
-                );
+                    JsonUtils.setString(diskObject, "label", path.toString());
+                    JsonUtils.setDouble(diskObject, "percentage", BigDecimal.valueOf(fileStore.getTotalSpace())
+                            .subtract(BigDecimal.valueOf(fileStore.getUsableSpace()))
+                            .multiply(BigDecimal.valueOf(100))
+                            .divide(BigDecimal.valueOf(fileStore.getTotalSpace()), 2, RoundingMode.HALF_UP)
+                            .doubleValue()
+                    );
+                    JsonUtils.setString(diskObject, "used", StorageUnitUtils.convert(BigDecimal.valueOf(fileStore.getTotalSpace())
+                                    .subtract(BigDecimal.valueOf(fileStore.getUsableSpace()))
+                            , StorageUnitUtils.BYTE, 2)
+                    );
+                    JsonUtils.setString(diskObject, "total",
+                            StorageUnitUtils.convert(BigDecimal.valueOf(fileStore.getTotalSpace()), StorageUnitUtils.BYTE, 2)
+                    );
+                } catch (Exception e) {
+                    LOGGER.error("Failed to get disk info", e);
+                    JsonUtils.setString(diskObject, "label", path.toString());
+                    JsonUtils.setDouble(diskObject, "percentage", 0);
+                    JsonUtils.setString(diskObject, "used", "0BIT");
+                    JsonUtils.setString(diskObject, "total", "0BIT");
+                }
 
                 disksArray.add(diskObject);
             }

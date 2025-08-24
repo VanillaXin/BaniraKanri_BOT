@@ -25,7 +25,6 @@ shiro:
     client:
       enable: true
       url: ws://127.0.0.1:8080
-
 mybatis-plus:
   global-config:
     banner: false

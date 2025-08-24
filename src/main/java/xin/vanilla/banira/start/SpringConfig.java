@@ -5,17 +5,15 @@ import org.mybatis.spring.annotation.MapperScan;
 import org.quartz.Scheduler;
 import org.quartz.impl.StdSchedulerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.EnableAspectJAutoProxy;
-import org.springframework.context.annotation.ImportResource;
+import org.springframework.context.annotation.*;
 import xin.vanilla.banira.data.SQLitePageInterceptor;
 
 @Configuration
 @EnableConfigurationProperties
-@EnableAspectJAutoProxy(proxyTargetClass = true)
 @MapperScan("xin.vanilla.**.mapper")
+@EnableAspectJAutoProxy(proxyTargetClass = true)
 @ImportResource(locations = {"classpath:spring.xml"})
+@PropertySource(value = "classpath:git.properties", ignoreResourceNotFound = true)
 public class SpringConfig {
 
     @Bean
