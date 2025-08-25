@@ -25,6 +25,7 @@ import org.springframework.core.ResolvableType;
 import xin.vanilla.banira.config.YamlConfigManager;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
+import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.*;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumPermission;
@@ -66,6 +67,13 @@ public final class BaniraUtils {
         return groupConfig.get();
     }
 
+    private static InstructionsConfig getInsConfig() {
+        Supplier<InstructionsConfig> insConfig = SpringContextHolder.getBean(
+                ResolvableType.forClassWithGenerics(Supplier.class, InstructionsConfig.class)
+        );
+        return insConfig.get();
+    }
+
     private static YamlConfigManager<GlobalConfig> getGlobalConfigManager() {
         return SpringContextHolder.getBean(
                 ResolvableType.forClassWithGenerics(YamlConfigManager.class, GlobalConfig.class)
@@ -76,6 +84,16 @@ public final class BaniraUtils {
         return SpringContextHolder.getBean(
                 ResolvableType.forClassWithGenerics(YamlConfigManager.class, GroupConfig.class)
         );
+    }
+
+    private static YamlConfigManager<InstructionsConfig> getInsConfigManager() {
+        return SpringContextHolder.getBean(
+                ResolvableType.forClassWithGenerics(YamlConfigManager.class, InstructionsConfig.class)
+        );
+    }
+
+    private static IMessageRecordManager getMessageRecordManager() {
+        return SpringContextHolder.getBean(IMessageRecordManager.class);
     }
 
     public static boolean saveGlobalConfig() {
@@ -107,68 +125,41 @@ public final class BaniraUtils {
         return StringUtils.isNotNullOrEmpty(nick) ? nick : "香草酱";
     }
 
-    public static BaseConfig getBaseConfig() {
-        return getBaseConfig(null);
-    }
-
-    public static BaseConfig getBaseConfig(Long groupId) {
-        BaseConfig baseConfig = null;
-        if (isGroupIdValid(groupId)) {
-            // 群聊配置
-            GroupConfig groupConfig = getGroupConfig();
-            if (groupConfig.baseConfig().containsKey(groupId)) {
-                if (groupConfig.baseConfig().get(groupId) != null) {
-                    baseConfig = groupConfig.baseConfig().get(groupId);
-                } else {
-                    groupConfig.baseConfig().put(groupId, BaseConfig.empty());
-                    saveGroupConfig();
-                }
-            }
-        }
-        // 全局配置
-        if (baseConfig == null) {
-            baseConfig = getGlobalConfig().baseConfig();
-        }
-        return baseConfig;
-    }
-
     public static OtherConfig getOthersConfig() {
         return getOthersConfig(null);
     }
 
     public static OtherConfig getOthersConfig(Long groupId) {
         OtherConfig otherConfig = null;
-        if (isGroupIdValid(groupId)) {
+        Map<Long, OtherConfig> otherConfigMap = getGroupConfig().otherConfig();
+        if (isGroupIdValid(groupId) && otherConfigMap.containsKey(groupId)) {
             // 群聊配置
-            GroupConfig groupConfig = getGroupConfig();
-            if (groupConfig.otherConfig().containsKey(groupId)) {
-                if (groupConfig.otherConfig().get(groupId) != null) {
-                    otherConfig = groupConfig.otherConfig().get(groupId);
-                } else {
-                    groupConfig.otherConfig().put(groupId, OtherConfig.empty());
-                    saveGroupConfig();
-                }
+            if (otherConfigMap.get(groupId) != null) {
+                otherConfig = otherConfigMap.get(groupId);
+            } else {
+                otherConfigMap.put(groupId, OtherConfig.preset());
+                saveGroupConfig();
             }
         }
         // 全局配置
-        if (otherConfig == null) {
-            otherConfig = getGlobalConfig().otherConfig();
+        else {
+            otherConfig = otherConfigMap.computeIfAbsent(0L, k -> OtherConfig.preset());
         }
         return otherConfig;
     }
 
     public static BaseInstructionsConfig getBaseIns() {
-        BaseInstructionsConfig base = getGlobalConfig().instConfig().base();
+        BaseInstructionsConfig base = getInsConfig().base();
         return base != null ? base : BaseInstructionsConfig.preset();
     }
 
     public static KeyInstructionsConfig getKeyIns() {
-        KeyInstructionsConfig key = getGlobalConfig().instConfig().key();
+        KeyInstructionsConfig key = getInsConfig().key();
         return key != null ? key : KeyInstructionsConfig.preset();
     }
 
     public static TimerInstructionsConfig getTimerIns() {
-        TimerInstructionsConfig timer = getGlobalConfig().instConfig().timer();
+        TimerInstructionsConfig timer = getInsConfig().timer();
         return timer != null ? timer : TimerInstructionsConfig.preset();
     }
 
@@ -326,7 +317,7 @@ public final class BaniraUtils {
                 .orElse(0L);
         Long replyId = getReplyId(arrayMsg);
         if (qq == 0 && replyId != null) {
-            IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
+            IMessageRecordManager messageRecordManager = getMessageRecordManager();
             List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
                     .setMsgId(String.valueOf(replyId))
                     .setBotId(bot.getSelfId())
@@ -376,7 +367,7 @@ public final class BaniraUtils {
                     .map(Long::parseLong)
                     .findFirst().orElse(0L);
             if (qq == 0) {
-                IMessageRecordManager messageRecordManager = SpringContextHolder.getBean(IMessageRecordManager.class);
+                IMessageRecordManager messageRecordManager = getMessageRecordManager();
                 List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
                         .setMsgId(String.valueOf(getReplyId(msg)))
                         .setBotId(bot.getSelfId())
@@ -438,14 +429,11 @@ public final class BaniraUtils {
     }
 
     public static boolean hasAtAll(String msg) {
-        Supplier<GlobalConfig> globalConfig = SpringContextHolder.getBean(
-                ResolvableType.forClassWithGenerics(Supplier.class, GlobalConfig.class)
-        );
         return hasAt(msg)
                 && (ShiroUtils.isAtAll(msg)
                 || msg.contains("[CQ:at,qq=0]")
                 || msg.contains("[CQ:at,qq=233]"))
-                || globalConfig.get().instConfig().base().atAll().stream().anyMatch(msg::contains);
+                || getInsConfig().base().atAll().stream().anyMatch(msg::contains);
     }
 
     // endregion 艾特
@@ -634,6 +622,35 @@ public final class BaniraUtils {
     // region 权限判断
 
     /**
+     * 获取主人
+     */
+    public static Long getOwner() {
+        return getGlobalConfig().owner();
+    }
+
+    /**
+     * 获取管家
+     */
+    public static List<PermissionConfig> getButler() {
+        return getGroupConfig().maid().computeIfAbsent(0L, k -> new ArrayList<>());
+    }
+
+    /**
+     * 获取女仆
+     */
+    public static Map<Long, List<PermissionConfig>> getMaid() {
+        return getGroupConfig().maid();
+    }
+
+    /**
+     * 获取女仆
+     */
+    public static List<PermissionConfig> getMaid(Long groupId) {
+        if (groupId == null || groupId == 0L) return new ArrayList<>();
+        return getGroupConfig().maid().computeIfAbsent(groupId, k -> new ArrayList<>());
+    }
+
+    /**
      * 判断是否主人
      */
     @SuppressWarnings("ConstantConditions")
@@ -646,16 +663,16 @@ public final class BaniraUtils {
      * 判断是否管家
      */
     public static boolean isButler(@Nonnull Long qq) {
-        List<PermissionConfig> butler = getGlobalConfig().butler();
+        List<PermissionConfig> butler = getButler();
         return CollectionUtils.isNotNullOrEmpty(butler) && butler.stream().anyMatch(p -> qq.equals(p.id()));
     }
 
     /**
-     * 判断是否仆人
+     * 判断是否女仆
      */
     public static boolean isServant(@Nullable Long groupId, @Nonnull Long qq) {
         if (groupId == null || !isGroupIdValid(groupId)) return false;
-        List<PermissionConfig> servant = getGroupConfig().maid().get(groupId);
+        List<PermissionConfig> servant = getMaid(groupId);
         return CollectionUtils.isNotNullOrEmpty(servant) && servant.stream().anyMatch(e -> qq.equals(e.id()));
     }
 
@@ -721,12 +738,12 @@ public final class BaniraUtils {
                     && !isOwner(b)
                     && !isButler(b)
                     && !isGroupAdmin(bot, groupId, b);
-        if (isServant(groupId, a))
+        if (isMaid(groupId, a))
             return !isGroupOwner(bot, groupId, b)
                     && !isOwner(b)
                     && !isButler(b)
                     && !isGroupAdmin(bot, groupId, b)
-                    && !isServant(groupId, b);
+                    && !isMaid(groupId, b);
         return false;
     }
 
@@ -753,7 +770,7 @@ public final class BaniraUtils {
             permissions.addAll(EnumPermission.getGroupOwner());
         if (isGroupAdmin(bot, groupId, qq))
             permissions.addAll(EnumPermission.getGroupAdmin());
-        List<PermissionConfig> butler = getGlobalConfig().butler();
+        List<PermissionConfig> butler = getGroupConfig().maid().computeIfAbsent(0L, k -> new ArrayList<>());
         if (CollectionUtils.isNotNullOrEmpty(butler)) {
             butler.stream()
                     .filter(p -> qq.equals(p.id()))
@@ -761,7 +778,7 @@ public final class BaniraUtils {
                     .ifPresent(p -> permissions.addAll(p.permissions()));
         }
         if (groupId != null && groupId > 0L) {
-            List<PermissionConfig> servant = getGroupConfig().maid().getOrDefault(groupId, new ArrayList<>());
+            List<PermissionConfig> servant = getGroupConfig().maid().computeIfAbsent(groupId, k -> new ArrayList<>());
             servant.stream()
                     .filter(p -> qq.equals(p.id()))
                     .findFirst()
@@ -809,49 +826,49 @@ public final class BaniraUtils {
      * 获取权限名称
      */
     public static List<String> getPermissionNames(EnumPermission permission) {
-        GlobalConfig globalConfig = getGlobalConfig();
+        InstructionsConfig insConfig = getInsConfig();
         switch (permission) {
             case APER, RPER -> {
-                return globalConfig.instConfig().kanri().op();
+                return insConfig.kanri().op();
             }
             case MUTE, MALL -> {
-                return globalConfig.instConfig().kanri().mute();
+                return insConfig.kanri().mute();
             }
             case LOUD, LALL -> {
-                return globalConfig.instConfig().kanri().loud();
+                return insConfig.kanri().loud();
             }
             case ATAL -> {
-                return globalConfig.instConfig().base().atAll();
+                return insConfig.base().atAll();
             }
             case CARD -> {
-                return globalConfig.instConfig().kanri().card();
+                return insConfig.kanri().card();
             }
             case TAG -> {
-                return globalConfig.instConfig().kanri().tag();
+                return insConfig.kanri().tag();
             }
             case KICK -> {
-                return globalConfig.instConfig().kanri().kick();
+                return insConfig.kanri().kick();
             }
             case RECA -> {
-                return globalConfig.instConfig().kanri().withdraw();
+                return insConfig.kanri().withdraw();
             }
             case GARE -> {
-                return globalConfig.instConfig().kanri().approve();
+                return insConfig.kanri().approve();
             }
             case AESS, RESS -> {
-                return globalConfig.instConfig().kanri().essence();
+                return insConfig.kanri().essence();
             }
             case GNAM -> {
-                return globalConfig.instConfig().kanri().groupName();
+                return insConfig.kanri().groupName();
             }
             case AADM, RADM -> {
-                return globalConfig.instConfig().kanri().admin();
+                return insConfig.kanri().admin();
             }
             case AMAI, RMAI -> {
-                return globalConfig.instConfig().kanri().maid();
+                return insConfig.kanri().maid();
             }
             case ABUT, RBUT -> {
-                return globalConfig.instConfig().kanri().butler();
+                return insConfig.kanri().butler();
             }
             default -> {
                 return List.of();
@@ -864,7 +881,7 @@ public final class BaniraUtils {
     // region 指令
 
     public static String getInsPrefix() {
-        String prefix = getGlobalConfig().instConfig().prefix();
+        String prefix = getInsConfig().prefix();
         return StringUtils.isNotNullOrEmpty(prefix) ? prefix : "";
     }
 
@@ -873,10 +890,10 @@ public final class BaniraUtils {
     }
 
     public static String getKanriInsPrefix() {
-        String prefix = getInsPrefixWithSpace();
-        GlobalConfig globalConfig = getGlobalConfig();
-        if (CollectionUtils.isNotNullOrEmpty(globalConfig.instConfig().kanri().prefix())) {
-            prefix += CollectionUtils.getRandomElement(globalConfig.instConfig().kanri().prefix());
+        InstructionsConfig insConfig = getInsConfig();
+        String prefix = StringUtils.isNotNullOrEmpty(insConfig.prefix()) ? insConfig.prefix().trim() + " " : "";
+        if (CollectionUtils.isNotNullOrEmpty(insConfig.kanri().prefix())) {
+            prefix += CollectionUtils.getRandomElement(insConfig.kanri().prefix());
         }
         return prefix;
     }

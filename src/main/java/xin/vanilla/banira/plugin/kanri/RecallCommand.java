@@ -3,7 +3,7 @@ package xin.vanilla.banira.plugin.kanri;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.config.entity.GlobalConfig;
+import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumPermission;
@@ -26,7 +26,7 @@ import java.util.function.Supplier;
 public class RecallCommand implements KanriHandler {
 
     @Resource
-    private Supplier<GlobalConfig> globalConfig;
+    private Supplier<InstructionsConfig> insConfig;
     @Resource
     private IMessageRecordManager messageRecordManager;
 
@@ -71,7 +71,7 @@ public class RecallCommand implements KanriHandler {
     @Nonnull
     @Override
     public List<String> getAction() {
-        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().withdraw(), List::of);
+        return Objects.requireNonNullElseGet(insConfig.get().kanri().withdraw(), List::of);
     }
 
     @Override

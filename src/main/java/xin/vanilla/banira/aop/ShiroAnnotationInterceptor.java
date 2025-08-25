@@ -97,12 +97,12 @@ public class ShiroAnnotationInterceptor {
     private boolean shouldProceed(String className) {
         if (RecorderPlugin.class.getName().equalsIgnoreCase(className)) return true;
         if (globalConfig.get() == null
-                || globalConfig.get().baseConfig() == null
-                || globalConfig.get().baseConfig().capability() == null
+                || globalConfig.get().pluginConfig() == null
+                || globalConfig.get().pluginConfig().capability() == null
         ) {
             return false;
         }
-        Integer cap = globalConfig.get().baseConfig().capability().get(className);
+        Integer cap = globalConfig.get().pluginConfig().capability().get(className);
         return cap != null && cap > 0;
     }
 

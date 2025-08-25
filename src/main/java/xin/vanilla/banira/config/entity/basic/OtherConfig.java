@@ -11,22 +11,9 @@ import java.util.List;
 public record OtherConfig(
         List<String> hentaiPath,
         List<WifeConfig> wifeConfig,
-        List<String> wifeInsConfig,
-        List<String> imageFaceToImage,
         String statusBgUrl,
         McConfig mcConfig
 ) {
-
-    public static OtherConfig empty() {
-        return new OtherConfig(
-                Arrays.asList()
-                , Arrays.asList()
-                , Arrays.asList()
-                , Arrays.asList()
-                , ""
-                , McConfig.empty()
-        );
-    }
 
     public static OtherConfig preset() {
         return new OtherConfig(
@@ -36,10 +23,6 @@ public record OtherConfig(
                 , "$nick"
                 , "$atUser 今天你的群友$wifeNick是\n$wifeHead『$wifeName』($wifeId) 喵！"
                 , "$atUser 今天你已经有$wifeNick了喵！"))
-
-                , Arrays.asList("wife", "老婆")
-
-                , Arrays.asList("获取表情", "获取图片", "获取表情图片", "getface", "getimage", "getimg")
 
                 , "bg.png"
 

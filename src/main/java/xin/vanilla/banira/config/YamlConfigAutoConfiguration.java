@@ -5,6 +5,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
+import xin.vanilla.banira.config.entity.InstructionsConfig;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -38,6 +39,20 @@ public class YamlConfigAutoConfiguration {
 
     @Bean
     public Supplier<GroupConfig> groupConfig(YamlConfigManager<GroupConfig> manager) {
+        return manager::getCurrent;
+    }
+
+    @Bean
+    public YamlConfigManager<InstructionsConfig> insConfigManager(YamlConfigWatcherService watcherService,
+                                                                  ApplicationEventPublisher publisher
+    ) throws Exception {
+        Path path = Paths.get("./config/ins-config.yml");
+        InstructionsConfig defaults = InstructionsConfig.preset();
+        return new YamlConfigManager<>(path, defaults, InstructionsConfig.class, "ins-config", watcherService, publisher);
+    }
+
+    @Bean
+    public Supplier<InstructionsConfig> insConfig(YamlConfigManager<InstructionsConfig> manager) {
         return manager::getCurrent;
     }
 }

@@ -46,8 +46,8 @@ public class HelpPlugin extends BasePlugin {
     public boolean help(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
         if (super.isCommand(message)
-                && globalConfig.get().instConfig().base().help() != null
-                && globalConfig.get().instConfig().base().help().stream().anyMatch(ins -> super.replaceCommand(message).startsWith(ins))
+                && insConfig.get().base().help() != null
+                && insConfig.get().base().help().stream().anyMatch(ins -> super.replaceCommand(message).startsWith(ins))
         ) {
             try {
 
@@ -84,11 +84,11 @@ public class HelpPlugin extends BasePlugin {
                 msg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
                         , "指令帮助：" + "\n\n" +
                                 BaniraUtils.getInsPrefixWithSpace() +
-                                globalConfig.get().instConfig().base().help() + " " +
+                                insConfig.get().base().help() + " " +
                                 "[<指令类型>]" + " " + "[<页数>]" + "\n\n" +
                                 "例子：" + "\n" +
                                 BaniraUtils.getInsPrefixWithSpace() +
-                                globalConfig.get().instConfig().base().help().getFirst() + " keyword"
+                                insConfig.get().base().help().getFirst() + " keyword"
                 ));
 
                 plugins.stream()

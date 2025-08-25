@@ -9,7 +9,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
 import xin.vanilla.banira.config.entity.GlobalConfig;
-import xin.vanilla.banira.config.entity.basic.BaseConfig;
+import xin.vanilla.banira.config.entity.basic.PluginConfig;
 import xin.vanilla.banira.event.ConfigReloadedEvent;
 import xin.vanilla.banira.plugin.RecorderPlugin;
 import xin.vanilla.banira.start.SpringContextHolder;
@@ -70,8 +70,8 @@ public class BotFactoryHandlerSorter implements ApplicationListener<ContextRefre
         } else {
             Map<String, Integer> capabilityMap = Optional.ofNullable(globalConfig)
                     .map(Supplier::get)
-                    .map(GlobalConfig::baseConfig)
-                    .map(BaseConfig::capability)
+                    .map(GlobalConfig::pluginConfig)
+                    .map(PluginConfig::capability)
                     .orElse(Collections.emptyMap());
 
             LOGGER.debug("Starting to sort handlers by capability");

@@ -35,8 +35,8 @@ import xin.vanilla.banira.util.*;
 
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -89,32 +89,32 @@ public class WifePlugin extends BasePlugin {
             );
             result.add("抽老婆 - 年度统计：\n\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
-                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
-                    globalConfig.get().instConfig().base().status()
+                    insConfig.get().wife() + " " +
+                    insConfig.get().base().status()
             );
             result.add("抽老婆 - 设置规则：\n\n" +
                     "启用：\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
-                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
-                    globalConfig.get().instConfig().base().enable() + "\n\n" +
+                    insConfig.get().wife() + " " +
+                    insConfig.get().base().enable() + "\n\n" +
                     "禁用：\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
-                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
-                    globalConfig.get().instConfig().base().disable() + "\n\n" +
+                    insConfig.get().wife() + " " +
+                    insConfig.get().base().disable() + "\n\n" +
                     "添加规则：\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
-                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
-                    globalConfig.get().instConfig().base().add() + "\n" +
+                    insConfig.get().wife() + " " +
+                    insConfig.get().base().add() + "\n" +
                     "<正则表达式>\n" + "[<昵称表达式>]\n" + "[<抽取成功提示>]\n" + "[<抽取失败提示>]" + "\n\n" +
                     "删除规则：\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
-                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
-                    globalConfig.get().instConfig().base().del() + "\n" +
+                    insConfig.get().wife() + " " +
+                    insConfig.get().base().del() + "\n" +
                     "<正则表达式>\n" + "[<昵称表达式>]\n" + "[<抽取成功提示>]\n" + "[<抽取失败提示>]" + "\n\n" +
                     "查询规则：\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
-                    globalConfig.get().otherConfig().wifeInsConfig() + " " +
-                    globalConfig.get().instConfig().base().list()
+                    insConfig.get().wife() + " " +
+                    insConfig.get().base().list()
             );
         }
         return result;
@@ -181,8 +181,7 @@ public class WifePlugin extends BasePlugin {
     public boolean config(BaniraBot bot, GroupMessageEvent event) {
         String message = event.getMessage();
         if (super.isCommand(message)
-                && globalConfig.get().otherConfig().wifeInsConfig() != null
-                && globalConfig.get().otherConfig().wifeInsConfig().stream().anyMatch(ins -> super.replaceCommand(message).startsWith(ins))
+                && insConfig.get().wife().stream().anyMatch(ins -> super.replaceCommand(message).startsWith(ins))
         ) {
             String argString = super.replaceCommand(message);
             String[] split = argString.split("\\s+");
@@ -190,9 +189,9 @@ public class WifePlugin extends BasePlugin {
 
             String operate = split[1];
             // 启用
-            if (globalConfig.get().instConfig().base().enable().contains(operate)) {
+            if (insConfig.get().base().enable().contains(operate)) {
                 groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> OtherConfig.empty())
+                        .computeIfAbsent(event.getGroupId(), k -> OtherConfig.preset())
                         .wifeConfig()
                         .removeIf(wife -> DISABLED.equals(wife)
                                 || (DISABLED.reg().equals(wife.reg()) && DISABLED.nick().equals(wife.nick()))
@@ -201,16 +200,16 @@ public class WifePlugin extends BasePlugin {
                 return bot.setMsgEmojiLikeOk(event.getMessageId());
             }
             // 禁用
-            else if (globalConfig.get().instConfig().base().disable().contains(operate)) {
+            else if (insConfig.get().base().disable().contains(operate)) {
                 groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> OtherConfig.empty())
+                        .computeIfAbsent(event.getGroupId(), k -> OtherConfig.preset())
                         .wifeConfig()
                         .add(DISABLED);
                 BaniraUtils.saveGroupConfig();
                 return bot.setMsgEmojiLikeOk(event.getMessageId());
             }
             // 添加
-            else if (globalConfig.get().instConfig().base().add().contains(operate)) {
+            else if (insConfig.get().base().add().contains(operate)) {
                 String[] args = argString.split("\\r\\n|\\r|\\n");
                 if (args.length < 2 || args.length > 5) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                 WifeConfig wifeConfig = new WifeConfig(args[1]
@@ -219,13 +218,13 @@ public class WifePlugin extends BasePlugin {
                         , CollectionUtils.getOrDefault(args, 4, FAIL_CONTENT)
                 );
                 groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> OtherConfig.empty())
+                        .computeIfAbsent(event.getGroupId(), k -> OtherConfig.preset())
                         .wifeConfig().add(wifeConfig);
                 BaniraUtils.saveGroupConfig();
                 return bot.setMsgEmojiLikeOk(event.getMessageId());
             }
             // 删除
-            else if (globalConfig.get().instConfig().base().del().contains(operate)) {
+            else if (insConfig.get().base().del().contains(operate)) {
                 String[] args = argString.split("\\r\\n|\\r|\\n");
                 if (args.length < 2 || args.length > 5) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                 WifeConfig wifeConfig = new WifeConfig(args[1]
@@ -234,7 +233,7 @@ public class WifePlugin extends BasePlugin {
                         , CollectionUtils.getOrDefault(args, 4, null)
                 );
                 groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> OtherConfig.empty())
+                        .computeIfAbsent(event.getGroupId(), k -> OtherConfig.preset())
                         .wifeConfig()
                         .removeIf(config -> config.reg().equals(wifeConfig.reg())
                                 && (StringUtils.isNullOrEmpty(wifeConfig.nick()) || config.nick().equals(wifeConfig.nick()))
@@ -246,9 +245,9 @@ public class WifePlugin extends BasePlugin {
 
             }
             // 查询
-            else if (globalConfig.get().instConfig().base().list().contains(operate)) {
+            else if (insConfig.get().base().list().contains(operate)) {
                 List<WifeConfig> wifeConfigs = groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> OtherConfig.empty())
+                        .computeIfAbsent(event.getGroupId(), k -> OtherConfig.preset())
                         .wifeConfig();
                 if (wifeConfigs.isEmpty()) {
                     ActionData<MsgId> msgIdData = bot.sendGroupMsg(event.getGroupId(), "该群没有独立的配置喵！", false);
@@ -274,7 +273,7 @@ public class WifePlugin extends BasePlugin {
                 }
             }
             // 统计
-            else if (globalConfig.get().instConfig().base().status().contains(operate)) {
+            else if (insConfig.get().base().status().contains(operate)) {
                 return this.statistics(bot, event, Arrays.copyOfRange(split, 2, split.length));
             }
             // 未知

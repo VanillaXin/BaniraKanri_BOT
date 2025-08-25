@@ -10,25 +10,21 @@ import java.util.Set;
 /**
  * 基础配置
  *
- * @param backGroup  后台群
  * @param capability 插件启用状态
  */
 @Accessors(chain = true)
-public record BaseConfig(
-        Set<Long> backGroup,
+public record PluginConfig(
         Map<String, Integer> capability
 ) {
 
-    public static BaseConfig empty() {
-        return new BaseConfig(
-                BaniraUtils.mutableSetOf(),
+    public static PluginConfig empty() {
+        return new PluginConfig(
                 BaniraUtils.mutableMapOf()
         );
     }
 
-    public static BaseConfig preset() {
-        return new BaseConfig(
-                BaniraUtils.mutableSetOf(),
+    public static PluginConfig preset() {
+        return new PluginConfig(
                 BaniraUtils.mutableMapOf(
                         KanriPlugin.class.getName(), 1
                         , HelpPlugin.class.getName(), 2

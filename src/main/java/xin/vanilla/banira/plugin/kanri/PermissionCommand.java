@@ -4,8 +4,8 @@ import com.mikuac.shiro.common.utils.MsgUtils;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
+import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.PermissionConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
@@ -23,7 +23,7 @@ import java.util.function.Supplier;
 public class PermissionCommand implements KanriHandler {
 
     @Resource
-    private Supplier<GlobalConfig> globalConfig;
+    private Supplier<InstructionsConfig> insConfig;
     @Resource
     private Supplier<GroupConfig> groupConfig;
 
@@ -37,13 +37,13 @@ public class PermissionCommand implements KanriHandler {
                     "增加权限：\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction() + " " +
-                    globalConfig.get().instConfig().base().add() + " " +
+                    insConfig.get().base().add() + " " +
                     "<QQ号|艾特> ..." + " " +
                     "<权限别称> ..." + "\n\n" +
                     "删除权限：\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace() +
                     this.getAction() + " " +
-                    globalConfig.get().instConfig().base().del() + " " +
+                    insConfig.get().base().del() + " " +
                     "<QQ号|艾特> ..." + " " +
                     "<权限别称> ..." + "\n\n" +
                     "权限别称列表：\n" +
@@ -70,7 +70,7 @@ public class PermissionCommand implements KanriHandler {
     @Nonnull
     @Override
     public List<String> getAction() {
-        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().op(), List::of);
+        return Objects.requireNonNullElseGet(insConfig.get().kanri().op(), List::of);
     }
 
     @Override
@@ -78,9 +78,9 @@ public class PermissionCommand implements KanriHandler {
         // 解析操作
         Boolean operate = null;
         if (args.length > 0) {
-            if (globalConfig.get().instConfig().base().add().contains(args[0])) {
+            if (insConfig.get().base().add().contains(args[0])) {
                 operate = true;
-            } else if (globalConfig.get().instConfig().base().del().contains(args[0])) {
+            } else if (insConfig.get().base().del().contains(args[0])) {
                 operate = false;
             }
         }
@@ -115,7 +115,7 @@ public class PermissionCommand implements KanriHandler {
             boolean butler = BaniraUtils.isButler(targetId);
             boolean maid = BaniraUtils.isMaid(context.group(), targetId);
             if (butler) {
-                permissions = globalConfig.get().butler()
+                permissions = BaniraUtils.getButler()
                         .stream().filter(p -> targetId.equals(p.id()))
                         .findFirst().orElse(new PermissionConfig(targetId, new HashSet<>()))
                         .permissions();
@@ -142,8 +142,8 @@ public class PermissionCommand implements KanriHandler {
                 }
             }
             if (butler) {
-                globalConfig.get().butler().removeIf(p -> targetId.equals(p.id()));
-                globalConfig.get().butler().add(new PermissionConfig(targetId, permissions));
+                BaniraUtils.getButler().removeIf(p -> targetId.equals(p.id()));
+                BaniraUtils.getButler().add(new PermissionConfig(targetId, permissions));
             } else {
                 groupConfig.get().maid().getOrDefault(context.group(), new ArrayList<>()).removeIf(p -> targetId.equals(p.id()));
                 groupConfig.get().maid().getOrDefault(context.group(), new ArrayList<>()).add(new PermissionConfig(targetId, permissions));

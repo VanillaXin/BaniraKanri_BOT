@@ -4,7 +4,7 @@ import com.mikuac.shiro.common.utils.MsgUtils;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.config.entity.GlobalConfig;
+import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -23,7 +23,7 @@ import java.util.function.Supplier;
 public class AtAllCommand implements KanriHandler {
 
     @Resource
-    private Supplier<GlobalConfig> globalConfig;
+    private Supplier<InstructionsConfig> insConfig;
 
     @Nonnull
     @Override
@@ -52,7 +52,7 @@ public class AtAllCommand implements KanriHandler {
     @Nonnull
     @Override
     public List<String> getAction() {
-        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().base().atAll(), ArrayList::new);
+        return Objects.requireNonNullElseGet(insConfig.get().base().atAll(), ArrayList::new);
     }
 
     @Override

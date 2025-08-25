@@ -158,7 +158,7 @@ public class McQueryPlugin extends BasePlugin {
     public boolean config(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
         if (super.isCommand(message)
-                && super.replaceCommand(message).startsWith("mc")
+                && insConfig.get().mcQuery().stream().anyMatch(ins -> super.replaceCommand(message).startsWith(ins))
         ) {
             String[] split = super.replaceCommand(message).split("\\s+");
             if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());

@@ -336,13 +336,6 @@ public class TimerPlugin extends BasePlugin {
                         "群号：" + record.getGroupId() + "\n" +
                         "表达式：" + record.getCron() + reason
         ));
-        // String dates = CronChecker.getNextFireTimes(record.getCron(), 6).stream()
-        //         .map(DateUtils::toDateTimeString)
-        //         .collect(Collectors.joining("\n"));
-        // forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-        //         , "未来执行时间：\n" +
-        //                 (StringUtils.isNotNullOrEmpty(dates) ? StringUtils.replaceLine(dates, 6, "...") : "无")
-        // ));
         forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
                 , "定时任务内容：\n" + record.getReplyMsg()
         ));

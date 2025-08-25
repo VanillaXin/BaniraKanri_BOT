@@ -51,7 +51,7 @@ public class ImageFaceToImagePlugin extends BasePlugin {
             result.add("表情转图片：\n" +
                     "使用指令回复带有图片的消息以获得其中的图片详情。\n\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
-                    globalConfig.get().otherConfig().imageFaceToImage()
+                    insConfig.get().imageFaceToImage()
             );
         }
         return result;
@@ -61,8 +61,7 @@ public class ImageFaceToImagePlugin extends BasePlugin {
     public boolean convert(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
         if (super.isCommand(message)
-                && globalConfig.get().otherConfig().imageFaceToImage() != null
-                && globalConfig.get().otherConfig().imageFaceToImage().contains(super.replaceCommand(message))
+                && insConfig.get().imageFaceToImage().contains(super.replaceCommand(message))
         ) {
             if (BaniraUtils.hasReply(event.getArrayMsg())) {
                 List<ArrayMsg> replyContent = bot.getReplyContent(event.getArrayMsg());

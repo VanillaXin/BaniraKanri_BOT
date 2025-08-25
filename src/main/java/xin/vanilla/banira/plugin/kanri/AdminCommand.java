@@ -3,7 +3,7 @@ package xin.vanilla.banira.plugin.kanri;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.config.entity.GlobalConfig;
+import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -23,7 +23,7 @@ import java.util.function.Supplier;
 public class AdminCommand implements KanriHandler {
 
     @Resource
-    private Supplier<GlobalConfig> globalConfig;
+    private Supplier<InstructionsConfig> insConfig;
 
     @Nonnull
     @Override
@@ -35,12 +35,12 @@ public class AdminCommand implements KanriHandler {
                     "增加：\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace()
                     + this.getAction() + " "
-                    + globalConfig.get().instConfig().base().add() + " "
+                    + insConfig.get().base().add() + " "
                     + "<QQ号|艾特> ..." + "\n\n" +
                     "删除：\n" +
                     BaniraUtils.getKanriInsPrefixWithSpace()
                     + this.getAction() + " "
-                    + globalConfig.get().instConfig().base().del() + " "
+                    + insConfig.get().base().del() + " "
                     + "<QQ号|艾特> ..."
             );
         }
@@ -60,7 +60,7 @@ public class AdminCommand implements KanriHandler {
     @Nonnull
     @Override
     public List<String> getAction() {
-        return Objects.requireNonNullElseGet(globalConfig.get().instConfig().kanri().admin(), ArrayList::new);
+        return Objects.requireNonNullElseGet(insConfig.get().kanri().admin(), ArrayList::new);
     }
 
     @Override
@@ -68,9 +68,9 @@ public class AdminCommand implements KanriHandler {
         // 解析操作
         Boolean operate = null;
         if (args.length > 0) {
-            if (globalConfig.get().instConfig().base().add().contains(args[0])) {
+            if (insConfig.get().base().add().contains(args[0])) {
                 operate = true;
-            } else if (globalConfig.get().instConfig().base().del().contains(args[0])) {
+            } else if (insConfig.get().base().del().contains(args[0])) {
                 operate = false;
             }
         }

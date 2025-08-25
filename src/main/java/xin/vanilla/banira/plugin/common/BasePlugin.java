@@ -6,6 +6,7 @@ import jakarta.annotation.Resource;
 import org.springframework.context.event.EventListener;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
+import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.KeyInstructionsConfig;
 import xin.vanilla.banira.event.ConfigReloadedEvent;
@@ -25,6 +26,8 @@ public abstract class BasePlugin {
     protected Supplier<GlobalConfig> globalConfig;
     @Resource
     protected Supplier<GroupConfig> groupConfig;
+    @Resource
+    protected Supplier<InstructionsConfig> insConfig;
 
     private Pattern BASE_COMMAND_PATTERN;
     private Pattern KANRI_COMMAND_PATTERN;
@@ -40,7 +43,7 @@ public abstract class BasePlugin {
     private Pattern baseCommand() {
         if (BASE_COMMAND_PATTERN == null) {
             BASE_COMMAND_PATTERN = RegexpHelper.start()
-                    .groupByName("prefix", globalConfig.get().instConfig().prefix())
+                    .groupByName("prefix", insConfig.get().prefix())
                     .groupIgByName("prefixSpace", RegexpHelper.REG_SEPARATOR)
                     .compile();
         }
@@ -72,10 +75,10 @@ public abstract class BasePlugin {
     private Pattern kanriCommand() {
         if (KANRI_COMMAND_PATTERN == null) {
             RegexpHelper regexpHelper = RegexpHelper.start()
-                    .groupByName("prefix", globalConfig.get().instConfig().prefix())
+                    .groupByName("prefix", insConfig.get().prefix())
                     .groupIgByName("prefixSpace", RegexpHelper.REG_SEPARATOR);
-            if (CollectionUtils.isNotNullOrEmpty(globalConfig.get().instConfig().kanri().prefix())) {
-                regexpHelper.groupByName("action", globalConfig.get().instConfig().kanri().prefix())
+            if (CollectionUtils.isNotNullOrEmpty(insConfig.get().kanri().prefix())) {
+                regexpHelper.groupByName("action", insConfig.get().kanri().prefix())
                         .groupIgByName("actionSpace", RegexpHelper.REG_SEPARATOR);
             }
             KANRI_COMMAND_PATTERN = regexpHelper.compile();
@@ -104,7 +107,7 @@ public abstract class BasePlugin {
 
     private Set<Pattern> timerCommand() {
         if (TIMER_COMMAND_PATTERN.isEmpty()) {
-            BaseInstructionsConfig baseInsConfig = globalConfig.get().instConfig().base();
+            BaseInstructionsConfig baseInsConfig = insConfig.get().base();
 
             Set<String> timerActions = BaniraUtils.mutableSetOf();
             timerActions.addAll(baseInsConfig.add());
@@ -118,7 +121,7 @@ public abstract class BasePlugin {
             BaniraUtils.getTimerIns().locator()
                     .forEach(kv -> TIMER_COMMAND_PATTERN.add(
                             RegexpHelper.start()
-                                    .groupByName("prefix", globalConfig.get().instConfig().prefix())
+                                    .groupByName("prefix", insConfig.get().prefix())
                                     .groupIgByName("prefixSpace", RegexpHelper.REG_SEPARATOR)
                                     .groupByName("actionStart", kv.getKey())
                                     .groupIgByName("actionStartSpace", RegexpHelper.REG_SEPARATOR)
@@ -169,7 +172,7 @@ public abstract class BasePlugin {
     private Set<Pattern> keywordCommand() {
         if (KEYWORD_COMMAND_PATTERN.isEmpty()) {
             KeyInstructionsConfig keyInsConfig = BaniraUtils.getKeyIns();
-            BaseInstructionsConfig baseInsConfig = globalConfig.get().instConfig().base();
+            BaseInstructionsConfig baseInsConfig = insConfig.get().base();
 
             Set<String> keywordActions = BaniraUtils.mutableSetOf();
             keywordActions.addAll(baseInsConfig.add());
@@ -190,7 +193,7 @@ public abstract class BasePlugin {
             keyInsConfig.locator()
                     .forEach(kv -> KEYWORD_COMMAND_PATTERN.add(
                             RegexpHelper.start()
-                                    .groupByName("prefix", globalConfig.get().instConfig().prefix())
+                                    .groupByName("prefix", insConfig.get().prefix())
                                     .groupIgByName("prefixSpace", RegexpHelper.REG_SEPARATOR)
                                     .groupByName("actionStart", kv.getKey())
                                     .groupIgByName("actionStartSpace", RegexpHelper.REG_SEPARATOR)

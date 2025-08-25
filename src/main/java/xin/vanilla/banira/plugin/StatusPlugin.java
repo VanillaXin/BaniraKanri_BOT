@@ -90,7 +90,7 @@ public class StatusPlugin extends BasePlugin {
             result.add("框架状态：\n" +
                     "获取框架及系统状态信息总览。\n\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
-                    globalConfig.get().instConfig().base().status()
+                    insConfig.get().base().status()
             );
         }
         return result;
@@ -100,8 +100,8 @@ public class StatusPlugin extends BasePlugin {
     public boolean status(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
         if (super.isCommand(message)
-                && globalConfig.get().instConfig().base().status() != null
-                && globalConfig.get().instConfig().base().status().contains(super.replaceCommand(message))
+                && insConfig.get().base().status() != null
+                && insConfig.get().base().status().contains(super.replaceCommand(message))
         ) {
             // 限制访问
             if (System.currentTimeMillis() - lastRenderTime < 1000 * 60)
@@ -425,11 +425,11 @@ public class StatusPlugin extends BasePlugin {
 
     private boolean isPluginEnabled(String className) {
         if (RecorderPlugin.class.getName().equalsIgnoreCase(className)) return true;
-        if (globalConfig.get() == null || globalConfig.get().baseConfig().capability() == null
+        if (globalConfig.get() == null || globalConfig.get().pluginConfig().capability() == null
         ) {
             return false;
         }
-        Integer cap = globalConfig.get().baseConfig().capability().get(className);
+        Integer cap = globalConfig.get().pluginConfig().capability().get(className);
         return cap != null && cap > 0;
     }
 }
