@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.McQueryCode;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
+import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.domain.MinecraftRecord;
 import xin.vanilla.banira.domain.PageResult;
 import xin.vanilla.banira.mapper.param.MinecraftRecordQueryParam;
@@ -437,7 +438,7 @@ public class McQueryPlugin extends BasePlugin {
             HtmlScreenshotResult render = HtmlScreenshotUtils.render(
                     new HtmlScreenshotConfig(new File("config/mc_query_plugin/index.html"))
                             .setContextOptions(new Browser.NewContextOptions()
-                                    .setViewportSize(820, 500)
+                                    .setViewportSize(800, 380)
                             )
                             .setScreenshotOptions(new Page.ScreenshotOptions()
                                     .setFullPage(true)
@@ -558,13 +559,16 @@ public class McQueryPlugin extends BasePlugin {
         JsonUtils.setString(result, "serverIcon", JsonUtils.getString(mcQuery.getServerJson(), "favicon", ""));
         JsonUtils.setString(result, "serverAddress", mcQuery.serverAddress());
         JsonUtils.setString(result, "description", mcQuery.descriptionHtml());
-        JsonUtils.setInt(result, "maxPlayers", mcQuery.maxPlayers());
+        JsonUtils.setLong(result, "ping", mcQuery.getPing());
+        JsonUtils.setInt(result, "maxPlayer", mcQuery.maxPlayers());
+        JsonUtils.setInt(result, "onlinePlayer", mcQuery.onlinePlayers());
         JsonUtils.setString(result, "version.name", JsonUtils.getString(mcQuery.getServerJson(), "version.name", ""));
 
         JsonArray players = new JsonArray();
-        for (String s : mcQuery.playerList()) {
+        for (KeyValue<String, String> kv : mcQuery.playerList()) {
             JsonObject playerObject = new JsonObject();
-            JsonUtils.setString(playerObject, "name", s);
+            JsonUtils.setString(playerObject, "name", kv.getKey());
+            JsonUtils.setString(playerObject, "uuid", kv.getValue().replace("-", ""));
             players.add(playerObject);
         }
         result.add("onlinePlayers", players);

@@ -33,12 +33,11 @@
         body {
             display: flex;
             justify-content: center;
-            padding: 50px 0;
+            padding: 10px 0;
         }
 
         .container {
-            width: 90%;
-            max-width: 900px;
+            width: 98%;
             position: relative;
         }
 
@@ -46,7 +45,7 @@
             background: var(--card-bg);
             border-radius: var(--border-radius);
             box-shadow: var(--box-shadow);
-            padding: 40px;
+            padding: 30px;
             position: relative;
             overflow: hidden;
             z-index: 1;
@@ -204,6 +203,17 @@
             color: #ff6b9d;
         }
 
+        .player-icon {
+            width: 100%;
+            height: 100%;
+            border: 4px solid var(--primary);
+            border-radius: 12px;
+            object-fit: cover;
+            filter: drop-shadow(0 0 20px rgba(255, 107, 157, 0.75));
+            transition: all 0.3s ease;
+            animation: float 4s ease-in-out infinite;
+        }
+
         .player-name {
             font-size: 14px;
             font-weight: 500;
@@ -226,6 +236,27 @@
         .footer-icon {
             margin: 0 5px;
             color: var(--secondary-color);
+        }
+
+        /* Ping值的颜色样式 */
+        .ping-low {
+            color: #2ecc71; /* 绿色 - 延迟低 */
+            font-weight: bold;
+        }
+
+        .ping-medium {
+            color: #3498db; /* 蓝色 - 延迟中等 */
+            font-weight: bold;
+        }
+
+        .ping-high {
+            color: #f39c12; /* 橙色 - 延迟较高 */
+            font-weight: bold;
+        }
+
+        .ping-very-high {
+            color: #e74c3c; /* 红色 - 延迟高 */
+            font-weight: bold;
         }
 
         @media (max-width: 768px) {
@@ -255,8 +286,15 @@
             <div id="serverIcon">
                 <div class="server-icon-title" id="serverIconTitle">MC</div>
             </div>
-            <div class="server-title">
-                <h2 id="serverName">服务器名称</h2>
+            <div class="server-title" style="display: flex; flex-direction: column; flex: 1;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <h2 id="serverName">服务器名称</h2>
+                    <div style="display: flex; align-items: center;">
+                        <span id="ping-dot"
+                              style="display: inline-block;margin-top: 3px;width: 10px; height: 10px; border-radius: 50%; margin-right: 5px;"></span>
+                        <span id="ping-value"></span> ms
+                    </div>
+                </div>
                 <div class="server-address" id="serverAddress"></div>
             </div>
         </div>
@@ -293,7 +331,25 @@
     document.getElementById("serverName").innerText = configData.serverName;
     document.getElementById("serverAddress").innerText = configData.serverAddress;
     document.getElementById("description").innerHTML = configData.description;
-    document.getElementById("playerCount").innerText = configData.onlinePlayers.length + " / " + configData.maxPlayers;
+    document.getElementById("playerCount").innerText = configData.onlinePlayer + " / " + configData.maxPlayer;
+
+    // 设置ping值和对应的颜色
+    const pingValue = document.getElementById("ping-value");
+    const pingDot = document.getElementById("ping-dot");
+    const ping = configData.ping;
+    pingValue.innerText = ping === -1 ? '∞' : ping;
+
+    let dotColor;
+    if (ping > 0 && ping < 50) {
+        dotColor = "#2ecc71";
+    } else if (ping < 100) {
+        dotColor = "#3498db";
+    } else if (ping < 200) {
+        dotColor = "#f39c12";
+    } else {
+        dotColor = "#e74c3c";
+    }
+    pingDot.style.backgroundColor = dotColor;
 
     const grid = document.getElementById("playerGrid");
     configData.onlinePlayers.forEach(player => {
@@ -302,7 +358,7 @@
 
         const avatar = document.createElement("div");
         avatar.className = "player-avatar";
-        avatar.innerText = player.name.charAt(0).toUpperCase();
+        avatar.innerHTML = '<img class="player-icon" src="https://crafatar.com/avatars/' + player.uuid + '?overlay=true" alt="ServerIcon">';
 
         const name = document.createElement("div");
         name.className = "player-name";

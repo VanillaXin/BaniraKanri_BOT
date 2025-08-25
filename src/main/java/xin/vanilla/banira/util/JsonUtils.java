@@ -508,7 +508,8 @@ public final class JsonUtils {
      * 设置长整型
      */
     public static JsonElement setLong(@NonNull JsonElement json, @NonNull String path, long value) {
-        return setFloat(json, path, value);
+        JsonElement newValue = new JsonPrimitive(value);
+        return setJsonElement(json, path, newValue);
     }
 
     /**
@@ -540,7 +541,8 @@ public final class JsonUtils {
      * 设置单精度浮点数
      */
     public static JsonElement setFloat(@NonNull JsonElement json, @NonNull String path, float value) {
-        return setDouble(json, path, value);
+        JsonElement newValue = new JsonPrimitive(value);
+        return setJsonElement(json, path, newValue);
     }
 
     /**

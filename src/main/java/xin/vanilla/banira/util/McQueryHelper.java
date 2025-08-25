@@ -5,17 +5,19 @@ import com.google.gson.JsonObject;
 import jakarta.annotation.Nullable;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import xin.vanilla.banira.domain.KeyValue;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Slf4j
 public class McQueryHelper {
@@ -25,10 +27,20 @@ public class McQueryHelper {
     private int queryPort = 25565;
     @Getter
     private JsonObject serverJson = new JsonObject();
+    @Getter
+    private long ping = -1;
+
     public static final String ERROR_MSG_LOADING = "LOADING";
     public static final String ERROR_MSG_UNKNOWN_HOST = "UNKNOWN_HOST";
     public static final String ERROR_MSG_CONNECT_FAILED = "FAILED";
     public static final String ERROR_MSG_UNKNOWN_RESPONSE = "UNKNOWN_RESPONSE";
+    public static final String ERROR_MSG_PING_FAILED = "PING_FAILED";
+
+    private static final int PACKET_TYPE_HANDSHAKE = 0;
+    private static final int PACKET_TYPE_STATUS = 0;
+    private static final int PROTOCOL_VERSION = 4;
+    private static final int SOCKET_TIMEOUT = 10000;
+    private static final AtomicLong PING_ID = new AtomicLong(1);
 
     private McQueryHelper(String name, String address) throws URISyntaxException {
         serverName = name;
@@ -60,7 +72,11 @@ public class McQueryHelper {
 
     public void setError(String msg) {
         try {
-            serverJson.addProperty("error", msg);
+            if (msg == null) {
+                serverJson.remove("error");
+            } else {
+                serverJson.addProperty("error", msg);
+            }
         } catch (Exception e) {
             LOGGER.error("Failed to set error", e);
         }
@@ -109,8 +125,8 @@ public class McQueryHelper {
         return players.get("online").getAsInt();
     }
 
-    public List<String> playerList() {
-        List<String> result = new ArrayList<>();
+    public List<KeyValue<String, String>> playerList() {
+        List<KeyValue<String, String>> result = new ArrayList<>();
         JsonObject players = serverJson.getAsJsonObject("players");
         if (players == null) {
             return result;
@@ -119,19 +135,19 @@ public class McQueryHelper {
         if (sample == null) {
             return result;
         }
-        int pos = 0;
-        while (pos < sample.size()) {
-            JsonObject entry = sample.get(pos++).getAsJsonObject();
-            String username = entry.get("name").getAsString();
-            result.add(username);
+        for (int i = 0; i < sample.size(); i++) {
+            JsonObject entry = sample.get(i).getAsJsonObject();
+            String username = JsonUtils.getString(entry, "name", "");
+            String uuid = JsonUtils.getString(entry, "id", "");
+            result.add(new KeyValue<>(username, uuid));
         }
-        Collections.sort(result);
+        result.sort(Comparator.comparing(KeyValue::getKey));
         return result;
     }
 
     public String playerListString(String separator) {
-        List<String> playerList = this.playerList();
-        return String.join(separator, playerList);
+        List<KeyValue<String, String>> playerList = this.playerList();
+        return String.join(separator, playerList.stream().map(KeyValue::getKey).toList());
     }
 
     public String playerListString() {
@@ -363,108 +379,257 @@ public class McQueryHelper {
     }
 
     /**
+     * 查询服务器状态信息
      * See <a href="http://wiki.vg/Protocol">Status Ping</a>
      */
     public void query() {
-        Socket socket;
-        try {
-            socket = new Socket(serverAddress, queryPort);
-            socket.setSoTimeout(10000);
+        try (Socket socket = new Socket(serverAddress, queryPort)) {
+            socket.setSoTimeout(SOCKET_TIMEOUT);
+            try (OutputStream out = socket.getOutputStream();
+                 InputStream in = socket.getInputStream()) {
+
+                // 发送握手包
+                sendHandshakePacket(out);
+
+                // 发送状态请求包
+                sendStatusRequestPacket(out);
+
+                // 读取状态响应
+                readStatusResponse(in);
+
+                // 尝试获取ping值
+                measurePing(socket, out, in);
+
+                setError(null);
+            }
         } catch (UnknownHostException e) {
             // 服务器地址有误
             setError(ERROR_MSG_UNKNOWN_HOST);
-            return;
         } catch (IllegalArgumentException | IOException e) {
             // 已离线或未启用查询
             setError(ERROR_MSG_CONNECT_FAILED);
-            // setDescription("Error: " + e.getLocalizedMessage());
-            return;
-        }
-        OutputStream out;
-        InputStream in;
-        try {
-            out = socket.getOutputStream();
-            in = socket.getInputStream();
-            // 数据包的总长度
-            out.write(6 + serverAddress.length());
-            // 数据包ID
-            out.write(0);
-            // 协议版本
-            out.write(4);
-            // 服务器地址长度
-            out.write(serverAddress.length());
-            // 服务器UTF-8地址
-            out.write(serverAddress.getBytes());
-            // 端口高位字节
-            out.write((queryPort & 0xFF00) >> 8);
-            // 端口低位字节
-            out.write(queryPort & 0x00FF);
-            // 下一个状态标志，1: Status, 2: Login, 3: Transfer
-            out.write(1);
-            // 状态ping的第一个字节
-            out.write(0x01);
-            // 状态ping的第一个字节
-            out.write(0x00);
-
-            // 整个数据包的大小
-            int packetLength = readVarInt(in);
-            String serverData;
-            if (packetLength < 11) {
-                LOGGER.warn("{}, {}: packet length is too short: {}\n", serverName, serverAddress, packetLength);
-                // 来自服务器的响应无效(服务器可能正在重新启动)
-                setError(ERROR_MSG_UNKNOWN_RESPONSE);
-                in.close();
-                out.close();
-                socket.close();
-                return;
-            }
-            // 忽略数据包类型, 只用取一个类型
-            in.read();
-            // logger.info(String.format("%s, %s: 数据包类型: %d%n", serverName, serverAddress, packetType));
-            int jsonLength = readVarInt(in);
-            if (jsonLength < 0) {
-                in.close();
-                out.close();
-                socket.close();
-                return;
-            }
-            // 安全起见, 多取10字节
-            byte[] buffer = new byte[jsonLength + 10];
-            int bytesRead = 0;
-            do {
-                bytesRead += in.read(buffer, bytesRead, jsonLength - bytesRead);
-            } while (bytesRead < jsonLength);
-            serverData = new String(buffer, 0, bytesRead);
-            serverJson = JsonUtils.GSON.fromJson(serverData, JsonObject.class);
-            in.close();
-            out.close();
-            socket.close();
-            setError(null);
         } catch (Exception e) {
-            LOGGER.error("Failed to query", e);
+            LOGGER.error("Failed to query server {}", serverAddress, e);
+            setError(ERROR_MSG_UNKNOWN_RESPONSE);
         }
     }
 
-    private int readVarInt(InputStream in) {
-        int theInt = 0;
-        for (int i = 0; i < 6; i++) {
-            int theByte;
-            try {
-                theByte = in.read();
-            } catch (IOException e) {
-                LOGGER.error("Failed to read var int", e);
-                return 0;
+    /**
+     * 发送握手包
+     */
+    private void sendHandshakePacket(OutputStream out) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        DataOutputStream data = new DataOutputStream(buffer);
+
+        // 数据包ID (Handshake)
+        writeVarInt(data, PACKET_TYPE_HANDSHAKE);
+        // 协议版本
+        writeVarInt(data, PROTOCOL_VERSION);
+        // 服务器地址长度和地址
+        writeString(data, serverAddress);
+        // 服务器端口
+        data.writeShort(queryPort);
+        // 下一步状态 (1 for status)
+        writeVarInt(data, 1);
+
+        // 发送数据包
+        sendPacket(out, buffer.toByteArray());
+    }
+
+    /**
+     * 发送状态请求包
+     */
+    private void sendStatusRequestPacket(OutputStream out) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        DataOutputStream data = new DataOutputStream(buffer);
+
+        // 数据包ID (Status Request)
+        writeVarInt(data, PACKET_TYPE_STATUS);
+
+        // 发送数据包
+        sendPacket(out, buffer.toByteArray());
+    }
+
+    /**
+     * 读取状态响应
+     */
+    private void readStatusResponse(InputStream in) throws IOException {
+        // 读取数据包长度
+        int packetLength = readVarInt(in);
+
+        if (packetLength < 1) {
+            throw new IOException("Invalid packet length: " + packetLength);
+        }
+
+        // 读取数据包ID
+        int packetId = readVarInt(in);
+        if (packetId != 0) {
+            throw new IOException("Unexpected packet ID: " + packetId);
+        }
+
+        // 读取JSON数据长度
+        int jsonLength = readVarInt(in);
+        if (jsonLength < 1) {
+            throw new IOException("Invalid JSON length: " + jsonLength);
+        }
+
+        // 读取JSON数据
+        byte[] jsonData = new byte[jsonLength];
+        int bytesRead = 0;
+        while (bytesRead < jsonLength) {
+            int read = in.read(jsonData, bytesRead, jsonLength - bytesRead);
+            if (read == -1) {
+                throw new IOException("Unexpected end of stream while reading JSON");
+            }
+            bytesRead += read;
+        }
+
+        String serverData = new String(jsonData);
+        serverJson = JsonUtils.GSON.fromJson(serverData, JsonObject.class);
+    }
+
+    /**
+     * 测量服务器ping值
+     */
+    private void measurePing(Socket socket, OutputStream out, InputStream in) {
+        try {
+            long pingId = PING_ID.getAndIncrement();
+            long startTime = System.currentTimeMillis();
+
+            // 发送ping请求
+            sendPingRequest(out, pingId);
+
+            // 读取ping响应
+            if (readPingResponse(in, pingId)) {
+                long endTime = System.currentTimeMillis();
+                ping = endTime - startTime;
+                serverJson.addProperty("ping", ping);
+            } else {
+                setError(ERROR_MSG_PING_FAILED);
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Failed to measure ping for server {}", serverAddress, e);
+            // Ping失败不影响主要状态查询
+        }
+    }
+
+    /**
+     * 发送ping请求
+     */
+    private void sendPingRequest(OutputStream out, long pingId) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        DataOutputStream data = new DataOutputStream(buffer);
+
+        // 数据包ID (Ping)
+        writeVarInt(data, 1);
+        // Ping负载
+        data.writeLong(pingId);
+
+        // 发送数据包
+        sendPacket(out, buffer.toByteArray());
+    }
+
+    /**
+     * 读取ping响应
+     */
+    private boolean readPingResponse(InputStream in, long expectedPingId) throws IOException {
+        // 设置读取超时时间为2秒
+        int timeout = 2000;
+        long startTime = System.currentTimeMillis();
+
+        while (System.currentTimeMillis() - startTime < timeout) {
+            if (in.available() > 0) {
+                // 读取数据包长度
+                int packetLength = readVarInt(in);
+
+                // 读取数据包ID
+                int packetId = readVarInt(in);
+
+                if (packetId == 1) {
+                    // 读取ping响应负载
+                    long pingId = readLong(in);
+                    return pingId == expectedPingId;
+                }
             }
 
-            theInt |= (theByte & 0x7F) << (7 * i);
-            if (theByte == 0xffffffff) {
-                LOGGER.warn("Unusual byte value: {}", theByte);
-                return -1;
-            }
-            if ((theByte & 0x80) != 128) {
-                break;
+            try {
+                Thread.sleep(10);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return false;
             }
         }
-        return theInt;
+
+        return false;
+    }
+
+    /**
+     * 发送数据包（添加长度前缀）
+     */
+    private void sendPacket(OutputStream out, byte[] data) throws IOException {
+        ByteArrayOutputStream packetBuffer = new ByteArrayOutputStream();
+        writeVarInt(packetBuffer, data.length);
+        packetBuffer.write(data);
+        out.write(packetBuffer.toByteArray());
+        out.flush();
+    }
+
+    /**
+     * 读取VarInt
+     */
+    private int readVarInt(InputStream in) throws IOException {
+        int value = 0;
+        int length = 0;
+        byte currentByte;
+
+        do {
+            currentByte = (byte) in.read();
+            value |= (currentByte & 0x7F) << (length * 7);
+            length++;
+
+            if (length > 5) {
+                throw new IOException("VarInt too long");
+            }
+        } while ((currentByte & 0x80) == 0x80);
+
+        return value;
+    }
+
+    /**
+     * 写入VarInt
+     */
+    private void writeVarInt(OutputStream out, int value) throws IOException {
+        do {
+            byte temp = (byte) (value & 0x7F);
+            value >>>= 7;
+            if (value != 0) {
+                temp |= 0x80;
+            }
+            out.write(temp);
+        } while (value != 0);
+    }
+
+    /**
+     * 写入字符串
+     */
+    private void writeString(DataOutputStream out, String value) throws IOException {
+        byte[] bytes = value.getBytes();
+        writeVarInt(out, bytes.length);
+        out.write(bytes);
+    }
+
+    /**
+     * 读取long值
+     */
+    private long readLong(InputStream in) throws IOException {
+        byte[] bytes = new byte[8];
+        int bytesRead = in.read(bytes);
+        if (bytesRead != 8) {
+            throw new IOException("Failed to read long value");
+        }
+
+        ByteBuffer buffer = ByteBuffer.wrap(bytes);
+        buffer.order(ByteOrder.BIG_ENDIAN);
+        return buffer.getLong();
     }
 }
