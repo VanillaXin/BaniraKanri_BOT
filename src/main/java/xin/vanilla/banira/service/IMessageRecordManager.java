@@ -21,6 +21,8 @@ public interface IMessageRecordManager {
 
     long getMessageRecordCount(MessageRecordQueryParam param);
 
-    MessageRecord getMessageRecord(long groupId, int msgId);
+    MessageRecord getGroupMessageRecord(long groupId, int msgId);
+
+    MessageRecord getPrivateMessageRecord(long friendId, int msgId);
 
 }

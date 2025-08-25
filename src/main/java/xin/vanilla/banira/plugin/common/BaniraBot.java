@@ -7,9 +7,7 @@ import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.ActionList;
 import com.mikuac.shiro.dto.action.common.ActionRaw;
 import com.mikuac.shiro.dto.action.common.MsgId;
-import com.mikuac.shiro.dto.action.response.GetForwardMsgResp;
-import com.mikuac.shiro.dto.action.response.LoginInfoResp;
-import com.mikuac.shiro.dto.action.response.MsgResp;
+import com.mikuac.shiro.dto.action.response.*;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.model.ArrayMsg;
 import jakarta.annotation.Nonnull;
@@ -24,10 +22,7 @@ import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 /**
  * Bot大包装，实现记录发送的消息并提供部分工具方法
@@ -533,6 +528,10 @@ public class BaniraBot extends Bot {
         return setMsgEmojiLike(msgId, 124);
     }
 
+    /**
+     * 获取Bot信息
+     */
+    @Nonnull
     public LoginInfoResp getLoginInfoEx() {
         LoginInfoResp result = new LoginInfoResp();
         ActionData<LoginInfoResp> loginInfo = super.getLoginInfo();
@@ -543,6 +542,55 @@ public class BaniraBot extends Bot {
             result.setNickname(BaniraUtils.getBotNick());
         }
         return result;
+    }
+
+    /**
+     * 获取群名称
+     *
+     * @return 未获取到时返回空字符串
+     */
+    @Nonnull
+    public String getGroupNameEx(long groupId) {
+        ActionData<GroupInfoResp> groupInfo = super.getGroupInfo(groupId, false);
+        if (isActionDataNotEmpty(groupInfo)) {
+            return groupInfo.getData().getGroupName();
+        } else {
+            return "";
+        }
+    }
+
+    /**
+     * 获取用户名称
+     *
+     * @return 未获取到时返回空字符串
+     */
+    @Nonnull
+    public String getUserNameEx(Long groupId, Long userId) {
+        if (!BaniraUtils.isFriendIdValid(userId)) return "";
+        String name = null;
+        if (BaniraUtils.isGroupIdValid(groupId)) {
+            ActionData<GroupMemberInfoResp> groupMemberInfo = super.getGroupMemberInfo(groupId, userId, false);
+            if (isActionDataNotEmpty(groupMemberInfo)) {
+                name = groupMemberInfo.getData().getNickname();
+            }
+        }
+        if (StringUtils.isNullOrEmpty(name)) {
+            ActionList<FriendInfoResp> friendList = super.getFriendList();
+            if (isActionDataNotEmpty(friendList)) {
+                name = friendList.getData().stream()
+                        .filter(f -> f.getUserId().equals(userId))
+                        .map(FriendInfoResp::getNickname)
+                        .filter(Objects::nonNull)
+                        .findFirst().orElse(null);
+            }
+        }
+        if (StringUtils.isNullOrEmpty(name)) {
+            ActionData<StrangerInfoResp> strangerInfo = super.getStrangerInfo(userId, false);
+            if (isActionDataNotEmpty(strangerInfo)) {
+                name = strangerInfo.getData().getNickname();
+            }
+        }
+        return StringUtils.isNullOrEmpty(name) ? "" : name;
     }
 
     // endregion ex

@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.domain.PageResult;
+import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.mapper.IMessageRecordDao;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.service.IMessageRecordManager;
@@ -56,10 +57,20 @@ public class MessageRecordManager implements IMessageRecordManager {
     }
 
     @Override
-    public MessageRecord getMessageRecord(long groupId, int msgId) {
-        MessageRecordQueryParam param = new MessageRecordQueryParam();
+    public MessageRecord getGroupMessageRecord(long groupId, int msgId) {
+        MessageRecordQueryParam param = new MessageRecordQueryParam(true);
         param.setGroupId(groupId);
         param.setMsgId(String.valueOf(msgId));
+        List<MessageRecord> messageRecords = messageRecordDao.selectByParam(param);
+        return CollectionUtils.isNotNullOrEmpty(messageRecords) ? messageRecords.getFirst() : null;
+    }
+
+    @Override
+    public MessageRecord getPrivateMessageRecord(long friendId, int msgId) {
+        MessageRecordQueryParam param = new MessageRecordQueryParam(true);
+        param.setSenderId(friendId);
+        param.setMsgId(String.valueOf(msgId));
+        param.setMsgType(EnumMessageType.FRIEND.name(), EnumMessageType.MEMBER.name(), EnumMessageType.STRANGER.name());
         List<MessageRecord> messageRecords = messageRecordDao.selectByParam(param);
         return CollectionUtils.isNotNullOrEmpty(messageRecords) ? messageRecords.getFirst() : null;
     }

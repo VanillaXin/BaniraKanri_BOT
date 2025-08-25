@@ -603,6 +603,44 @@ public final class BaniraUtils {
         return result;
     }
 
+    /**
+     * 是否包含复杂的消息
+     */
+    public static boolean hasComplexMsg(List<ArrayMsg> msgs) {
+        return msgs.stream().anyMatch(e ->
+                e.getType() == MsgTypeEnum.mface
+                        || e.getType() == MsgTypeEnum.marketface
+                        || e.getType() == MsgTypeEnum.basketball
+                        || e.getType() == MsgTypeEnum.record
+                        || e.getType() == MsgTypeEnum.video
+                        || e.getType() == MsgTypeEnum.rps
+                        || e.getType() == MsgTypeEnum.new_rps
+                        || e.getType() == MsgTypeEnum.dice
+                        || e.getType() == MsgTypeEnum.new_dice
+                        || e.getType() == MsgTypeEnum.shake
+                        || e.getType() == MsgTypeEnum.share
+                        || e.getType() == MsgTypeEnum.contact
+                        || e.getType() == MsgTypeEnum.location
+                        || e.getType() == MsgTypeEnum.music
+                        || e.getType() == MsgTypeEnum.redbag
+                        || e.getType() == MsgTypeEnum.poke
+                        || e.getType() == MsgTypeEnum.gift
+                        || e.getType() == MsgTypeEnum.forward
+                        || e.getType() == MsgTypeEnum.xml
+                        || e.getType() == MsgTypeEnum.json
+                        || e.getType() == MsgTypeEnum.cardimage
+                        || e.getType() == MsgTypeEnum.tts
+                        || e.getType() == MsgTypeEnum.unknown
+        );
+    }
+
+    /**
+     * 是否普通消息
+     */
+    public static boolean isOrdinaryMsg(List<ArrayMsg> msgs) {
+        return !hasComplexMsg(msgs);
+    }
+
     // endregion 合并转发
 
     // region 其他

@@ -89,7 +89,7 @@ public class RecallCommand implements KanriHandler {
             return FAIL;
         }
 
-        MessageRecord startMessage = messageRecordManager.getMessageRecord(context.group(), start);
+        MessageRecord startMessage = messageRecordManager.getGroupMessageRecord(context.group(), start);
 
         for (String arg : args) {
             String[] split = arg.replaceAll("[-：_~+]", ":")
