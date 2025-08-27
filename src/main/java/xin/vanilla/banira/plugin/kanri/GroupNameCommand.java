@@ -81,11 +81,11 @@ public class GroupNameCommand implements KanriHandler {
         BaniraCodeContext codeContext = new BaniraCodeContext(context.bot(), context.event().getArrayMsg());
 
         BaniraCodeContext code = codeHandler.decode(
-                codeContext.setSender(context.sender())
-                        .setGroup(context.group())
-                        .setMsg(name)
+                codeContext.sender(context.sender())
+                        .group(context.group())
+                        .msg(name)
         );
-        context.bot().setGroupName(context.group(), code.getMsg());
+        context.bot().setGroupName(context.group(), code.msg());
 
         return SUCCESS;
     }

@@ -37,7 +37,7 @@ public interface BaniraCoder {
     }
 
     default BaniraCodeContext fail(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        return context.setMsg(context.getMsg().replace(placeholder, code.getRaw()));
+        return context.msg(context.msg().replace(placeholder, code.getRaw()));
     }
 
 

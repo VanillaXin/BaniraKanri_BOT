@@ -1,6 +1,8 @@
 package xin.vanilla.banira.config;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.fasterxml.jackson.dataformat.yaml.YAMLGenerator;
@@ -82,6 +84,8 @@ public class YamlConfigManager<T> {
         ObjectMapper mapper = new ObjectMapper(new YAMLFactory()
                 .disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER));
         mapper.setSerializationInclusion(JsonInclude.Include.ALWAYS);
+        // 忽略未知字段
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         return mapper;
     }
 
@@ -108,9 +112,10 @@ public class YamlConfigManager<T> {
     private void loadAndProcessConfig() throws IOException {
         isProcessing.set(true);
         try {
-            T loaded;
+            Map<String, Object> loaded;
             try {
-                loaded = mapper.readValue(configPath.toFile(), clazz);
+                loaded = mapper.readValue(configPath.toFile(), new TypeReference<>() {
+                });
             } catch (Exception e) {
                 handleLoadFailure("parse-failure", "Failed to parse config file", e);
                 return;
@@ -140,10 +145,9 @@ public class YamlConfigManager<T> {
     }
 
     @SuppressWarnings("unchecked")
-    private T deepMerge(T defaults, T overrides) {
+    private T deepMerge(T defaults, Map<String, Object> overrideMap) {
         // 序列化为Map结构
         Map<String, Object> defaultMap = mapper.convertValue(defaults, Map.class);
-        Map<String, Object> overrideMap = mapper.convertValue(overrides, Map.class);
 
         // 递归合并
         Map<String, Object> resultMap = deepMergeMaps(defaultMap, overrideMap);

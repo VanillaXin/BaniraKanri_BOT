@@ -59,7 +59,7 @@ public class ToGroupCode implements BaniraCoder {
         if (StringUtils.isNullOrEmptyEx(group)) return fail(context, code, placeholder);
         long groupId = StringUtils.toLong(group);
         if (!BaniraUtils.isGroupIdValid(groupId)) return fail(context, code, placeholder);
-        return context.setGroup(groupId).setMsg(context.getMsg().replace(placeholder, ""));
+        return context.group(groupId).msg(context.msg().replace(placeholder, ""));
     }
 
 }

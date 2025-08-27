@@ -19,7 +19,7 @@ public class YamlConfigAutoConfiguration {
                                                                ApplicationEventPublisher publisher
     ) throws Exception {
         Path path = Paths.get("./config/global-config.yml");
-        GlobalConfig defaults = GlobalConfig.preset();
+        GlobalConfig defaults = new GlobalConfig();
         return new YamlConfigManager<>(path, defaults, GlobalConfig.class, "global-config", watcherService, publisher);
     }
 
@@ -33,7 +33,7 @@ public class YamlConfigAutoConfiguration {
                                                              ApplicationEventPublisher publisher
     ) throws Exception {
         Path path = Paths.get("./config/group-config.yml");
-        GroupConfig defaults = GroupConfig.preset();
+        GroupConfig defaults = new GroupConfig();
         return new YamlConfigManager<>(path, defaults, GroupConfig.class, "group-config", watcherService, publisher);
     }
 
@@ -47,7 +47,7 @@ public class YamlConfigAutoConfiguration {
                                                                   ApplicationEventPublisher publisher
     ) throws Exception {
         Path path = Paths.get("./config/ins-config.yml");
-        InstructionsConfig defaults = InstructionsConfig.preset();
+        InstructionsConfig defaults = new InstructionsConfig();
         return new YamlConfigManager<>(path, defaults, InstructionsConfig.class, "ins-config", watcherService, publisher);
     }
 

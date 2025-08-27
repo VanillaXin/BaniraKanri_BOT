@@ -61,7 +61,7 @@ public class ImageCode implements BaniraCoder {
         String url = JsonUtils.getString(data, "url");
         if (StringUtils.isNullOrEmptyEx(url)) url = JsonUtils.getString(data, "value");
         if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
-        return context.setMsg(context.getMsg().replace(placeholder, MsgUtils.builder().img(url).build()));
+        return context.msg(context.msg().replace(placeholder, MsgUtils.builder().img(url).build()));
     }
 
 }

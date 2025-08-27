@@ -206,8 +206,8 @@ public class StatusPlugin extends BasePlugin {
                     , version.getAppName()
                     , version.getAppVersion()
                     , baniraVersionInfo.getVersion()
-                    , baniraVersionInfo.getGitCommitCount()
-                    , baniraVersionInfo.getGitCommitShortId()
+                    , baniraVersionInfo.gitCommitCount()
+                    , baniraVersionInfo.gitCommitShortId()
             ));
             JsonUtils.setString(botObject, "activity", String.format("收%s | 发%s | 群%s | 好友%s"
                     , totalCount - sendCount

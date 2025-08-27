@@ -16,11 +16,11 @@ public class BaniraCodeHandler {
 
     public BaniraCodeContext decode(BaniraCodeContext context) {
         BaniraCodeContext clone = context.clone();
-        List<BaniraCode> codeList = BaniraCodeUtils.getAllBaniraCode(clone.getMsg());
+        List<BaniraCode> codeList = BaniraCodeUtils.getAllBaniraCode(clone.msg());
         if (codeList.isEmpty()) return clone;
         BaniraCode textCode = BaniraCodeUtils.getTextBaniraCode(codeList);
         if (textCode == null) return clone;
-        clone.setMsg(textCode.getData().get("text").getAsString());
+        clone.msg(textCode.getData().get("text").getAsString());
 
         for (BaniraCoder coder : coders.stream()
                 .filter(coder -> !coder.isKanri())

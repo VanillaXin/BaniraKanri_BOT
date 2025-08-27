@@ -137,30 +137,30 @@ public final class BaniraUtils {
             if (otherConfigMap.get(groupId) != null) {
                 otherConfig = otherConfigMap.get(groupId);
             } else {
-                otherConfigMap.put(groupId, OtherConfig.preset());
+                otherConfigMap.put(groupId, new OtherConfig());
                 saveGroupConfig();
             }
         }
         // 全局配置
         else {
-            otherConfig = otherConfigMap.computeIfAbsent(0L, k -> OtherConfig.preset());
+            otherConfig = otherConfigMap.computeIfAbsent(0L, k -> new OtherConfig());
         }
         return otherConfig;
     }
 
     public static BaseInstructionsConfig getBaseIns() {
         BaseInstructionsConfig base = getInsConfig().base();
-        return base != null ? base : BaseInstructionsConfig.preset();
+        return base != null ? base : new BaseInstructionsConfig();
     }
 
     public static KeyInstructionsConfig getKeyIns() {
         KeyInstructionsConfig key = getInsConfig().key();
-        return key != null ? key : KeyInstructionsConfig.preset();
+        return key != null ? key : new KeyInstructionsConfig();
     }
 
     public static TimerInstructionsConfig getTimerIns() {
         TimerInstructionsConfig timer = getInsConfig().timer();
-        return timer != null ? timer : TimerInstructionsConfig.preset();
+        return timer != null ? timer : new TimerInstructionsConfig();
     }
 
     // endregion 配置管理

@@ -8,7 +8,7 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import java.util.List;
 
 @Data
-@Accessors(chain = true)
+@Accessors(chain = true, fluent = true)
 public class BaniraCodeContext implements Cloneable {
     private final BaniraBot bot;
     /**
@@ -45,10 +45,10 @@ public class BaniraCodeContext implements Cloneable {
             return (BaniraCodeContext) super.clone();
         } catch (Exception e) {
             return new BaniraCodeContext(bot, originalMsg)
-                    .setGroup(group)
-                    .setSender(sender)
-                    .setTarget(target)
-                    .setMsg(msg)
+                    .group(group)
+                    .sender(sender)
+                    .target(target)
+                    .msg(msg)
                     ;
         }
     }

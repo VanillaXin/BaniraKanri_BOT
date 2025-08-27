@@ -1,65 +1,102 @@
 package xin.vanilla.banira.config.entity.basic;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.Accessors;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 /**
  * 管理指令配置
- *
- * @param prefix    前缀
- * @param tag       头衔
- * @param card      群名片
- * @param tap       戳一戳
- * @param mute      禁言
- * @param loud      解除禁言
- * @param withdraw  撤回
- * @param kick      踢出群聊
- * @param essence   精华
- * @param admin     群管理
- * @param butler    主管
- * @param maid      女仆
- * @param op        权限
- * @param groupName 群名称
  */
-@Accessors(chain = true)
-public record KanriInstructionsConfig(
-        List<String> prefix,
-        List<String> tag,
-        List<String> card,
-        List<String> tap,
-        List<String> mute,
-        List<String> loud,
-        List<String> withdraw,
-        List<String> kick,
-        List<String> essence,
-        List<String> admin,
-        List<String> butler,
-        List<String> maid,
-        List<String> op,
-        List<String> groupName,
-        List<String> approve
-) {
+@Getter
+@Setter
+@Accessors(chain = true, fluent = true)
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+public class KanriInstructionsConfig {
 
-    public static KanriInstructionsConfig preset() {
-        return new KanriInstructionsConfig(
-                Arrays.asList(),
-                Arrays.asList("头衔", "tag"),
-                Arrays.asList("群名片", "card"),
-                Arrays.asList("戳一戳", "戳", "tap", "slap"),
-                Arrays.asList("禁言", "mute", "ban"),
-                Arrays.asList("解除禁言", "解禁", "loud", "unmute", "unban"),
-                Arrays.asList("撤回", "withdraw", "recall", "rec"),
-                Arrays.asList("踢出群聊", "kick"),
-                Arrays.asList("精华", "essence"),
-                Arrays.asList("群管理", "admin", "gad", "ad"),
-                Arrays.asList("主管", "管家", "女仆长", "butler", "chief"),
-                Arrays.asList("仆人", "女仆", "妹抖", "servant", "maid"),
-                Arrays.asList("权限", "op", "permission"),
-                Arrays.asList("群名", "群名称", "groupname", "gname", "gn"),
-                Arrays.asList("审批", "审核", "approve")
-        );
+    /**
+     * 前缀
+     */
+    private List<String> prefix;
+    /**
+     * 头衔
+     */
+    private List<String> tag;
+    /**
+     * 群名片
+     */
+    private List<String> card;
+    /**
+     * 戳一戳
+     */
+    private List<String> tap;
+    /**
+     * 禁言
+     */
+    private List<String> mute;
+    /**
+     * 解除禁言
+     */
+    private List<String> loud;
+    /**
+     * 撤回
+     */
+    private List<String> withdraw;
+    /**
+     * 踢出群聊
+     */
+    private List<String> kick;
+    /**
+     * 精华
+     */
+    private List<String> essence;
+    /**
+     * 群管理
+     */
+    private List<String> admin;
+    /**
+     * 主管
+     */
+    private List<String> butler;
+    /**
+     * 女仆
+     */
+    private List<String> maid;
+    /**
+     * 权限
+     */
+    private List<String> op;
+    /**
+     * 群名称
+     */
+    private List<String> groupName;
+    /**
+     *
+     */
+    private List<String> approve;
+
+
+    {
+        this.prefix = new ArrayList<>();
+        this.tag = Arrays.asList("头衔", "tag");
+        this.card = Arrays.asList("群名片", "card");
+        this.tap = Arrays.asList("戳一戳", "戳", "tap", "slap");
+        this.mute = Arrays.asList("禁言", "mute", "ban");
+        this.loud = Arrays.asList("解除禁言", "解禁", "loud", "unmute", "unban");
+        this.withdraw = Arrays.asList("撤回", "withdraw", "recall", "rec");
+        this.kick = Arrays.asList("踢出群聊", "kick");
+        this.essence = Arrays.asList("精华", "essence");
+        this.admin = Arrays.asList("群管理", "admin", "gad", "ad");
+        this.butler = Arrays.asList("主管", "管家", "女仆长", "butler", "chief");
+        this.maid = Arrays.asList("仆人", "女仆", "妹抖", "servant", "maid");
+        this.op = Arrays.asList("权限", "op", "permission");
+        this.groupName = Arrays.asList("群名", "群名称", "groupname", "gname", "gn");
+        this.approve = Arrays.asList("审批", "审核", "approve");
+
     }
 
 }

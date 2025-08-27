@@ -1,6 +1,8 @@
 package xin.vanilla.banira.config.entity;
 
-import jakarta.annotation.Nonnull;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.KanriInstructionsConfig;
@@ -12,40 +14,59 @@ import java.util.List;
 
 /**
  * 指令配置
- *
- * @param prefix 前缀
- * @param base   基础指令
- * @param key    关键词指令
- * @param timer  定时任务指令
- * @param kanri  群管指令
  */
-@Accessors(chain = true)
-public record InstructionsConfig(
-        @Nonnull String prefix,
-        @Nonnull BaseInstructionsConfig base,
-        @Nonnull KeyInstructionsConfig key,
-        @Nonnull TimerInstructionsConfig timer,
-        @Nonnull KanriInstructionsConfig kanri,
-        @Nonnull List<String> imageFaceToImage,
-        @Nonnull List<String> wife,
-        @Nonnull List<String> mcQuery
-) {
+@Getter
+@Setter
+@Accessors(chain = true, fluent = true)
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+public class InstructionsConfig {
 
-    public static InstructionsConfig preset() {
-        return new InstructionsConfig(
-                "/bk",
-                BaseInstructionsConfig.preset(),
-                KeyInstructionsConfig.preset(),
-                TimerInstructionsConfig.preset(),
-                KanriInstructionsConfig.preset()
+    /**
+     * 前缀
+     */
+    private String prefix;
+    /**
+     * 基础指令
+     */
+    private BaseInstructionsConfig base;
+    /**
+     * 关键词指令
+     */
+    private KeyInstructionsConfig key;
+    /**
+     * 定时任务指令
+     */
+    private TimerInstructionsConfig timer;
+    /**
+     * 群管指令
+     */
+    private KanriInstructionsConfig kanri;
 
-                , Arrays.asList("获取表情", "获取图片", "获取表情图片", "getface", "getimage", "getimg")
+    /**
+     * 获取表情图片
+     */
+    private List<String> imageFaceToImage;
 
-                , Arrays.asList("老婆", "wife")
+    /**
+     * 获取老婆
+     */
+    private List<String> wife;
 
-                , Arrays.asList("我的世界", "麦块", "mc")
+    /**
+     * 我的世界服务器查询
+     */
+    private List<String> mcQuery;
 
-        );
+
+    {
+        this.prefix = "/bk";
+        this.base = new BaseInstructionsConfig();
+        this.key = new KeyInstructionsConfig();
+        this.timer = new TimerInstructionsConfig();
+        this.kanri = new KanriInstructionsConfig();
+        this.imageFaceToImage = Arrays.asList("获取表情", "获取图片", "获取表情图片", "getface", "getimage", "getimg");
+        this.wife = Arrays.asList("老婆", "wife");
+        this.mcQuery = Arrays.asList("我的世界", "麦块", "mc");
     }
 
 }

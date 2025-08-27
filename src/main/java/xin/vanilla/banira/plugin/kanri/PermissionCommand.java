@@ -104,25 +104,25 @@ public class PermissionCommand implements KanriHandler {
         Set<Long> targets = getQQsWithReply(context, args);
 
         // 解析内容
-        Set<EnumPermission> ops = EnumPermission.valueFrom(args);
+        List<EnumPermission> ops = EnumPermission.valueFrom(args);
         // 移除自身没有的权限
         ops.retainAll(context.bot().getPermission(context.group(), context.sender()));
         if (ops.isEmpty()) return FAIL;
 
         Set<Long> fail = new HashSet<>();
         for (Long targetId : targets) {
-            Set<EnumPermission> permissions;
+            List<EnumPermission> permissions;
             boolean butler = BaniraUtils.isButler(targetId);
             boolean maid = BaniraUtils.isMaid(context.group(), targetId);
             if (butler) {
                 permissions = BaniraUtils.getButler()
                         .stream().filter(p -> targetId.equals(p.id()))
-                        .findFirst().orElse(new PermissionConfig(targetId, new HashSet<>()))
+                        .findFirst().orElse(new PermissionConfig(targetId, new ArrayList<>()))
                         .permissions();
             } else if (maid) {
                 permissions = groupConfig.get().maid().getOrDefault(context.group(), new ArrayList<>())
                         .stream().filter(p -> targetId.equals(p.id()))
-                        .findFirst().orElse(new PermissionConfig(targetId, new HashSet<>()))
+                        .findFirst().orElse(new PermissionConfig(targetId, new ArrayList<>()))
                         .permissions();
             } else {
                 fail.add(targetId);

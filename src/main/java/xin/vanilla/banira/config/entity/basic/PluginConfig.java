@@ -1,5 +1,8 @@
 package xin.vanilla.banira.config.entity.basic;
 
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.plugin.*;
 
@@ -8,29 +11,33 @@ import java.util.Map;
 
 /**
  * 基础配置
- *
- * @param capability 插件启用状态
  */
-@Accessors(chain = true)
-public record PluginConfig(
-        Map<String, Integer> capability
-) {
+@Getter
+@Setter
+@Accessors(chain = true, fluent = true)
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
+public class PluginConfig {
 
-    public static PluginConfig preset() {
-        return new PluginConfig(
-                new LinkedHashMap<>() {{
-                    put(KanriPlugin.class.getName(), 1);
-                    put(HelpPlugin.class.getName(), 2);
-                    put(TimerPlugin.class.getName(), 2);
-                    put(StatusPlugin.class.getName(), 2);
-                    put(KeywordPlugin.class.getName(), 2);
+    /**
+     * 插件启用状态
+     */
+    private Map<String, Integer> capability;
 
-                    put(ExamplePlugin.class.getName(), 0);
-                    put(WifePlugin.class.getName(), 99);
-                    put(McQueryPlugin.class.getName(), 99);
-                    put(ImageFaceToImagePlugin.class.getName(), 99);
-                }}
-        );
+
+    {
+        this.capability = new LinkedHashMap<>();
+
+        this.capability.put(KanriPlugin.class.getName(), 1);
+        this.capability.put(HelpPlugin.class.getName(), 2);
+        this.capability.put(TimerPlugin.class.getName(), 2);
+        this.capability.put(StatusPlugin.class.getName(), 2);
+        this.capability.put(KeywordPlugin.class.getName(), 2);
+
+        this.capability.put(ExamplePlugin.class.getName(), 0);
+        this.capability.put(WifePlugin.class.getName(), 99);
+        this.capability.put(McQueryPlugin.class.getName(), 99);
+        this.capability.put(ImageFaceToImagePlugin.class.getName(), 99);
+
     }
 
 }

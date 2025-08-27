@@ -29,18 +29,18 @@ public class TimerTaskExecutor implements ITimerTaskExecutor {
 
         BaniraCodeContext decode = codeHandler.decode(
                 new BaniraCodeContext(bot, MessageConverser.stringToArray(task.getReplyMsg()))
-                        .setGroup(task.getGroupId())
-                        .setSender(task.getCreatorId())
-                        .setTarget(task.getCreatorId())
-                        .setOpId(task.getCreatorId())
-                        .setMsg(task.getReplyMsg())
-                        .setTime(DateUtils.getTimestamp(null))
+                        .group(task.getGroupId())
+                        .sender(task.getCreatorId())
+                        .target(task.getCreatorId())
+                        .opId(task.getCreatorId())
+                        .msg(task.getReplyMsg())
+                        .time(DateUtils.getTimestamp(null))
         );
 
-        if (BaniraUtils.isGroupIdValid(decode.getGroup())) {
-            bot.sendGroupMsg(decode.getGroup(), decode.getMsg(), false);
-        } else if (BaniraUtils.isFriendIdValid(decode.getTarget())) {
-            bot.sendPrivateMsg(decode.getTarget(), decode.getMsg(), false);
+        if (BaniraUtils.isGroupIdValid(decode.group())) {
+            bot.sendGroupMsg(decode.group(), decode.msg(), false);
+        } else if (BaniraUtils.isFriendIdValid(decode.target())) {
+            bot.sendPrivateMsg(decode.target(), decode.msg(), false);
         }
 
         LOGGER.info("Executed timer task: {}", taskJsonStrong);

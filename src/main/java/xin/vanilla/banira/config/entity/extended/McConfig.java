@@ -1,12 +1,16 @@
 package xin.vanilla.banira.config.entity.extended;
 
-import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.Accessors;
 
 import java.util.List;
 
-@Data
-@Accessors(chain = true)
+@Getter
+@Setter
+@Accessors(chain = true, fluent = true)
+@JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
 public class McConfig {
 
     /**
@@ -20,46 +24,41 @@ public class McConfig {
      * [online]: 在线玩家数量
      * [max]: 最大玩家数量
      */
-    String success;
+    private String success;
 
     /**
      * 异常提示: 服务器没人在线
      */
-    List<String> none;
+    private List<String> none;
 
     /**
      * 错误提示: 未知的主机
      */
-    List<String> unknownHost;
+    private List<String> unknownHost;
 
     /**
      * 错误提示: 连接失败
      */
-    List<String> connectFailed;
+    private List<String> connectFailed;
 
     /**
      * 错误提示: 密码错误
      */
-    List<String> pswError;
+    private List<String> pswError;
 
     /**
      * 错误提示: 未知的响应
      */
-    List<String> unknownResponse;
+    private List<String> unknownResponse;
 
-    public static McConfig empty() {
-        return new McConfig();
-    }
 
-    public static McConfig preset() {
-        return new McConfig()
-                .setSuccess("[name]有[online]/[max]名玩家在线:\n[players]")
-                .setNone(List.of("%s一片死寂."))
-                .setUnknownHost(List.of("无法定位%s."))
-                .setConnectFailed(List.of("%s一片混沌."))
-                .setPswError(List.of("%s.需要..密码..."))
-                .setUnknownResponse(List.of("%s发回了一串未知的信号."))
-                ;
+    {
+        this.success = "[name]有[online]/[max]名玩家在线:\n[players]";
+        this.none = List.of("%s一片死寂.");
+        this.unknownHost = List.of("无法定位%s.");
+        this.connectFailed = List.of("%s一片混沌.");
+        this.pswError = List.of("%s.需要..密码...");
+        this.unknownResponse = List.of("%s发回了一串未知的信号.");
     }
 
 }

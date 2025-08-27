@@ -1,6 +1,7 @@
 package xin.vanilla.banira.config;
 
 import lombok.Getter;
+import lombok.experimental.Accessors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
@@ -10,6 +11,7 @@ import java.util.jar.Manifest;
 
 @Getter
 @Component
+@Accessors(fluent = true)
 public class BaniraVersionInfo {
 
     @Value("${git.commit.id.abbrev:}")
@@ -26,6 +28,7 @@ public class BaniraVersionInfo {
 
     @Value("${git.last.commit.short:}")
     private String gitCommitShortId;
+
 
     public String getVersion() {
         try {

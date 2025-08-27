@@ -448,18 +448,18 @@ public class KeywordPlugin extends BasePlugin {
     public boolean reply(BaniraBot bot, AnyMessageEvent event) {
         BaniraCodeContext context = this.searchReply(
                 new BaniraCodeContext(bot, event.getArrayMsg())
-                        .setGroup(event.getGroupId())
-                        .setSender(event.getUserId())
-                        .setTarget(event.getUserId())
-                        .setMsg(event.getMessage())
-                        .setTime(event.getTime())
+                        .group(event.getGroupId())
+                        .sender(event.getUserId())
+                        .target(event.getUserId())
+                        .msg(event.getMessage())
+                        .time(event.getTime())
         );
         if (context != null) {
             ActionData<MsgId> msgId;
             if (ActionParams.PRIVATE.equals(event.getMessageType())) {
-                msgId = bot.sendPrivateMsg(context.getTarget(), context.getMsg(), false);
+                msgId = bot.sendPrivateMsg(context.target(), context.msg(), false);
             } else if (ActionParams.GROUP.equals(event.getMessageType())) {
-                msgId = bot.sendGroupMsg(context.getGroup(), context.getMsg(), false);
+                msgId = bot.sendGroupMsg(context.group(), context.msg(), false);
             } else msgId = null;
             return bot.isActionDataMsgIdNotEmpty(msgId);
         }
@@ -508,10 +508,10 @@ public class KeywordPlugin extends BasePlugin {
 
     private BaniraCodeContext searchReply(BaniraCodeContext context) {
         BaniraCodeContext result = null;
-        KeywordRecord matchReply = keywordManager.findMatchReply(context.getMsg(), context.getBot().getSelfId(), context.getGroup());
+        KeywordRecord matchReply = keywordManager.findMatchReply(context.msg(), context.bot().getSelfId(), context.group());
         if (matchReply != null) {
-            context.setMsg(matchReply.getReplyMsg())
-                    .setOpId(matchReply.getCreatorId());
+            context.msg(matchReply.getReplyMsg())
+                    .opId(matchReply.getCreatorId());
             result = codeHandler.decode(context);
         }
         return result;

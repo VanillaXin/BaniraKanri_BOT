@@ -73,7 +73,7 @@ public class McQueryCode implements BaniraCoder {
         if (StringUtils.isNullOrEmptyEx(port) || StringUtils.toInt(port) == 0) port = "25565";
         String info = getQueryInfo(name, ip, StringUtils.toInt(port));
         if (StringUtils.isNullOrEmpty(info)) return fail(context, code, placeholder);
-        return context.setMsg(context.getMsg().replace(placeholder, info));
+        return context.msg(context.msg().replace(placeholder, info));
     }
 
     public static String getQueryInfo(String name, String ip, Integer port) {
@@ -86,11 +86,11 @@ public class McQueryCode implements BaniraCoder {
         if (StringUtils.isNotNullOrEmpty(mcQuery.error())) {
             switch (mcQuery.error()) {
                 case ERROR_MSG_CONNECT_FAILED:
-                    if (CollectionUtils.isNullOrEmpty(mcConfig.getConnectFailed())) {
+                    if (CollectionUtils.isNullOrEmpty(mcConfig.connectFailed())) {
                         info.append(mcQuery.serverName())
                                 .append(":").append(ERROR_MSG_CONNECT_FAILED);
                     } else {
-                        String err = CollectionUtils.getRandomElement(mcConfig.getConnectFailed(), random);
+                        String err = CollectionUtils.getRandomElement(mcConfig.connectFailed(), random);
 
                         if (err.contains("%s")) {
                             info.append(String.format(err, mcQuery.serverName()));
@@ -104,11 +104,11 @@ public class McQueryCode implements BaniraCoder {
                             .append(":").append(ERROR_MSG_LOADING);
                     break;
                 case ERROR_MSG_UNKNOWN_HOST:
-                    if (CollectionUtils.isNullOrEmpty(mcConfig.getUnknownHost())) {
+                    if (CollectionUtils.isNullOrEmpty(mcConfig.unknownHost())) {
                         info.append(mcQuery.serverName())
                                 .append(":").append(ERROR_MSG_UNKNOWN_HOST);
                     } else {
-                        String err = CollectionUtils.getRandomElement(mcConfig.getUnknownHost(), random);
+                        String err = CollectionUtils.getRandomElement(mcConfig.unknownHost(), random);
                         if (err.contains("%s")) {
                             info.append(String.format(err, mcQuery.serverName()));
                         } else {
@@ -117,11 +117,11 @@ public class McQueryCode implements BaniraCoder {
                     }
                     break;
                 case ERROR_MSG_UNKNOWN_RESPONSE:
-                    if (CollectionUtils.isNullOrEmpty(mcConfig.getUnknownResponse())) {
+                    if (CollectionUtils.isNullOrEmpty(mcConfig.unknownResponse())) {
                         info.append(mcQuery.serverName())
                                 .append(":").append(ERROR_MSG_UNKNOWN_RESPONSE);
                     } else {
-                        String err = CollectionUtils.getRandomElement(mcConfig.getUnknownResponse(), random);
+                        String err = CollectionUtils.getRandomElement(mcConfig.unknownResponse(), random);
                         if (err.contains("%s")) {
                             info.append(String.format(err, mcQuery.serverName()));
                         } else {
@@ -131,14 +131,14 @@ public class McQueryCode implements BaniraCoder {
                     break;
             }
         } else if (mcQuery.onlinePlayers() == 0) {
-            String err = CollectionUtils.getRandomElement(mcConfig.getNone(), random);
+            String err = CollectionUtils.getRandomElement(mcConfig.none(), random);
             if (err.contains("%s")) {
                 info.append(String.format(err, mcQuery.serverName()));
             } else {
                 info.append(mcQuery.serverName()).append(":").append(err);
             }
         } else {
-            String success = mcConfig.getSuccess();
+            String success = mcConfig.success();
             success = success.replace("[name]", mcQuery.serverName());
             success = success.replace("[motd]", mcQuery.description());
             success = success.replace("[host]", mcQuery.serverIp());

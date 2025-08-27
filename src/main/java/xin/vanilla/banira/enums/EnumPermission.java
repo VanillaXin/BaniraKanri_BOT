@@ -3,11 +3,7 @@ package xin.vanilla.banira.enums;
 import lombok.Getter;
 import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.Collection;
-import java.util.EnumSet;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.*;
 
 @Getter
 public enum EnumPermission {
@@ -54,35 +50,35 @@ public enum EnumPermission {
     /**
      * 获取主管拥有的权限
      */
-    public static Set<EnumPermission> getButler() {
+    public static List<EnumPermission> getButler() {
         return getAll().stream()
                 .filter(p -> p.level <= 3)
-                .collect(Collectors.toSet());
+                .toList();
     }
 
     /**
      * 获取女仆拥有的权限
      */
-    public static Set<EnumPermission> getMaid() {
+    public static List<EnumPermission> getMaid() {
         return getGroupAdmin();
     }
 
     /**
      * 获取群主拥有的权限
      */
-    public static Set<EnumPermission> getGroupOwner() {
+    public static List<EnumPermission> getGroupOwner() {
         return getAll().stream()
                 .filter(p -> p.level <= 2)
-                .collect(Collectors.toSet());
+                .toList();
     }
 
     /**
      * 获取群管理员拥有的权限
      */
-    public static Set<EnumPermission> getGroupAdmin() {
+    public static List<EnumPermission> getGroupAdmin() {
         return getAll().stream()
                 .filter(p -> p.level <= 1)
-                .collect(Collectors.toSet());
+                .toList();
     }
 
     public static EnumPermission valueFrom(String s) {
@@ -98,15 +94,15 @@ public enum EnumPermission {
         return null;
     }
 
-    public static Set<EnumPermission> valueFrom(Collection<String> collection) {
+    public static List<EnumPermission> valueFrom(Collection<String> collection) {
         return collection.stream()
                 .map(EnumPermission::valueFrom)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
+                .toList();
     }
 
-    public static Set<EnumPermission> valueFrom(String... strings) {
-        return valueFrom(Set.of(strings));
+    public static List<EnumPermission> valueFrom(String... strings) {
+        return valueFrom(List.of(strings));
     }
 
 }
