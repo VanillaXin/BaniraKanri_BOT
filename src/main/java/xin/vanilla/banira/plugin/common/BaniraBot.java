@@ -566,7 +566,7 @@ public class BaniraBot extends Bot {
      */
     @Nonnull
     public String getUserNameEx(Long groupId, Long userId) {
-        if (!BaniraUtils.isFriendIdValid(userId)) return "";
+        if (!BaniraUtils.isUserIdValid(userId)) return "";
         String name = null;
         if (BaniraUtils.isGroupIdValid(groupId)) {
             ActionData<GroupMemberInfoResp> groupMemberInfo = super.getGroupMemberInfo(groupId, userId, false);

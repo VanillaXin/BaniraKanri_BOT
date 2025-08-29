@@ -187,7 +187,7 @@ public class TimerPlugin extends BasePlugin {
                     if (split.length != 2 && !BaniraUtils.getBaseIns().del().contains(split[1])) {
                         return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                     }
-                    if (BaniraUtils.getReplyQQ(bot, event.getGroupId(), event.getArrayMsg()) != bot.getSelfId()) {
+                    if (BaniraUtils.getReplyUserId(bot, event.getGroupId(), event.getArrayMsg()) != bot.getSelfId()) {
                         return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                     }
                     Long replyId = BaniraUtils.getReplyId(event.getArrayMsg());

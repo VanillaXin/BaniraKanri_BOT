@@ -213,7 +213,7 @@ public class McQueryPlugin extends BasePlugin {
             else if (baseIns.del().contains(operate)) {
                 // 回复删除
                 if (BaniraUtils.hasReply(event.getArrayMsg())) {
-                    if (BaniraUtils.getReplyQQ(bot, event.getGroupId(), event.getArrayMsg()) != bot.getSelfId()) {
+                    if (BaniraUtils.getReplyUserId(bot, event.getGroupId(), event.getArrayMsg()) != bot.getSelfId()) {
                         return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                     }
                     Long replyId = BaniraUtils.getReplyId(event.getArrayMsg());
@@ -313,7 +313,7 @@ public class McQueryPlugin extends BasePlugin {
 
                 // 回复修改
                 if (BaniraUtils.hasReply(event.getArrayMsg())) {
-                    if (BaniraUtils.getReplyQQ(bot, event.getGroupId(), event.getArrayMsg()) != bot.getSelfId()) {
+                    if (BaniraUtils.getReplyUserId(bot, event.getGroupId(), event.getArrayMsg()) != bot.getSelfId()) {
                         return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                     }
                     Long replyId = BaniraUtils.getReplyId(event.getArrayMsg());

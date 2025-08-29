@@ -39,7 +39,7 @@ public class TimerTaskExecutor implements ITimerTaskExecutor {
 
         if (BaniraUtils.isGroupIdValid(decode.group())) {
             bot.sendGroupMsg(decode.group(), decode.msg(), false);
-        } else if (BaniraUtils.isFriendIdValid(decode.target())) {
+        } else if (BaniraUtils.isUserIdValid(decode.target())) {
             bot.sendPrivateMsg(decode.target(), decode.msg(), false);
         }
 

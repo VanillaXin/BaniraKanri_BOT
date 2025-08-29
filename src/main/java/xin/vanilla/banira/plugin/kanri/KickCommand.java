@@ -63,7 +63,7 @@ public class KickCommand implements KanriHandler {
     @Override
     public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
         // 解析目标
-        Set<Long> targets = getQQsWithReply(context, args);
+        Set<Long> targets = getUserIdsWithReply(context, args);
 
         for (Long targetId : targets) {
             if (context.bot().isUpper(context.group(), context.sender(), targetId)

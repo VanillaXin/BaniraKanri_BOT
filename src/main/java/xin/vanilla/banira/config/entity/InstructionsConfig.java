@@ -57,6 +57,11 @@ public class InstructionsConfig {
      */
     private List<String> mcQuery;
 
+    /**
+     * 戳一戳
+     */
+    private List<String> tap;
+
 
     {
         this.prefix = "/bk";
@@ -67,6 +72,7 @@ public class InstructionsConfig {
         this.imageFaceToImage = Arrays.asList("获取表情", "获取图片", "获取表情图片", "getface", "getimage", "getimg");
         this.wife = Arrays.asList("老婆", "wife");
         this.mcQuery = Arrays.asList("我的世界", "麦块", "mc");
+        this.tap = Arrays.asList("戳一戳", "戳", "tap", "poke");
     }
 
 }

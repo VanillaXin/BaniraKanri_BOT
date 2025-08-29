@@ -1,11 +1,9 @@
 package xin.vanilla.banira.plugin.kanri;
 
 import com.mikuac.shiro.common.utils.MsgUtils;
-import com.mikuac.shiro.common.utils.ShiroUtils;
 import jakarta.annotation.Nonnull;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.StringUtils;
 
 import java.util.List;
 import java.util.Set;
@@ -83,37 +81,13 @@ public interface KanriHandler {
     }
 
     @Nonnull
-    default Set<Long> getQQs(String[] args) {
-        Set<Long> qqs = BaniraUtils.mutableSetOf();
-        for (String arg : args) {
-            if (BaniraUtils.hasAt(arg)) {
-                qqs.add(BaniraUtils.getAtQQ(arg));
-            } else {
-                long l = StringUtils.toLong(arg, -1L);
-                if (BaniraUtils.isFriendIdValid(l)) qqs.add(l);
-            }
-        }
-        return qqs;
+    default Set<Long> getUserIdsWithoutReply(@Nonnull KanriContext context, @Nonnull String[] args) {
+        return BaniraUtils.getUserIdsWithoutReply(context.event().getArrayMsg(), args);
     }
 
     @Nonnull
-    default Set<Long> getQQsWithoutReply(@Nonnull KanriContext context, @Nonnull String[] args) {
-        Set<Long> result = BaniraUtils.mutableSetOf();
-        result.addAll(ShiroUtils.getAtList(context.event().getArrayMsg()));
-        result.addAll(getQQs(args));
-        return result;
-    }
-
-    @Nonnull
-    default Set<Long> getQQsWithReply(@Nonnull KanriContext context, @Nonnull String[] args) {
-        Set<Long> result = BaniraUtils.mutableSetOf();
-        if (BaniraUtils.hasReply(context.event().getArrayMsg())) {
-            result.add(BaniraUtils.getReplyQQ(context.bot(), context.group(), context.event().getArrayMsg()));
-        } else if (BaniraUtils.hasAtAll(context.event().getArrayMsg())) {
-            result.add(233L);
-        }
-        result.addAll(getQQsWithoutReply(context, args));
-        return result;
+    default Set<Long> getUserIdsWithReply(@Nonnull KanriContext context, @Nonnull String[] args) {
+        return BaniraUtils.getUserIdsWithReply(context.bot(), context.group(), context.event().getArrayMsg(), args);
     }
 
 }

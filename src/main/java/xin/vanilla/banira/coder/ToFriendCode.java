@@ -58,7 +58,7 @@ public class ToFriendCode implements BaniraCoder {
         String friend = JsonUtils.getString(data, "value");
         if (StringUtils.isNullOrEmptyEx(friend)) return fail(context, code, placeholder);
         long friendId = StringUtils.toLong(friend);
-        if (!BaniraUtils.isFriendIdValid(friendId)) return fail(context, code, placeholder);
+        if (!BaniraUtils.isUserIdValid(friendId)) return fail(context, code, placeholder);
         return context.target(friendId).msg(context.msg().replace(placeholder, ""));
     }
 

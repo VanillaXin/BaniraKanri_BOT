@@ -309,7 +309,7 @@ public final class BaniraUtils {
         return MessageConverser.arraysToString(getReplyContent(bot, arrayMsg));
     }
 
-    public static long getReplyQQ(BaniraBot bot, Long groupId, List<ArrayMsg> arrayMsg) {
+    public static long getReplyUserId(BaniraBot bot, Long groupId, List<ArrayMsg> arrayMsg) {
         long qq = arrayMsg.stream()
                 .filter(e -> e.getType() == MsgTypeEnum.reply)
                 .findFirst()
@@ -359,7 +359,7 @@ public final class BaniraUtils {
         return MessageConverser.arraysToString(getReplyContentById(bot, replyId));
     }
 
-    public static long getReplyQQ(BaniraBot bot, Long groupId, String msg) {
+    public static long getReplyUserId(BaniraBot bot, Long groupId, String msg) {
         long qq = 0;
         if (hasReply(msg)) {
             qq = QQ_PATTERN.matcher(msg).results()
@@ -402,7 +402,7 @@ public final class BaniraUtils {
         return arrayMsg.stream().anyMatch(e -> e.getType() == MsgTypeEnum.at);
     }
 
-    public static long getAtQQ(List<ArrayMsg> arrayMsg) {
+    public static long getAtUserId(List<ArrayMsg> arrayMsg) {
         return arrayMsg.stream()
                 .filter(e -> e.getType() == MsgTypeEnum.at)
                 .findFirst()
@@ -414,7 +414,7 @@ public final class BaniraUtils {
         return StringUtils.isNotNullOrEmpty(msg) && msg.contains("[CQ:at,");
     }
 
-    public static long getAtQQ(String msg) {
+    public static long getAtUserId(String msg) {
         return hasAt(msg) ?
                 QQ_PATTERN.matcher(msg).results()
                         .map(m -> m.group("qq"))
@@ -649,8 +649,43 @@ public final class BaniraUtils {
         return groupId != null && groupId > 10000;
     }
 
-    public static boolean isFriendIdValid(Long friendId) {
+    public static boolean isUserIdValid(Long friendId) {
         return friendId != null && friendId > 10000;
+    }
+
+
+    @Nonnull
+    public static Set<Long> getUserIds(String[] args) {
+        Set<Long> qqs = BaniraUtils.mutableSetOf();
+        for (String arg : args) {
+            if (BaniraUtils.hasAt(arg)) {
+                qqs.add(BaniraUtils.getAtUserId(arg));
+            } else {
+                long l = StringUtils.toLong(arg, -1L);
+                if (BaniraUtils.isUserIdValid(l)) qqs.add(l);
+            }
+        }
+        return qqs;
+    }
+
+    @Nonnull
+    public static Set<Long> getUserIdsWithoutReply(@Nonnull List<ArrayMsg> arrayMsgList, @Nonnull String[] args) {
+        Set<Long> result = BaniraUtils.mutableSetOf();
+        result.addAll(ShiroUtils.getAtList(arrayMsgList));
+        result.addAll(getUserIds(args));
+        return result;
+    }
+
+    @Nonnull
+    public static Set<Long> getUserIdsWithReply(@Nonnull BaniraBot bot, Long groupId, @Nonnull List<ArrayMsg> arrayMsgList, @Nonnull String[] args) {
+        Set<Long> result = BaniraUtils.mutableSetOf();
+        if (BaniraUtils.hasReply(arrayMsgList)) {
+            result.add(BaniraUtils.getReplyUserId(bot, groupId, arrayMsgList));
+        } else if (BaniraUtils.hasAtAll(arrayMsgList)) {
+            result.add(233L);
+        }
+        result.addAll(getUserIdsWithoutReply(arrayMsgList, args));
+        return result;
     }
 
     // endregion 其他
