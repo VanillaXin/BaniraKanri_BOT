@@ -7,8 +7,10 @@ import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.JsonUtils;
 import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.common.utils.MsgUtils;
+import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.response.GetForwardMsgResp;
+import com.mikuac.shiro.dto.action.response.MsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.dto.event.notice.GroupMsgDeleteNoticeEvent;
 import com.mikuac.shiro.dto.event.notice.PrivateMsgDeleteNoticeEvent;
@@ -23,11 +25,11 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.DateUtils;
+import xin.vanilla.banira.util.StringUtils;
 
-import java.util.Date;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 /**
  * 消息记录
@@ -148,8 +150,23 @@ public class RecorderPlugin extends BasePlugin {
                     // bot.sendGroupMsg(backGroup, JsonUtils.readValue(record.getMsgRaw(), new TypeReference<List<ArrayMsg>>() {
                     // }), false);
 
+                    // 方式3
+                    List<Map<String, Object>> forwardMsg = new ArrayList<>();
+                    List<List<MsgResp>> forwardContent = BaniraUtils.getForwardContent(record.getMsgRecode());
+                    if (CollectionUtils.isNullOrEmpty(forwardContent)) {
+                        bot.sendGroupMsg(backGroup, head + "\n" + JsonUtils.toJSONString(arrayMsgList), false);
+                    } else {
+                        for (MsgResp msgResp : forwardContent.getFirst()) {
+                            forwardMsg.add(ShiroUtils.generateSingleMsg(StringUtils.toLong(msgResp.getSender().getUserId()), msgResp.getSender().getNickname()
+                                    , msgResp.getMessage()
+                            ));
+                        }
+                        bot.sendGroupMsg(backGroup, head, false);
+                        bot.sendGroupForwardMsg(backGroup, forwardMsg);
+                    }
+
                     // 方式CNM
-                    bot.sendGroupMsg(backGroup, head + "\n" + JsonUtils.toJSONString(arrayMsgList), false);
+                    // bot.sendGroupMsg(backGroup, head + "\n" + JsonUtils.toJSONString(arrayMsgList), false);
                 } else if (BaniraUtils.hasComplexMsg(arrayMsgList)) {
                     bot.sendGroupMsg(backGroup, head, false);
                     bot.sendGroupMsg(backGroup, record.getMsgRecode(), false);
