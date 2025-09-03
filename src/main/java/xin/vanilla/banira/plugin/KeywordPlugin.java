@@ -497,9 +497,9 @@ public class KeywordPlugin extends BasePlugin {
         );
         if (context != null) {
             if (BaniraUtils.isGroupIdValid(event.getGroupId())) {
-                bot.sendPrivateMsg(context.target(), context.msg(), false);
-            } else {
                 bot.sendGroupMsg(context.group(), context.msg(), false);
+            } else {
+                bot.sendPrivateMsg(context.target(), context.msg(), false);
             }
         }
     }
