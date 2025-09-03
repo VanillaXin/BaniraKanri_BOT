@@ -1,9 +1,11 @@
 package xin.vanilla.banira.util;
 
 import com.google.gson.*;
+import com.google.gson.reflect.TypeToken;
 import lombok.NonNull;
 
 import java.lang.reflect.Array;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -11,6 +13,7 @@ import java.util.NoSuchElementException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+@SuppressWarnings("unused")
 public final class JsonUtils {
     public static final Gson GSON = new GsonBuilder().enableComplexMapKeySerialization().create();
     public static final Gson PRETTY_GSON = new GsonBuilder().setPrettyPrinting().enableComplexMapKeySerialization().create();
@@ -171,6 +174,113 @@ public final class JsonUtils {
             return "";
         }
         return keys.getFirst();
+    }
+
+    public static JsonElement parseJson(String json) {
+        if (!JsonUtils.isValidJsonString(json)) {
+            return null;
+        }
+        try {
+            return JsonUtils.GSON.fromJson(json, JsonElement.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static JsonElement parseJson(Object obj) {
+        try {
+            return JsonUtils.GSON.toJsonTree(obj);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static JsonObject parseJsonObject(String json) {
+        if (!JsonUtils.isValidJsonString(json)) {
+            return null;
+        }
+        try {
+            return JsonUtils.GSON.fromJson(json, JsonObject.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static JsonObject parseJsonObject(Object obj) {
+        JsonElement element = parseJson(obj);
+        return element != null && element.isJsonObject() ? element.getAsJsonObject() : null;
+    }
+
+    public static JsonArray parseJsonArray(String json) {
+        if (!JsonUtils.isValidJsonString(json)) {
+            return null;
+        }
+        try {
+            return JsonUtils.GSON.fromJson(json, JsonArray.class);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static JsonArray parseJsonArray(Object obj) {
+        JsonElement element = parseJson(obj);
+        return element != null && element.isJsonArray() ? element.getAsJsonArray() : null;
+    }
+
+    public static String toJsonString(Object obj) {
+        try {
+            return JsonUtils.GSON.toJson(obj);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static String toJsonString(Object obj, Type typeOfSrc) {
+        try {
+            return JsonUtils.GSON.toJson(obj, typeOfSrc);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static String toPrettyJsonString(Object obj) {
+        try {
+            return JsonUtils.PRETTY_GSON.toJson(obj);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static String toPrettyJsonString(Object obj, Type typeOfSrc) {
+        try {
+            return JsonUtils.PRETTY_GSON.toJson(obj, typeOfSrc);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static <T> T fromJson(@NonNull String json, @NonNull Type typeOfT) {
+        try {
+            return JsonUtils.GSON.fromJson(json, typeOfT);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public <T> T fromJson(String json, Class<T> classOfT) {
+        try {
+            return JsonUtils.GSON.fromJson(json, classOfT);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static <T> T fromJson(String json, TypeToken<T> typeOfT) {
+        try {
+            return JsonUtils.GSON.fromJson(json, typeOfT);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**
@@ -679,4 +789,16 @@ public final class JsonUtils {
             throw new IllegalArgumentException("Unsupported type: " + value.getClass());
         }
     }
+
+    public static boolean isValidJsonString(String json) {
+        if (StringUtils.isNullOrEmptyEx(json)) return false;
+        if ((!json.startsWith("{") && !json.endsWith("}")) || (!json.startsWith("[") && !json.endsWith("]")))
+            return false;
+        try {
+            return JsonParser.parseString(json) != null;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
 }

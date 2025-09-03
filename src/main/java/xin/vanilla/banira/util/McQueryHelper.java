@@ -485,7 +485,7 @@ public class McQueryHelper {
         }
 
         String serverData = new String(jsonData);
-        serverJson = JsonUtils.GSON.fromJson(serverData, JsonObject.class);
+        serverJson = JsonUtils.parseJsonObject(serverData);
     }
 
     /**

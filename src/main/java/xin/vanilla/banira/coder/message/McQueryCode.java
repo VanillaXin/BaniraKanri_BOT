@@ -1,10 +1,10 @@
-package xin.vanilla.banira.coder;
+package xin.vanilla.banira.coder.message;
 
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
-import xin.vanilla.banira.coder.common.BaniraCoder;
+import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.config.entity.extended.McConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumCodeType;
@@ -20,15 +20,15 @@ import static xin.vanilla.banira.util.McQueryHelper.*;
  * Minecraft 服务器查询
  */
 @Component
-public class McQueryCode implements BaniraCoder {
+public class McQueryCode implements MessageCoder {
 
     private static final Random random = new Random();
 
     @Override
     public List<String> getExample() {
         return List.of(
-                CODE_START + "mc" + VAL_SEPARATOR + ShiroUtils.getUserAvatar(123456789, 0) + CODE_END
-                , CODE_START + "mcquery" + ARG_SEPARATOR
+                CODE_START + CollectionUtils.getRandomElement(types) + VAL_SEPARATOR + ShiroUtils.getUserAvatar(123456789, 0) + CODE_END
+                , CODE_START + CollectionUtils.getRandomElement(types) + ARG_SEPARATOR
                         + "name" + VAL_SEPARATOR + "server" + ARG_SEPARATOR
                         + "host" + VAL_SEPARATOR + "127.0.0.1" + ARG_SEPARATOR
                         + "port" + VAL_SEPARATOR + "25565" + CODE_END

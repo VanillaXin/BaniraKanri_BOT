@@ -39,16 +39,23 @@ public class BaniraCodeContext implements Cloneable {
      * 发送时间
      */
     private Long time;
+    /**
+     * 消息ID
+     */
+    private Integer msgId;
 
     public BaniraCodeContext clone() {
         try {
             return (BaniraCodeContext) super.clone();
         } catch (Exception e) {
             return new BaniraCodeContext(bot, originalMsg)
+                    .opId(opId)
                     .group(group)
                     .sender(sender)
                     .target(target)
                     .msg(msg)
+                    .time(time)
+                    .msgId(msgId)
                     ;
         }
     }

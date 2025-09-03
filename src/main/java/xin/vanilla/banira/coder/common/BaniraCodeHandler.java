@@ -12,7 +12,7 @@ import java.util.List;
 public class BaniraCodeHandler {
 
     @Autowired(required = false)
-    private List<BaniraCoder> coders = new ArrayList<>();
+    private List<MessageCoder> coders = new ArrayList<>();
 
     public BaniraCodeContext decode(BaniraCodeContext context) {
         BaniraCodeContext clone = context.clone();
@@ -22,9 +22,9 @@ public class BaniraCodeHandler {
         if (textCode == null) return clone;
         clone.msg(textCode.getData().get("text").getAsString());
 
-        for (BaniraCoder coder : coders.stream()
+        for (MessageCoder coder : coders.stream()
                 .filter(coder -> !coder.isKanri())
-                .sorted(Comparator.comparingInt(BaniraCoder::getPriority))
+                .sorted(Comparator.comparingInt(MessageCoder::getPriority))
                 .toList()) {
             for (int i = 0; i < codeList.size(); i++) {
                 BaniraCode code = codeList.get(i);

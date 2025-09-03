@@ -1,15 +1,15 @@
-package xin.vanilla.banira.coder;
+package xin.vanilla.banira.coder.message;
 
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
-import xin.vanilla.banira.coder.common.BaniraCoder;
+import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumCodeType;
 
 import java.util.List;
 
 @Component
-public class TextCode implements BaniraCoder {
+public class TextCode implements MessageCoder {
 
     @Override
     public List<String> getExample() {

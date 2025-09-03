@@ -575,8 +575,8 @@ public final class BaniraUtils {
     public static List<MsgResp> encodeSendForwardMsg(@Nonnull List<Map<String, Object>> msg) {
         List<MsgResp> result = new ArrayList<>();
         for (Map<String, Object> node : msg) {
-            JsonObject jsonObject = xin.vanilla.banira.util.JsonUtils.GSON.toJsonTree(node).getAsJsonObject();
-            if (xin.vanilla.banira.util.JsonUtils.getString(jsonObject, "type").equalsIgnoreCase("node")) {
+            JsonObject jsonObject = xin.vanilla.banira.util.JsonUtils.parseJsonObject(node);
+            if (jsonObject != null && "node".equalsIgnoreCase(xin.vanilla.banira.util.JsonUtils.getString(jsonObject, "type"))) {
                 JsonObject data = xin.vanilla.banira.util.JsonUtils.getJsonObject(jsonObject, "data");
                 MsgResp msgResp = new MsgResp();
                 msgResp.setPostType("message");

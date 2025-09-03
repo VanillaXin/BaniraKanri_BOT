@@ -1,14 +1,13 @@
-package xin.vanilla.banira.coder;
+package xin.vanilla.banira.coder.message;
 
 import com.google.gson.JsonObject;
-import com.mikuac.shiro.common.utils.MsgUtils;
-import com.mikuac.shiro.common.utils.ShiroUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
-import xin.vanilla.banira.coder.common.BaniraCoder;
+import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumCodeType;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.StringUtils;
 
@@ -16,27 +15,26 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 图片
+ * 转发至群组
  */
 @Component
-public class ImageCode implements BaniraCoder {
+public class ToGroupCode implements MessageCoder {
 
     @Override
     public List<String> getExample() {
         return List.of(
-                CODE_START + "image" + ARG_SEPARATOR + "value" + VAL_SEPARATOR + ShiroUtils.getUserAvatar(123456789, 0) + CODE_END
-                , CODE_START + "pic" + VAL_SEPARATOR + "pic/reimu.png" + CODE_END
+                CODE_START + CollectionUtils.getRandomElement(types) + VAL_SEPARATOR + "123456789" + CODE_END
         );
     }
 
     @Override
     public String getName() {
-        return "图片";
+        return "转发至群组";
     }
 
     @Override
     public String getDesc() {
-        return "在消息中插入图片";
+        return "将消息回复目标改为指定群聊";
     }
 
     @Override
@@ -44,8 +42,8 @@ public class ImageCode implements BaniraCoder {
         return EnumCodeType.MSG;
     }
 
-    private final Set<String> types = BaniraUtils.mutableSetOf(
-            "image", "pic", "img"
+    private static final Set<String> types = BaniraUtils.mutableSetOf(
+            "tg", "2g", "togroup", "2group"
     );
 
     @Override
@@ -58,10 +56,11 @@ public class ImageCode implements BaniraCoder {
         if (notMatch(code)) return context;
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String url = JsonUtils.getString(data, "url");
-        if (StringUtils.isNullOrEmptyEx(url)) url = JsonUtils.getString(data, "value");
-        if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
-        return context.msg(context.msg().replace(placeholder, MsgUtils.builder().img(url).build()));
+        String group = JsonUtils.getString(data, "value");
+        if (StringUtils.isNullOrEmptyEx(group)) return fail(context, code, placeholder);
+        long groupId = StringUtils.toLong(group);
+        if (!BaniraUtils.isGroupIdValid(groupId)) return fail(context, code, placeholder);
+        return context.group(groupId).msg(context.msg().replace(placeholder, ""));
     }
 
 }

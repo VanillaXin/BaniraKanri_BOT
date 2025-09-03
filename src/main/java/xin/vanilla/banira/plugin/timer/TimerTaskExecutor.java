@@ -21,7 +21,7 @@ public class TimerTaskExecutor implements ITimerTaskExecutor {
 
     @Override
     public void execute(TimerRecord task) {
-        String taskJsonStrong = JsonUtils.GSON.toJson(task);
+        String taskJsonStrong = JsonUtils.toJsonString(task);
         LOGGER.info("Executing timer task: {}", taskJsonStrong);
 
         BaniraBot bot = BaniraUtils.getBot(task.getBotId());

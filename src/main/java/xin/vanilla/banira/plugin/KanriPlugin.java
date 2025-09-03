@@ -11,7 +11,7 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.coder.ToGroupCode;
+import xin.vanilla.banira.coder.message.ToGroupCode;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.BaniraCodeUtils;
 import xin.vanilla.banira.domain.BaniraCodeContext;

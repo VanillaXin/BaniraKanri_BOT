@@ -20,7 +20,7 @@ import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.coder.McQueryCode;
+import xin.vanilla.banira.coder.message.McQueryCode;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.domain.MinecraftRecord;

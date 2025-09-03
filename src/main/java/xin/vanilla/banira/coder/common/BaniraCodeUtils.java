@@ -32,8 +32,8 @@ public final class BaniraCodeUtils {
 
         while (i < len) {
             boolean isBkode = true;
-            for (int j = 0; j < BaniraCoder.CODE_START.length(); j++) {
-                if (i + j >= len || msg.charAt(i + j) != BaniraCoder.CODE_START.charAt(j)) {
+            for (int j = 0; j < MessageCoder.CODE_START.length(); j++) {
+                if (i + j >= len || msg.charAt(i + j) != MessageCoder.CODE_START.charAt(j)) {
                     isBkode = false;
                     break;
                 }
@@ -42,12 +42,12 @@ public final class BaniraCodeUtils {
             if (isBkode) {
                 // 找到 bk 码开始位置
                 int start = i;
-                i += BaniraCoder.CODE_START.length(); // 跳过 "[bkode:"
+                i += MessageCoder.CODE_START.length(); // 跳过 "[bkode:"
 
                 // 解析 bk 码类型
                 StringBuilder typeBuilder = new StringBuilder();
-                while (i < len && msg.charAt(i) != BaniraCoder.ARG_SEPARATOR && msg.charAt(i) != BaniraCoder.VAL_SEPARATOR
-                        && !msg.startsWith(BaniraCoder.CODE_END, i)
+                while (i < len && msg.charAt(i) != MessageCoder.ARG_SEPARATOR && msg.charAt(i) != MessageCoder.VAL_SEPARATOR
+                        && !msg.startsWith(MessageCoder.CODE_END, i)
                 ) {
                     typeBuilder.append(msg.charAt(i));
                     i++;
@@ -63,15 +63,15 @@ public final class BaniraCodeUtils {
                 Map<String, String> data = new HashMap<>();
 
                 // 解析参数
-                if (msg.charAt(i) == BaniraCoder.ARG_SEPARATOR || (msg.charAt(i) == BaniraCoder.VAL_SEPARATOR && chain.size() < 2)) {
+                if (msg.charAt(i) == MessageCoder.ARG_SEPARATOR || (msg.charAt(i) == MessageCoder.VAL_SEPARATOR && chain.size() < 2)) {
                     i++; // 跳过 ARG_SEPARATOR || VAL_SEPARATOR
                     while (i < len
-                            && !msg.startsWith(BaniraCoder.CODE_END, i)
+                            && !msg.startsWith(MessageCoder.CODE_END, i)
                     ) {
                         // 解析键
                         StringBuilder keyBuilder = new StringBuilder();
-                        while (i < len && msg.charAt(i) != BaniraCoder.VAL_SEPARATOR
-                                && !msg.startsWith(BaniraCoder.CODE_END, i)
+                        while (i < len && msg.charAt(i) != MessageCoder.VAL_SEPARATOR
+                                && !msg.startsWith(MessageCoder.CODE_END, i)
                         ) {
                             keyBuilder.append(msg.charAt(i));
                             i++;
@@ -79,10 +79,10 @@ public final class BaniraCodeUtils {
 
                         // 解析值
                         StringBuilder valueBuilder = new StringBuilder();
-                        if (msg.charAt(i) == BaniraCoder.VAL_SEPARATOR) {
+                        if (msg.charAt(i) == MessageCoder.VAL_SEPARATOR) {
                             i++; // 跳过 VAL_SEPARATOR
-                            while (i < len && msg.charAt(i) != BaniraCoder.ARG_SEPARATOR
-                                    && !msg.startsWith(BaniraCoder.CODE_END, i)
+                            while (i < len && msg.charAt(i) != MessageCoder.ARG_SEPARATOR
+                                    && !msg.startsWith(MessageCoder.CODE_END, i)
                             ) {
                                 valueBuilder.append(msg.charAt(i));
                                 i++;
@@ -98,19 +98,19 @@ public final class BaniraCodeUtils {
                             data.put(key, value);
                         }
 
-                        if (i < len && msg.charAt(i) == BaniraCoder.ARG_SEPARATOR) {
+                        if (i < len && msg.charAt(i) == MessageCoder.ARG_SEPARATOR) {
                             i++; // 跳过 ARG_SEPARATOR 继续解析下一个参数
                         }
                     }
                 }
 
-                if (msg.startsWith(BaniraCoder.CODE_END, i)) {
+                if (msg.startsWith(MessageCoder.CODE_END, i)) {
                     i++; // 跳过 CODE_END
                     // 创建 BaniraCode
                     BaniraCode item = new BaniraCode();
                     item.setType(type);
                     item.setRaw(msg.substring(start, i));
-                    item.setData(JsonUtils.GSON.toJsonTree(data).getAsJsonObject());
+                    item.setData(JsonUtils.parseJsonObject(data));
                     chain.add(item);
                     addTextMsg(chain, placeholder(chain.size() - 1));
                 } else {
@@ -120,8 +120,8 @@ public final class BaniraCodeUtils {
             } else {
                 // 普通文本
                 StringBuilder textBuilder = new StringBuilder();
-                while (i < len && !(msg.charAt(i) == BaniraCoder.CODE_START.charAt(0)
-                        && i + BaniraCoder.CODE_START.length() < len && msg.startsWith(BaniraCoder.CODE_START, i))
+                while (i < len && !(msg.charAt(i) == MessageCoder.CODE_START.charAt(0)
+                        && i + MessageCoder.CODE_START.length() < len && msg.startsWith(MessageCoder.CODE_START, i))
                 ) {
                     textBuilder.append(msg.charAt(i));
                     i++;
@@ -158,11 +158,11 @@ public final class BaniraCodeUtils {
     }
 
     public static String placeholder(int i) {
-        return BaniraCoder.CODE_START + i + BaniraCoder.CODE_END;
+        return MessageCoder.CODE_START + i + MessageCoder.CODE_END;
     }
 
     @Nullable
-    public static BaniraCode getTextBaniraCode(List<BaniraCode> codeList){
+    public static BaniraCode getTextBaniraCode(List<BaniraCode> codeList) {
         if (CollectionUtils.isNullOrEmpty(codeList)) return null;
         return codeList.stream().filter(c -> "text".equals(c.getType())).findFirst().orElse(null);
     }

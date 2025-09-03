@@ -5,7 +5,7 @@ import xin.vanilla.banira.enums.EnumCodeType;
 
 import java.util.List;
 
-public interface BaniraCoder {
+public interface MessageCoder {
 
     String CODE_START = "[bkode:";
     String CODE_END = "]";

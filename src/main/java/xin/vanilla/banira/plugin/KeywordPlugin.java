@@ -1,6 +1,9 @@
 package xin.vanilla.banira.plugin;
 
+import com.google.gson.JsonObject;
 import com.mikuac.shiro.annotation.AnyMessageHandler;
+import com.mikuac.shiro.annotation.GroupPokeNoticeHandler;
+import com.mikuac.shiro.annotation.PrivatePokeNoticeHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.constant.ActionParams;
@@ -11,12 +14,16 @@ import com.mikuac.shiro.dto.action.response.LoginInfoResp;
 import com.mikuac.shiro.dto.action.response.MsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.dto.event.message.MessageEvent;
+import com.mikuac.shiro.dto.event.notice.PokeNoticeEvent;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCodeHandler;
+import xin.vanilla.banira.coder.common.EventCoder;
+import xin.vanilla.banira.coder.event.PokeCode;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.KeyInstructionsConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
@@ -29,12 +36,11 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.service.IKeywordManager;
 import xin.vanilla.banira.service.IKeywordRecordManager;
-import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.RegexpHelper;
-import xin.vanilla.banira.util.StringUtils;
+import xin.vanilla.banira.start.SpringContextHolder;
+import xin.vanilla.banira.util.*;
 
 import java.util.*;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.regex.Matcher;
 
 /**
@@ -51,6 +57,8 @@ public class KeywordPlugin extends BasePlugin {
     private IKeywordRecordManager keywordRecordManager;
     @Resource
     private BaniraCodeHandler codeHandler;
+    @Autowired(required = false)
+    private List<EventCoder> eventCoders = new ArrayList<>();
 
     private static final Set<String> helpType = BaniraUtils.mutableSetOf(
             "keyword", "key", "keyWord", "关键词", "关键词回复"
@@ -446,16 +454,21 @@ public class KeywordPlugin extends BasePlugin {
 
     @AnyMessageHandler
     public boolean reply(BaniraBot bot, AnyMessageEvent event) {
+        AtomicReference<String> message = new AtomicReference<>(event.getMessage());
+        eventCoders.forEach(coder -> message.set(coder.escape(message.get())));
         BaniraCodeContext context = this.searchReply(
                 new BaniraCodeContext(bot, event.getArrayMsg())
                         .group(event.getGroupId())
                         .sender(event.getUserId())
                         .target(event.getUserId())
-                        .msg(event.getMessage())
+                        .msg(message.get())
+                        .msgId(event.getMessageId())
                         .time(event.getTime())
         );
         if (context != null) {
             ActionData<MsgId> msgId;
+            message.set(context.msg());
+            eventCoders.forEach(coder -> message.set(coder.unescape(message.get())));
             if (ActionParams.PRIVATE.equals(event.getMessageType())) {
                 msgId = bot.sendPrivateMsg(context.target(), context.msg(), false);
             } else if (ActionParams.GROUP.equals(event.getMessageType())) {
@@ -464,6 +477,31 @@ public class KeywordPlugin extends BasePlugin {
             return bot.isActionDataMsgIdNotEmpty(msgId);
         }
         return false;
+    }
+
+    @GroupPokeNoticeHandler
+    @PrivatePokeNoticeHandler
+    public void reply(BaniraBot bot, PokeNoticeEvent event) {
+        JsonObject data = new JsonObject();
+        JsonUtils.setLong(data, "targetId", event.getTargetId());
+        JsonUtils.setLong(data, "senderId", event.getUserId());
+        String eventMsg = getEventCoder(PokeCode.class).build(data);
+
+        BaniraCodeContext context = this.searchReply(
+                new BaniraCodeContext(bot, new ArrayList<>())
+                        .group(event.getGroupId())
+                        .sender(event.getUserId())
+                        .target(event.getTargetId())
+                        .msg(eventMsg)
+                        .time(event.getTime())
+        );
+        if (context != null) {
+            if (BaniraUtils.isGroupIdValid(event.getGroupId())) {
+                bot.sendPrivateMsg(context.target(), context.msg(), false);
+            } else {
+                bot.sendGroupMsg(context.group(), context.msg(), false);
+            }
+        }
     }
 
 
@@ -515,5 +553,9 @@ public class KeywordPlugin extends BasePlugin {
             result = codeHandler.decode(context);
         }
         return result;
+    }
+
+    private EventCoder getEventCoder(Class<? extends EventCoder> clazz) {
+        return SpringContextHolder.getBean(clazz);
     }
 }
