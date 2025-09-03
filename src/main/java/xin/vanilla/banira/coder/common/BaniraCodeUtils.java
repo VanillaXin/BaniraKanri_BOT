@@ -63,7 +63,7 @@ public final class BaniraCodeUtils {
                 Map<String, String> data = new HashMap<>();
 
                 // 解析参数
-                if (msg.charAt(i) == MessageCoder.ARG_SEPARATOR || (msg.charAt(i) == MessageCoder.VAL_SEPARATOR && chain.size() < 2)) {
+                if (msg.charAt(i) == MessageCoder.ARG_SEPARATOR || (msg.charAt(i) == MessageCoder.VAL_SEPARATOR)) {
                     i++; // 跳过 ARG_SEPARATOR || VAL_SEPARATOR
                     while (i < len
                             && !msg.startsWith(MessageCoder.CODE_END, i)
@@ -169,7 +169,8 @@ public final class BaniraCodeUtils {
 
     public static void main(String[] args) {
         String s = "abcds[bkode:tg:123456789] wdwe [bkode:tf,value:123456789,data:012456]ds2ad\n" +
-                "[bkode:img,value:https://www.baidu.com/img/bd_logo1.png]";
+                "[bkode:img,value:https://www.baidu.com/img/bd_logo1.png]\n" +
+                "mute[bkode:mute:60-18000]";
         List<BaniraCode> codeList = getAllBaniraCode(s);
         System.out.println(codeList);
     }
