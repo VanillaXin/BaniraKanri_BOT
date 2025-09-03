@@ -77,7 +77,7 @@ public class MuteCode implements MessageCoder {
                 .replace("#", "-")
                 .split("-");
         if (split.length > 2) return fail(context, code, placeholder);
-        int time;
+        double time;
         if (split.length == 1) {
             time = StringUtils.toInt(split[0]);
         } else {
@@ -94,7 +94,7 @@ public class MuteCode implements MessageCoder {
                 , ""
         );
 
-        String[] args = {String.valueOf(context.target()), String.valueOf(time)};
+        String[] args = {String.valueOf(context.target()), String.valueOf(time / 60d)};
 
         if (muteCommand.execute(kanriContext, args) != KanriHandler.FAIL) {
             return context.msg(context.msg().replace(placeholder, ""));
