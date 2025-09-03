@@ -34,6 +34,7 @@ public class BaniraCodeHandler {
                     try {
                         clone = coder.execute(clone, code, BaniraCodeUtils.placeholder(i));
                     } catch (Exception e) {
+                        clone = coder.fail(clone, code, BaniraCodeUtils.placeholder(i));
                         LOGGER.error("Failed to decode banira code", e);
                     }
                 }

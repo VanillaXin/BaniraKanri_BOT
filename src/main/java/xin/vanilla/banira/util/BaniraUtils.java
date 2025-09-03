@@ -669,20 +669,24 @@ public final class BaniraUtils {
     }
 
     @Nonnull
-    public static Set<Long> getUserIdsWithoutReply(@Nonnull List<ArrayMsg> arrayMsgList, @Nonnull String[] args) {
+    public static Set<Long> getUserIdsWithoutReply(List<ArrayMsg> arrayMsgList, @Nonnull String[] args) {
         Set<Long> result = BaniraUtils.mutableSetOf();
-        result.addAll(ShiroUtils.getAtList(arrayMsgList));
+        if (CollectionUtils.isNotNullOrEmpty(arrayMsgList)) {
+            result.addAll(ShiroUtils.getAtList(arrayMsgList));
+        }
         result.addAll(getUserIds(args));
         return result;
     }
 
     @Nonnull
-    public static Set<Long> getUserIdsWithReply(@Nonnull BaniraBot bot, Long groupId, @Nonnull List<ArrayMsg> arrayMsgList, @Nonnull String[] args) {
+    public static Set<Long> getUserIdsWithReply(@Nonnull BaniraBot bot, Long groupId, List<ArrayMsg> arrayMsgList, @Nonnull String[] args) {
         Set<Long> result = BaniraUtils.mutableSetOf();
-        if (BaniraUtils.hasReply(arrayMsgList)) {
-            result.add(BaniraUtils.getReplyUserId(bot, groupId, arrayMsgList));
-        } else if (BaniraUtils.hasAtAll(arrayMsgList)) {
-            result.add(233L);
+        if (CollectionUtils.isNotNullOrEmpty(arrayMsgList)) {
+            if (BaniraUtils.hasReply(arrayMsgList)) {
+                result.add(BaniraUtils.getReplyUserId(bot, groupId, arrayMsgList));
+            } else if (BaniraUtils.hasAtAll(arrayMsgList)) {
+                result.add(233L);
+            }
         }
         result.addAll(getUserIdsWithoutReply(arrayMsgList, args));
         return result;
