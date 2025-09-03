@@ -4,6 +4,7 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumCodeType;
 
 import java.util.List;
+import java.util.Random;
 
 public interface MessageCoder {
 
@@ -11,6 +12,7 @@ public interface MessageCoder {
     String CODE_END = "]";
     Character ARG_SEPARATOR = ',';
     Character VAL_SEPARATOR = ':';
+    Random RANDOM = new Random();
 
     List<String> getExample();
 
@@ -29,7 +31,7 @@ public interface MessageCoder {
      * 优先级
      */
     default int getPriority() {
-        return Integer.MAX_VALUE;
+        return Integer.MAX_VALUE / 2;
     }
 
     default boolean notMatch(BaniraCode code) {
