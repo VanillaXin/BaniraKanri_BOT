@@ -43,12 +43,12 @@ public class KanriContext {
 
     private boolean coder = false;
 
-    public KanriContext(MessageEvent event, BaniraBot bot, long group, long sender, int msgId, String guildMsgId, String content) {
+    public KanriContext(MessageEvent event, BaniraBot bot, Long group, Long sender, Integer msgId, String guildMsgId, String content) {
         this.event = event;
         this.bot = bot;
-        this.group = group;
-        this.sender = sender;
-        this.msgId = msgId;
+        this.group = group == null ? 0L : group;
+        this.sender = sender == null ? 0L : sender;
+        this.msgId = msgId == null ? 0 : msgId;
         this.guildMsgId = guildMsgId;
         this.content = content;
     }
