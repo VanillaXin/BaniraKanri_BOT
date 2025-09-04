@@ -69,7 +69,7 @@ public class MuteCode implements MessageCoder {
         if (notMatch(code)) return context;
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String timeString = JsonUtils.getString(data, "value");
+        String timeString = JsonUtils.getString(data, "value", "");
         if (StringUtils.isNullOrEmpty(timeString)) return fail(context, code, placeholder);
         String[] split = timeString.replace("_", "-")
                 .replace("~", "-")

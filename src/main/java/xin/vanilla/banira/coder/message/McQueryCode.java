@@ -64,10 +64,10 @@ public class McQueryCode implements MessageCoder {
         if (notMatch(code)) return context;
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String name = JsonUtils.getString(data, "name");
-        String ip = JsonUtils.getString(data, "host");
-        String port = JsonUtils.getString(data, "port");
-        if (StringUtils.isNullOrEmptyEx(ip)) ip = JsonUtils.getString(data, "value");
+        String name = JsonUtils.getString(data, "name", "");
+        String ip = JsonUtils.getString(data, "host", "");
+        String port = JsonUtils.getString(data, "port", "");
+        if (StringUtils.isNullOrEmptyEx(ip)) ip = JsonUtils.getString(data, "value", "");
         if (StringUtils.isNullOrEmptyEx(ip)) return fail(context, code, placeholder);
 
         if (StringUtils.isNullOrEmptyEx(port) || StringUtils.toInt(port) == 0) port = "25565";

@@ -576,12 +576,12 @@ public final class BaniraUtils {
         List<MsgResp> result = new ArrayList<>();
         for (Map<String, Object> node : msg) {
             JsonObject jsonObject = xin.vanilla.banira.util.JsonUtils.parseJsonObject(node);
-            if (jsonObject != null && "node".equalsIgnoreCase(xin.vanilla.banira.util.JsonUtils.getString(jsonObject, "type"))) {
+            if (jsonObject != null && "node".equalsIgnoreCase(xin.vanilla.banira.util.JsonUtils.getString(jsonObject, "type", ""))) {
                 JsonObject data = xin.vanilla.banira.util.JsonUtils.getJsonObject(jsonObject, "data");
                 MsgResp msgResp = new MsgResp();
                 msgResp.setPostType("message");
                 if (data.has("id")) {
-                    msgResp.setMessage(MsgUtils.builder().forward(xin.vanilla.banira.util.JsonUtils.getString(data, "id")).build());
+                    msgResp.setMessage(MsgUtils.builder().forward(xin.vanilla.banira.util.JsonUtils.getString(data, "id", "")).build());
                     msgResp.setRawMessage(msgResp.getMessage());
                     msgResp.setArrayMsg(MessageConverser.stringToArray(msgResp.getMessage()));
                 } else {

@@ -56,7 +56,7 @@ public class ToGroupCode implements MessageCoder {
         if (notMatch(code)) return context;
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String group = JsonUtils.getString(data, "value");
+        String group = JsonUtils.getString(data, "value", "");
         if (StringUtils.isNullOrEmptyEx(group)) return fail(context, code, placeholder);
         long groupId = StringUtils.toLong(group);
         if (!BaniraUtils.isGroupIdValid(groupId)) return fail(context, code, placeholder);

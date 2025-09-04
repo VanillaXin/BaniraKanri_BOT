@@ -61,10 +61,10 @@ public class ImageCode implements MessageCoder {
         if (notMatch(code)) return context;
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String jsonPath = JsonUtils.getString(data, "path");
-        if (StringUtils.isNullOrEmptyEx(jsonPath)) JsonUtils.getString(data, "jsonpath");
-        String url = JsonUtils.getString(data, "url");
-        if (StringUtils.isNullOrEmptyEx(url)) url = JsonUtils.getString(data, "value");
+        String jsonPath = JsonUtils.getString(data, "path", "");
+        if (StringUtils.isNullOrEmptyEx(jsonPath)) JsonUtils.getString(data, "jsonpath", "");
+        String url = JsonUtils.getString(data, "url", "");
+        if (StringUtils.isNullOrEmptyEx(url)) url = JsonUtils.getString(data, "value", "");
         if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
             JsonElement json = JsonUtils.parseJson(HttpUtil.get(url));

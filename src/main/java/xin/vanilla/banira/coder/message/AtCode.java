@@ -57,7 +57,7 @@ public class AtCode implements MessageCoder {
         if (notMatch(code)) return context;
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String user = JsonUtils.getString(data, "value");
+        String user = JsonUtils.getString(data, "value", "");
         if (StringUtils.isNullOrEmptyEx(user)) return fail(context, code, placeholder);
         long userId = StringUtils.toLong(user);
         if (!BaniraUtils.isUserIdValid(userId)) return fail(context, code, placeholder);
