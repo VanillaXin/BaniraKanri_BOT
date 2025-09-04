@@ -74,6 +74,7 @@ public class KanriPlugin extends BasePlugin {
                         , event.getUserId()
                         , event.getUserId()
                 )
+                        .msg(event.getMessage())
         );
 
         if (BaniraUtils.isGroupIdValid(context.group())) {
@@ -91,6 +92,7 @@ public class KanriPlugin extends BasePlugin {
                         , event.getUserId()
                         , event.getUserId()
                 )
+                        .msg(event.getMessage())
         );
 
         if (BaniraUtils.isGroupIdValid(context.group())) {
