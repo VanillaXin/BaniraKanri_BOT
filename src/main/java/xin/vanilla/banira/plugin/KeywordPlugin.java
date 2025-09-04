@@ -457,10 +457,12 @@ public class KeywordPlugin extends BasePlugin {
         AtomicReference<String> message = new AtomicReference<>(event.getMessage());
         eventCoders.forEach(coder -> message.set(coder.escape(message.get())));
         BaniraCodeContext context = this.searchReply(
-                new BaniraCodeContext(bot, event.getArrayMsg())
-                        .group(event.getGroupId())
-                        .sender(event.getUserId())
-                        .target(event.getUserId())
+                new BaniraCodeContext(bot
+                        , event.getArrayMsg()
+                        , event.getGroupId()
+                        , event.getUserId()
+                        , event.getUserId()
+                )
                         .msg(message.get())
                         .msgId(event.getMessageId())
                         .time(event.getTime())
@@ -470,7 +472,7 @@ public class KeywordPlugin extends BasePlugin {
             message.set(context.msg());
             eventCoders.forEach(coder -> message.set(coder.unescape(message.get())));
             if (ActionParams.PRIVATE.equals(event.getMessageType())) {
-                msgId = bot.sendPrivateMsg(context.target(), context.msg(), false);
+                msgId = bot.sendPrivateMsg(context.sender(), context.msg(), false);
             } else if (ActionParams.GROUP.equals(event.getMessageType())) {
                 msgId = bot.sendGroupMsg(context.group(), context.msg(), false);
             } else msgId = null;
@@ -488,10 +490,12 @@ public class KeywordPlugin extends BasePlugin {
         String eventMsg = getEventCoder(PokeCode.class).build(data);
 
         BaniraCodeContext context = this.searchReply(
-                new BaniraCodeContext(bot, new ArrayList<>())
-                        .group(event.getGroupId())
-                        .sender(event.getUserId())
-                        .target(event.getTargetId())
+                new BaniraCodeContext(bot
+                        , new ArrayList<>()
+                        , event.getGroupId()
+                        , event.getUserId()
+                        , event.getTargetId()
+                )
                         .msg(eventMsg)
                         .time(event.getTime())
         );
@@ -499,7 +503,7 @@ public class KeywordPlugin extends BasePlugin {
             if (BaniraUtils.isGroupIdValid(event.getGroupId())) {
                 bot.sendGroupMsg(context.group(), context.msg(), false);
             } else {
-                bot.sendPrivateMsg(context.target(), context.msg(), false);
+                bot.sendPrivateMsg(context.sender(), context.msg(), false);
             }
         }
     }

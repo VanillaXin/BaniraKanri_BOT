@@ -28,10 +28,12 @@ public class TimerTaskExecutor implements ITimerTaskExecutor {
         if (bot == null) return;
 
         BaniraCodeContext decode = codeHandler.decode(
-                new BaniraCodeContext(bot, MessageConverser.stringToArray(task.getReplyMsg()))
-                        .group(task.getGroupId())
-                        .sender(task.getCreatorId())
-                        .target(task.getCreatorId())
+                new BaniraCodeContext(bot
+                        , MessageConverser.stringToArray(task.getReplyMsg())
+                        , task.getGroupId()
+                        , task.getCreatorId()
+                        , task.getCreatorId()
+                )
                         .opId(task.getCreatorId())
                         .msg(task.getReplyMsg())
                         .time(DateUtils.getTimestamp(null))
@@ -39,8 +41,8 @@ public class TimerTaskExecutor implements ITimerTaskExecutor {
 
         if (BaniraUtils.isGroupIdValid(decode.group())) {
             bot.sendGroupMsg(decode.group(), decode.msg(), false);
-        } else if (BaniraUtils.isUserIdValid(decode.target())) {
-            bot.sendPrivateMsg(decode.target(), decode.msg(), false);
+        } else if (BaniraUtils.isUserIdValid(decode.sender())) {
+            bot.sendPrivateMsg(decode.sender(), decode.msg(), false);
         }
 
         LOGGER.info("Executed timer task: {}", taskJsonStrong);

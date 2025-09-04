@@ -11,9 +11,9 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.coder.message.ToGroupCode;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.BaniraCodeUtils;
+import xin.vanilla.banira.coder.message.ToGroupCode;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
@@ -68,10 +68,12 @@ public class KanriPlugin extends BasePlugin {
     @GroupMessageHandler
     public boolean group(BaniraBot bot, GroupMessageEvent event) {
         BaniraCodeContext context = this.decodeToGroupCode(
-                new BaniraCodeContext(bot, event.getArrayMsg())
-                        .sender(event.getUserId())
-                        .group(event.getGroupId())
-                        .msg(event.getMessage())
+                new BaniraCodeContext(bot
+                        , event.getArrayMsg()
+                        , event.getGroupId()
+                        , event.getUserId()
+                        , event.getUserId()
+                )
         );
 
         if (BaniraUtils.isGroupIdValid(context.group())) {
@@ -83,10 +85,12 @@ public class KanriPlugin extends BasePlugin {
     @PrivateMessageHandler
     public boolean friend(BaniraBot bot, PrivateMessageEvent event) {
         BaniraCodeContext context = this.decodeToGroupCode(
-                new BaniraCodeContext(bot, event.getArrayMsg())
-                        .sender(event.getUserId())
-                        .target(event.getSelfId())
-                        .msg(event.getMessage())
+                new BaniraCodeContext(bot
+                        , event.getArrayMsg()
+                        , 0L
+                        , event.getUserId()
+                        , event.getUserId()
+                )
         );
 
         if (BaniraUtils.isGroupIdValid(context.group())) {

@@ -73,7 +73,7 @@ public class MuteCommand implements KanriHandler {
         Set<Long> targets = getUserIdsWithReply(context, args);
 
         // 解析时长
-        int duration = (int) (StringUtils.toDouble(CollectionUtils.getLast(args)) * 60);
+        int duration = (int) (StringUtils.toDouble(CollectionUtils.getLast(args)) * 60d);
 
         // 全体禁言
         if (targets.contains(233L)) {

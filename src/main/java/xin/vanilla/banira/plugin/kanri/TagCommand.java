@@ -82,14 +82,17 @@ public class TagCommand implements KanriHandler {
         }
         if (tag == null) return FAIL;
 
-        BaniraCodeContext codeContext = new BaniraCodeContext(context.bot(), context.event().getArrayMsg());
+        BaniraCodeContext codeContext = new BaniraCodeContext(context.bot()
+                , context.event().getArrayMsg()
+                , context.group()
+                , context.sender()
+                , context.sender()
+        );
 
         for (Long targetId : targets) {
             if (context.bot().isUpper(context.group(), context.sender(), targetId)) {
                 BaniraCodeContext code = codeHandler.decode(
-                        codeContext.sender(context.sender())
-                                .group(context.group())
-                                .target(targetId)
+                        codeContext.target(targetId)
                                 .msg(tag)
                 );
                 context.bot().setGroupSpecialTitle(context.group(), targetId, code.msg(), -1);

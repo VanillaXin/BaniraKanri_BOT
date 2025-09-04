@@ -10,25 +10,39 @@ import java.util.List;
 @Data
 @Accessors(chain = true, fluent = true)
 public class BaniraCodeContext implements Cloneable {
+    /**
+     * 权限获取目标
+     */
+    private Long opId = 0L;
+
     private final BaniraBot bot;
     /**
      * 原始消息
      */
     private final List<ArrayMsg> originalMsg;
     /**
-     * 权限获取目标
+     * 群组
      */
-    private Long opId = 0L;
-    /**
-     * 群组(若有)
-     */
-    private Long group;
+    private final Long _group;
     /**
      * 消息发送者
      */
-    private Long sender;
+    private final Long _sender;
     /**
      * 作用目标
+     */
+    private final Long _target;
+
+    /**
+     * 群组(解码后)
+     */
+    private Long group;
+    /**
+     * 消息发送者(解码后)
+     */
+    private Long sender;
+    /**
+     * 作用目标(解码后)
      */
     private Long target;
     /**
@@ -44,11 +58,22 @@ public class BaniraCodeContext implements Cloneable {
      */
     private Integer msgId;
 
+    public BaniraCodeContext(BaniraBot bot, List<ArrayMsg> originalMsg, Long _group, Long _sender, Long _target) {
+        this.bot = bot;
+        this.originalMsg = originalMsg;
+        this._group = _group;
+        this.group = _group;
+        this._sender = _sender;
+        this.sender = _sender;
+        this._target = _target;
+        this.target = _target;
+    }
+
     public BaniraCodeContext clone() {
         try {
             return (BaniraCodeContext) super.clone();
         } catch (Exception e) {
-            return new BaniraCodeContext(bot, originalMsg)
+            return new BaniraCodeContext(bot, originalMsg, _group, _sender, _target)
                     .opId(opId)
                     .group(group)
                     .sender(sender)

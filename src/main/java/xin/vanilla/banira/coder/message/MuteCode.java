@@ -92,9 +92,9 @@ public class MuteCode implements MessageCoder {
                 , context.msgId()
                 , ""
                 , ""
-        );
+        ).coder(true);
 
-        String[] args = {String.valueOf(context.target()), String.valueOf(time / 60d)};
+        String[] args = {String.valueOf(context.sender()), String.valueOf(time / 60d)};
 
         if (muteCommand.execute(kanriContext, args) != KanriHandler.FAIL) {
             return context.msg(context.msg().replace(placeholder, ""));

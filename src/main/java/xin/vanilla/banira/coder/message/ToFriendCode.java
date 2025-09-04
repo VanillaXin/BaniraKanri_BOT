@@ -60,7 +60,7 @@ public class ToFriendCode implements MessageCoder {
         if (StringUtils.isNullOrEmptyEx(friend)) return fail(context, code, placeholder);
         long friendId = StringUtils.toLong(friend);
         if (!BaniraUtils.isUserIdValid(friendId)) return fail(context, code, placeholder);
-        return context.target(friendId).msg(context.msg().replace(placeholder, ""));
+        return context.sender(friendId).msg(context.msg().replace(placeholder, ""));
     }
 
 }
