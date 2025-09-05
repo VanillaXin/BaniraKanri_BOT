@@ -1,7 +1,6 @@
 package xin.vanilla.banira.util;
 
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.http.HttpUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
@@ -998,7 +997,7 @@ public final class BaniraUtils {
      * @return 文件名称列表
      */
     public static String downloadFileToCachePath(String url) {
-        byte[] bytes = HttpUtil.downloadBytes(url);
+        byte[] bytes = HttpUtils.downloadBytes(url);
         if (bytes != null) {
             File file = new File(String.format("cache/file/%s", StringUtils.md5(bytes)));
             file = FileUtil.writeBytes(bytes, file);
@@ -1023,7 +1022,7 @@ public final class BaniraUtils {
                 .map(it -> new KeyValue<>(it.getStringData("url"), new KeyValue<>(it.getType().name(), it.getStringData("file"))))
                 .toList()
         ) {
-            byte[] bytes = HttpUtil.downloadBytes(url.getKey());
+            byte[] bytes = HttpUtils.downloadBytes(url.getKey());
             if (bytes != null) {
                 String type = url.getValue().getKey();
                 if ("unknown".equals(type)) type = "file";

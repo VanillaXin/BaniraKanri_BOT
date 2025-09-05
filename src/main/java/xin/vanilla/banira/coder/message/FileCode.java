@@ -23,8 +23,6 @@ import java.util.Set;
 @Component
 public class FileCode implements MessageCoder {
 
-    private static final String DEFAULT_FILE_NAME = "文件";
-
     @Override
     public List<String> getExample() {
         return List.of(
@@ -66,8 +64,9 @@ public class FileCode implements MessageCoder {
         String url = JsonUtils.getString(data, "url", "");
         if (StringUtils.isNullOrEmptyEx(url)) url = JsonUtils.getString(data, "value", "");
         if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
-        String name = JsonUtils.getString(data, "name", DEFAULT_FILE_NAME);
+        String name = JsonUtils.getString(data, "name", "");
         String folder = JsonUtils.getString(data, "folder", "");
+        if (StringUtils.isNullOrEmptyEx(name)) name = url.substring(url.replace("\\", "/").lastIndexOf("/") + 1);
 
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
             JsonElement json = JsonUtils.parseJson(HttpUtil.get(url));
@@ -90,7 +89,7 @@ public class FileCode implements MessageCoder {
     }
 
     public static String build(String url) {
-        return build(url, DEFAULT_FILE_NAME);
+        return build(url, url.replace("\\", "/").substring(url.lastIndexOf("/") + 1));
     }
 
     public static String build(String url, String cover) {
@@ -101,13 +100,22 @@ public class FileCode implements MessageCoder {
     }
 
     private void uploadFile(BaniraCodeContext context, String url, String name, String folder) {
-        String fileName = BaniraUtils.downloadFileToCachePath(url);
-        if (StringUtils.isNotNullOrEmpty(fileName)) {
-            String file = new File("cache/file/", fileName).getAbsolutePath();
+        String filePath = null;
+        File file = new File(url);
+        if (file.exists()) {
+            filePath = file.getAbsolutePath();
+        } else {
+            String fileName = BaniraUtils.downloadFileToCachePath(url);
+            if (StringUtils.isNotNullOrEmpty(fileName)) {
+                filePath = new File("cache/file/", fileName).getAbsolutePath();
+            }
+        }
+        if (StringUtils.isNotNullOrEmpty(filePath)) {
+            name = name.replaceAll("[\\\\/:*?\"<>|]", "");
             if (BaniraUtils.isGroupIdValid(context.group())) {
-                context.bot().uploadGroupFile(context.group(), file, name, folder);
+                context.bot().uploadGroupFile(context.group(), filePath, name, folder);
             } else {
-                context.bot().uploadPrivateFile(context.sender(), file, name);
+                context.bot().uploadPrivateFile(context.sender(), filePath, name);
             }
         }
     }
