@@ -1,5 +1,7 @@
 package xin.vanilla.banira.util;
 
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.http.HttpUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
@@ -22,11 +24,15 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ResolvableType;
+import xin.vanilla.banira.coder.message.FileCode;
+import xin.vanilla.banira.coder.message.ImageCode;
+import xin.vanilla.banira.coder.message.VideoCode;
 import xin.vanilla.banira.config.YamlConfigManager;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.*;
+import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
@@ -34,8 +40,10 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.start.SpringContextHolder;
 
+import java.io.File;
 import java.net.InetAddress;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Supplier;
@@ -980,6 +988,119 @@ public final class BaniraUtils {
     }
 
     // endregion 指令
+
+    // region 文件缓存
+
+
+    /**
+     * 下载文件到缓存目录
+     *
+     * @return 文件名称列表
+     */
+    public static String downloadFileToCachePath(String url) {
+        byte[] bytes = HttpUtil.downloadBytes(url);
+        if (bytes != null) {
+            File file = new File(String.format("cache/file/%s", StringUtils.md5(bytes)));
+            file = FileUtil.writeBytes(bytes, file);
+            if (file != null) {
+                return file.getName();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 下载文件到缓存目录
+     *
+     * @return 文件名称列表
+     */
+    public static List<String> downloadFileToCachePath(List<ArrayMsg> arrayMsgList) {
+        List<String> fileNameList = new ArrayList<>();
+        for (KeyValue<String, KeyValue<String, String>> url : arrayMsgList
+                .stream()
+                .filter(it -> MsgTypeEnum.unknown == it.getType() || MsgTypeEnum.image == it.getType() || MsgTypeEnum.video == it.getType())
+                .filter(it -> StringUtils.isNotNullOrEmpty(it.getStringData("file")))
+                .map(it -> new KeyValue<>(it.getStringData("url"), new KeyValue<>(it.getType().name(), it.getStringData("file"))))
+                .toList()
+        ) {
+            byte[] bytes = HttpUtil.downloadBytes(url.getKey());
+            if (bytes != null) {
+                String type = url.getValue().getKey();
+                if ("unknown".equals(type)) type = "file";
+                File file = new File(String.format("cache/%s/%s", type, StringUtils.md5(bytes)));
+                file = FileUtil.writeBytes(bytes, file);
+                if (file != null) {
+                    fileNameList.add(file.getName());
+                    FileUtil.writeString(url.getKey()
+                            , new File(file.getParent(), String.format("%s_%s.info", file.getName(), url.getValue().getValue()))
+                            , StandardCharsets.UTF_8
+                    );
+                }
+            }
+        }
+        return fileNameList;
+    }
+
+    /**
+     * 下载消息中的附件(图片、视频、文件)至缓存路径并将其转为文件码
+     */
+    public static String replaceBaniraFileCode(String msg) {
+        List<ArrayMsg> arrayMsgList = MessageConverser.stringToArray(msg);
+        List<String> strings = downloadFileToCachePath(arrayMsgList);
+        int index = 0;
+        for (ArrayMsg it : arrayMsgList) {
+            switch (it.getType()) {
+                case unknown: {
+                    if (StringUtils.isNotNullOrEmpty(it.getStringData("file_id"))) {
+                        it.setType(MsgTypeEnum.text);
+                        String file = getCacheRelativePath("file", strings.get(index++));
+                        it.setData(mutableMapOf("text", FileCode.build(file)));
+                    }
+                }
+                break;
+                case image: {
+                    it.setType(MsgTypeEnum.text);
+                    String file = getCacheRelativePath("image", strings.get(index++));
+                    it.setData(mutableMapOf("text", ImageCode.build(file)));
+                }
+                break;
+                case video: {
+                    it.setType(MsgTypeEnum.text);
+                    String file = getCacheRelativePath("video", strings.get(index++));
+                    it.setData(mutableMapOf("text", VideoCode.build(file)));
+                }
+                break;
+            }
+        }
+        return MessageConverser.arraysToString(arrayMsgList);
+    }
+
+    /**
+     * 获取缓存文件相对路径
+     */
+    public static String getCacheRelativePath(String fileType, String fileName) {
+        return String.format("cache/%s/%s", fileType, fileName);
+    }
+
+    /**
+     * 获取缓存文件绝对路径
+     */
+    public static String getCacheAbsolutePath(String fileType, String fileName) {
+        return new File(getCacheRelativePath(fileType, fileName)).getAbsolutePath();
+    }
+
+    public static String convertFileUri(String uri) {
+        try {
+            File file = new File(uri);
+            if (file.exists()) {
+                return file.getAbsolutePath();
+            }
+        } catch (Exception ignored) {
+        }
+        return uri;
+    }
+
+    // endregion 文件缓存
 
     // region 其他
 

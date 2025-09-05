@@ -17,7 +17,7 @@ import java.sql.Statement;
  * sqlite schema initializer
  */
 @Component
-public class SqliteSchemaInitializer implements ApplicationRunner {
+public class SQLiteSchemaInitializer implements ApplicationRunner {
 
     @jakarta.annotation.Resource
     private DataSource dataSource;

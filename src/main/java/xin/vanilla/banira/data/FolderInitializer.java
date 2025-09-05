@@ -10,10 +10,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 @Component
-public class SqliteFolderInitializer implements SmartInitializingSingleton {
+public class FolderInitializer implements SmartInitializingSingleton {
 
     @Value("${spring.datasource.url}")
     private String url;
+
+    private static final String[] paths = new String[]{
+            "data",
+            "config",
+            "cache/image",
+            "cache/video",
+            "cache/file",
+    };
 
     @Override
     public void afterSingletonsInstantiated() {
@@ -24,6 +32,15 @@ public class SqliteFolderInitializer implements SmartInitializingSingleton {
                 Files.createDirectories(dbPath.getParent());
             } catch (IOException e) {
                 throw new IllegalStateException("Failed to create directory for database", e);
+            }
+        }
+
+        for (String path : paths) {
+            Path dataPath = Paths.get(path).toAbsolutePath();
+            try {
+                Files.createDirectories(dataPath);
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to create directory for " + path, e);
             }
         }
     }

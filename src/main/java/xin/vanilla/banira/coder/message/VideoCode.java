@@ -1,10 +1,11 @@
 package xin.vanilla.banira.coder.message;
 
+import cn.hutool.core.img.FontUtil;
+import cn.hutool.core.img.ImgUtil;
 import cn.hutool.http.HttpUtil;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.MsgUtils;
-import com.mikuac.shiro.common.utils.ShiroUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
@@ -15,31 +16,37 @@ import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.StringUtils;
 
+import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.util.List;
 import java.util.Set;
 
 /**
- * 图片
+ * 视频
  */
 @Component
-public class ImageCode implements MessageCoder {
+public class VideoCode implements MessageCoder {
+
+    private static final String DEFAULT_COVER = ImgUtil.toBase64(
+            ImgUtil.createImage(" ", FontUtil.createFont(), Color.BLACK, Color.BLACK, BufferedImage.TYPE_4BYTE_ABGR)
+            , "JPG"
+    );
 
     @Override
     public List<String> getExample() {
         return List.of(
-                CODE_START + CollectionUtils.getRandomElement(types) + ARG_SEPARATOR + "value" + VAL_SEPARATOR + ShiroUtils.getUserAvatar(123456789, 0) + CODE_END
-                , CODE_START + CollectionUtils.getRandomElement(types) + VAL_SEPARATOR + "pic/reimu.png" + CODE_END
+                CODE_START + CollectionUtils.getRandomElement(types) + VAL_SEPARATOR + "pic/reimu.mp4" + CODE_END
         );
     }
 
     @Override
     public String getName() {
-        return "图片";
+        return "视频";
     }
 
     @Override
     public String getDesc() {
-        return "在消息中插入图片";
+        return "短视频消息";
     }
 
     @Override
@@ -48,7 +55,7 @@ public class ImageCode implements MessageCoder {
     }
 
     private static final Set<String> types = BaniraUtils.mutableSetOf(
-            "image", "pic", "img"
+            "video"
     );
 
     @Override
@@ -66,6 +73,7 @@ public class ImageCode implements MessageCoder {
         String url = JsonUtils.getString(data, "url", "");
         if (StringUtils.isNullOrEmptyEx(url)) url = JsonUtils.getString(data, "value", "");
         if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
+        String cover = JsonUtils.getString(data, "cover", DEFAULT_COVER);
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
             JsonElement json = JsonUtils.parseJson(HttpUtil.get(url));
             if (json != null && !json.isJsonNull()) {
@@ -73,22 +81,28 @@ public class ImageCode implements MessageCoder {
                 MsgUtils builder = MsgUtils.builder();
                 if (jsonElement.isJsonArray()) {
                     for (JsonElement element : jsonElement.getAsJsonArray()) {
-                        builder.img(BaniraUtils.convertFileUri(element.getAsString()));
+                        builder.video(BaniraUtils.convertFileUri(element.getAsString()), cover);
                     }
                 } else if (jsonElement.isJsonPrimitive() && jsonElement.getAsJsonPrimitive().isString()) {
-                    builder.img(BaniraUtils.convertFileUri(jsonElement.getAsString()));
+                    builder.video(BaniraUtils.convertFileUri(jsonElement.getAsString()), cover);
                 } else {
-                    builder.img(BaniraUtils.convertFileUri(url));
+                    builder.video(BaniraUtils.convertFileUri(url), cover);
                 }
                 return context.msg(context.msg().replace(placeholder, builder.build()));
             }
         }
-        return context.msg(context.msg().replace(placeholder, MsgUtils.builder().img(BaniraUtils.convertFileUri(url)).build()));
+        return context.msg(context.msg().replace(placeholder, MsgUtils.builder().img(url).build()));
     }
 
+
     public static String build(String url) {
+        return build(url, DEFAULT_COVER);
+    }
+
+    public static String build(String url, String cover) {
         return CODE_START + CollectionUtils.getRandomElement(types)
                 + ARG_SEPARATOR + "url" + VAL_SEPARATOR + url
+                + ARG_SEPARATOR + "cover" + VAL_SEPARATOR + cover
                 + CODE_END;
     }
 

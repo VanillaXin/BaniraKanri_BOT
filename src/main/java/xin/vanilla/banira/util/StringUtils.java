@@ -511,6 +511,14 @@ public final class StringUtils {
         return "'" + input.replaceAll("'", "\\\\'") + "'";
     }
 
+    public static String md5(byte[] input) {
+        try {
+            return bytesToHex(MessageDigest.getInstance("MD5").digest(input));
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("MD5 algorithm not found", e);
+        }
+    }
+
     /**
      * 计算字符串的 MD5 值
      *

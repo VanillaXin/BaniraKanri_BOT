@@ -264,6 +264,7 @@ public class KeywordPlugin extends BasePlugin {
 
                 if (StringUtils.isNullOrEmptyEx(reason)) {
                     try {
+                        keywordRecord.setReplyMsg(BaniraUtils.replaceBaniraFileCode(reply));
                         keywordRecordManager.addKeywordRecord(keywordRecord);
                         if (keywordRecord.getId() == 0) {
                             reason = "添加失败";
