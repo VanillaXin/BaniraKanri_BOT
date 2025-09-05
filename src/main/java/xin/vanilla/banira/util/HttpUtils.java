@@ -2,7 +2,6 @@ package xin.vanilla.banira.util;
 
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -31,7 +30,8 @@ public final class HttpUtils {
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
                 return response.body();
             }
-        } catch (IOException | InterruptedException ignored) {
+        } catch (Exception ignored) {
+            LOGGER.error("Failed to download file from {}", url);
         }
         return null;
     }

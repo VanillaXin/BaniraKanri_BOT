@@ -792,7 +792,7 @@ public final class JsonUtils {
 
     public static boolean isValidJsonString(String json) {
         if (StringUtils.isNullOrEmptyEx(json)) return false;
-        if ((!json.startsWith("{") && !json.endsWith("}")) || (!json.startsWith("[") && !json.endsWith("]")))
+        if (!((json.startsWith("{") && json.endsWith("}")) || (json.startsWith("[") && json.endsWith("]"))))
             return false;
         try {
             return JsonParser.parseString(json) != null;

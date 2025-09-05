@@ -4,7 +4,6 @@ import com.mikuac.shiro.annotation.AnyMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
-import com.mikuac.shiro.core.Bot;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.MsgId;
 import com.mikuac.shiro.dto.action.response.LoginInfoResp;
@@ -14,16 +13,16 @@ import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.coder.common.EventCoder;
+import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 指令帮助插件
@@ -35,6 +34,15 @@ public class HelpPlugin extends BasePlugin {
 
     @Autowired(required = false)
     private List<BasePlugin> plugins = new ArrayList<>();
+    @Autowired(required = false)
+    private List<MessageCoder> msgCoders = new ArrayList<>();
+    @Autowired(required = false)
+    private List<EventCoder> eventCoders = new ArrayList<>();
+
+
+    private static final Set<String> codeType = Set.of(
+            "BaniraCode", "baniracode", "bkode", "bk", "code", "特殊码", "bk码"
+    );
 
     @Nonnull
     @Override
@@ -90,10 +98,33 @@ public class HelpPlugin extends BasePlugin {
                                 BaniraUtils.getInsPrefixWithSpace() +
                                 insConfig.get().base().help().getFirst() + " keyword"
                 ));
+                List<String> helpMsgList;
+                if (type.length > 0 && codeType.contains(CollectionUtils.getOrDefault(type, 0, ""))) {
+                    Set<String> coderType = new HashSet<>();
+                    if (type.length > 1) {
+                        coderType.addAll(Arrays.asList(type).subList(1, type.length));
+                    }
+                    helpMsgList = msgCoders.stream()
+                            .filter(coder -> coderType.isEmpty() || coderType.contains(coder.getName()))
+                            .filter(coder -> StringUtils.isNotNullOrEmpty(coder.getName()))
+                            .map(coder -> {
+                                String title = String.format("消息码 - %s\n%s", coder.getName(), coder.getDesc());
+                                return buildCodeExample(title, coder.getExample());
+                            }).collect(Collectors.toList());
+                    eventCoders.stream()
+                            .filter(coder -> coderType.isEmpty() || coderType.contains(coder.getName()))
+                            .filter(coder -> StringUtils.isNotNullOrEmpty(coder.getName()))
+                            .map(coder -> {
+                                String title = String.format("事件码 - %s\n%s", coder.getName(), coder.getDesc());
+                                return buildCodeExample(title, coder.getExample());
+                            }).forEach(helpMsgList::add);
+                } else {
+                    helpMsgList = plugins.stream()
+                            .map(plugin -> plugin.getHelpInfo(event.getGroupId(), type))
+                            .flatMap(List::stream).toList();
+                }
 
-                plugins.stream()
-                        .map(plugin -> plugin.getHelpInfo(event.getGroupId(), type))
-                        .flatMap(List::stream)
+                helpMsgList.stream()
                         .sorted()
                         .skip((page - 1) * 98L)
                         .limit(98L)
@@ -113,6 +144,20 @@ public class HelpPlugin extends BasePlugin {
             }
         }
         return false;
+    }
+
+    private String buildCodeExample(String title, List<String> example) {
+        StringBuilder sb = new StringBuilder(title).append("\n\n");
+        for (int i = 0; i < example.size(); i++) {
+            sb.append("例子");
+            if (example.size() > 1) sb.append(i + 1);
+            sb.append("：\n");
+            sb.append(example.get(i));
+            if (i != example.size() - 1) {
+                sb.append("\n\n");
+            }
+        }
+        return sb.toString();
     }
 
 }

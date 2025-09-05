@@ -1,7 +1,6 @@
 package xin.vanilla.banira.coder.message;
 
 import com.google.gson.JsonObject;
-import com.mikuac.shiro.common.utils.ShiroUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
@@ -27,7 +26,7 @@ public class McQueryCode implements MessageCoder {
     @Override
     public List<String> getExample() {
         return List.of(
-                CODE_START + CollectionUtils.getRandomElement(types) + VAL_SEPARATOR + ShiroUtils.getUserAvatar(123456789, 0) + CODE_END
+                CODE_START + CollectionUtils.getRandomElement(types) + VAL_SEPARATOR + "127.0.0.1:25565" + CODE_END
                 , CODE_START + CollectionUtils.getRandomElement(types) + ARG_SEPARATOR
                         + "name" + VAL_SEPARATOR + "server" + ARG_SEPARATOR
                         + "host" + VAL_SEPARATOR + "127.0.0.1" + ARG_SEPARATOR
