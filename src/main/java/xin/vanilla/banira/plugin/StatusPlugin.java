@@ -165,9 +165,9 @@ public class StatusPlugin extends BasePlugin {
                 && insConfig.get().alive().contains(super.replaceCommand(message))
         ) {
             if (BaniraUtils.isGroupIdValid(event.getGroupId())) {
-                return bot.setMsgEmojiLike(event.getMessageId(), 42);
+                return bot.setMsgEmojiLike(event.getMessageId(), 66);
             } else {
-                ActionData<MsgId> msgIdData = bot.sendMsg(event, MsgUtils.builder().reply(event.getMessageId()).face(42).build(), false);
+                ActionData<MsgId> msgIdData = bot.sendMsg(event, MsgUtils.builder().reply(event.getMessageId()).face(66).build(), false);
                 return bot.isActionDataMsgIdNotEmpty(msgIdData);
             }
         }
