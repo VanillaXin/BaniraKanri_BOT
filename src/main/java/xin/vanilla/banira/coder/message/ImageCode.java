@@ -69,7 +69,7 @@ public class ImageCode implements MessageCoder {
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
             JsonElement json = JsonUtils.parseJson(HttpUtil.get(url));
             if (json != null && !json.isJsonNull()) {
-                JsonElement jsonElement = JsonUtils.getJsonElement(json, jsonPath);
+                JsonElement jsonElement = JsonUtils.getJsonElement(json, ShiroUtils.unescape(jsonPath));
                 MsgUtils builder = MsgUtils.builder();
                 if (jsonElement.isJsonArray()) {
                     for (JsonElement element : jsonElement.getAsJsonArray()) {

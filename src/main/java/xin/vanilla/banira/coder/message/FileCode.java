@@ -3,6 +3,7 @@ package xin.vanilla.banira.coder.message;
 import cn.hutool.http.HttpUtil;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import com.mikuac.shiro.common.utils.ShiroUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
@@ -71,7 +72,7 @@ public class FileCode implements MessageCoder {
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
             JsonElement json = JsonUtils.parseJson(HttpUtil.get(url));
             if (json != null && !json.isJsonNull()) {
-                JsonElement jsonElement = JsonUtils.getJsonElement(json, jsonPath);
+                JsonElement jsonElement = JsonUtils.getJsonElement(json, ShiroUtils.unescape(jsonPath));
                 if (jsonElement.isJsonArray()) {
                     for (JsonElement element : jsonElement.getAsJsonArray()) {
                         uploadFile(context, element.getAsString(), name, folder);

@@ -6,6 +6,7 @@ import cn.hutool.http.HttpUtil;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.MsgUtils;
+import com.mikuac.shiro.common.utils.ShiroUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
@@ -77,7 +78,7 @@ public class VideoCode implements MessageCoder {
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
             JsonElement json = JsonUtils.parseJson(HttpUtil.get(url));
             if (json != null && !json.isJsonNull()) {
-                JsonElement jsonElement = JsonUtils.getJsonElement(json, jsonPath);
+                JsonElement jsonElement = JsonUtils.getJsonElement(json, ShiroUtils.unescape(jsonPath));
                 MsgUtils builder = MsgUtils.builder();
                 if (jsonElement.isJsonArray()) {
                     for (JsonElement element : jsonElement.getAsJsonArray()) {
