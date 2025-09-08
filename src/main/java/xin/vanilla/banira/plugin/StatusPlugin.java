@@ -167,7 +167,7 @@ public class StatusPlugin extends BasePlugin {
             if (BaniraUtils.isGroupIdValid(event.getGroupId())) {
                 return bot.setMsgEmojiLike(event.getMessageId(), 42);
             } else {
-                ActionData<MsgId> msgIdData = bot.sendMsg(event, MsgUtils.builder().face(42).build(), false);
+                ActionData<MsgId> msgIdData = bot.sendMsg(event, MsgUtils.builder().reply(event.getMessageId()).face(42).build(), false);
                 return bot.isActionDataMsgIdNotEmpty(msgIdData);
             }
         }
