@@ -157,6 +157,23 @@ public class StatusPlugin extends BasePlugin {
         return false;
     }
 
+    @AnyMessageHandler
+    public boolean alive(BaniraBot bot, AnyMessageEvent event) {
+        String message = event.getMessage();
+        if (super.isCommand(message)
+                && insConfig.get().alive() != null
+                && insConfig.get().alive().contains(super.replaceCommand(message))
+        ) {
+            if (BaniraUtils.isGroupIdValid(event.getGroupId())) {
+                return bot.setMsgEmojiLike(event.getMessageId(), 42);
+            } else {
+                ActionData<MsgId> msgIdData = bot.sendMsg(event, MsgUtils.builder().face(42).build(), false);
+                return bot.isActionDataMsgIdNotEmpty(msgIdData);
+            }
+        }
+        return false;
+    }
+
     private JsonObject generateStatus(BaniraBot bot) {
         LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
         Date now = new Date();
