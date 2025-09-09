@@ -1,14 +1,15 @@
 package xin.vanilla.banira.util;
 
+import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.*;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -17,10 +18,14 @@ public final class PlantCipher {
     private PlantCipher() {
     }
 
-    private static final String BASE64_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
-
     private static final String SALT = "BaniraKanri";
-    private static final List<String> PLANTS = Arrays.asList("矮蒿", "矮桦", "矮韭", "矮蓼", "矮松", "矮桃", "艾堇", "艾麻"
+    private static final int TOKEN_CHAR_LENGTH = 2;
+    private static final int GCM_TAG_BITS = 128;
+    private static final int GCM_IV_BYTES = 12; // 96 bits
+    private static final String AES_ALGO = "AES/GCM/NoPadding";
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
+    private static final List<String> BASE_PLANTS = Arrays.asList("矮蒿", "矮桦", "矮韭", "矮蓼", "矮松", "矮桃", "艾堇", "艾麻"
             , "安蕨", "八宝", "八角", "巴豆", "巴柳", "芭蕉", "菝葜", "坝竹", "霸王", "白桉", "白菜", "白草", "白蟾", "白刺", "白杜"
             , "白桦", "白及", "白芥", "白柯", "白兰", "白簕", "白梨", "白栎", "白蔹", "白柳", "白麻", "白茅", "白楠", "白扦", "白前"
             , "白楸", "白薷", "白术", "白树", "白檀", "白藤", "白薇", "白鲜", "白苋", "白英", "白芷", "百部", "百合", "柏木", "摆竹"
@@ -112,153 +117,127 @@ public final class PlantCipher {
             , "竹芋", "竹蔗", "苎麻", "柱兰", "锥栗", "孖竹", "紫参", "紫草", "紫椿", "紫丹", "紫椴", "紫萼", "紫茎", "紫荆", "紫矿"
             , "紫柳", "紫麻", "紫楠", "紫萍", "紫萁", "紫苏"
     );
-    private static final Map<Character, List<String>> MAP;
-    private static final Map<String, Character> REVERSE;
-
-    static {
-        MAP = buildMapping(PLANTS.stream().distinct().toList(), SALT);
-        REVERSE = MAP.entrySet().stream().flatMap(e -> e.getValue().stream().map(v -> Map.entry(v, e.getKey())))
-                .collect(HashMap::new, (m, e) -> m.put(e.getKey(), e.getValue()), HashMap::putAll);
-    }
-
-    public static Map<Character, List<String>> buildMapping(List<String> plants, String salt) {
-        Objects.requireNonNull(plants, "plants list required");
-        if (plants.size() < BASE64_CHARS.length()) {
-            throw new IllegalArgumentException("plants size must be >= 64 to cover all Base64 characters. current: " + plants.size());
-        }
-
-        // 复制并确定性打乱
-        List<String> copy = new ArrayList<>(plants);
-        Collections.shuffle(copy, new Random(seedFromSalt(salt)));
-
-        Map<Character, List<String>> map = new LinkedHashMap<>(64);
-        int total = copy.size();
-        int base = total / BASE64_CHARS.length();
-        int rem = total % BASE64_CHARS.length();
-
-        int cursor = 0;
-        for (int i = 0; i < BASE64_CHARS.length(); i++) {
-            int take = base + (i < rem ? 1 : 0);
-            List<String> slice = new ArrayList<>(take);
-            for (int j = 0; j < take; j++) {
-                slice.add(copy.get(cursor++));
-            }
-            map.put(BASE64_CHARS.charAt(i), Collections.unmodifiableList(slice));
-        }
-        return Collections.unmodifiableMap(map);
-    }
+    private static final List<String> RESORT_PLANTS = shuffledPlantsForSalt(SALT);
 
     /**
      * 加密
      *
-     * @param plain 明文
+     * @param string 明文
      * @return 加密后的字符串（由植物名拼接而成）
      */
-    public static String encode(String plain) {
-        return encode(plain, true);
-    }
+    public static String encode(String string) {
+        if (string == null) string = "";
 
-    /**
-     * 加密
-     *
-     * @param plain    明文
-     * @param compress 是否启用 gzip 压缩
-     * @return 加密后的字符串（由植物名拼接而成）
-     */
-    public static String encode(String plain, boolean compress) {
-
-        byte[] bytes = plain.getBytes(StandardCharsets.UTF_8);
-        if (compress) {
-            try {
-                bytes = compress(bytes);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+        // 1) 处理明文字节
+        byte[] plainBytes = string.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] compressed = gzipCompress(plainBytes);
+        boolean usedCompressed = compressed.length < plainBytes.length;
+        byte[] payload;
+        if (usedCompressed) {
+            payload = new byte[1 + compressed.length];
+            payload[0] = 1;
+            System.arraycopy(compressed, 0, payload, 1, compressed.length);
+        } else {
+            payload = new byte[1 + plainBytes.length];
+            payload[0] = 0;
+            System.arraycopy(plainBytes, 0, payload, 1, plainBytes.length);
         }
 
-        String b64 = Base64.getEncoder().withoutPadding().encodeToString(bytes);
-        StringBuilder sb = new StringBuilder(b64.length() * 2); // 预估
+        // 2) 派生 AES key
+        SecretKeySpec key = deriveKeyFromSalt(SALT);
 
-        ThreadLocalRandom rnd = ThreadLocalRandom.current();
-        for (char c : b64.toCharArray()) {
-            List<String> variants = MAP.get(c);
-            if (variants == null || variants.isEmpty()) {
-                throw new IllegalStateException("no variants for base64 char: " + c);
-            }
-            String pick = variants.get(rnd.nextInt(variants.size()));
-            sb.append(pick);
+        // 3) 随机 IV，AES-GCM 加密
+        byte[] iv = new byte[GCM_IV_BYTES];
+        SECURE_RANDOM.nextBytes(iv);
+        byte[] cipherBytes;
+        try {
+            Cipher cipher = Cipher.getInstance(AES_ALGO);
+            GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_BITS, iv);
+            cipher.init(Cipher.ENCRYPT_MODE, key, spec);
+            cipherBytes = cipher.doFinal(payload);
+        } catch (Exception e) {
+            return "";
         }
+
+        // 4) 组合 iv + 密文
+        byte[] out = new byte[iv.length + cipherBytes.length];
+        System.arraycopy(iv, 0, out, 0, iv.length);
+        System.arraycopy(cipherBytes, 0, out, iv.length, cipherBytes.length);
+
+        // 5) 使用打乱后的植物表进行 base-N 编码
+        int base = RESORT_PLANTS.size();
+        int[] digits = bytesToBaseNIndices(out, base); // 返回每位索引（0..base-1）
+        StringBuilder sb = new StringBuilder(digits.length * TOKEN_CHAR_LENGTH);
+        for (int d : digits) sb.append(RESORT_PLANTS.get(d));
         return sb.toString();
     }
 
     /**
      * 解密
      *
-     * @param cipher 密文
+     * @param tokenString 密文
      * @return 解密后的明文（UTF-8）
      */
-    public static String decode(String cipher) {
-        return decode(cipher, true);
-    }
+    public static String decode(String tokenString) {
+        if (tokenString == null) tokenString = "";
 
-    /**
-     * 解密
-     *
-     * @param cipher     密文
-     * @param compressed 是否启用 gzip 压缩（应与 encode 时一致）
-     * @return 解密后的明文（UTF-8）
-     */
-    public static String decode(String cipher, boolean compressed) {
-        // 为了正确切分，按 token 长度从长到短尝试匹配（防止短词优先匹配出错）
-        List<String> tokensByLenDesc = new ArrayList<>(REVERSE.keySet());
-        tokensByLenDesc.sort((a, b) -> Integer.compare(b.length(), a.length()));
+        int base = RESORT_PLANTS.size();
 
-        StringBuilder b64Builder = new StringBuilder(cipher.length() / 2);
-        int i = 0;
-        while (i < cipher.length()) {
-            boolean matched = false;
-            for (String token : tokensByLenDesc) {
-                if (cipher.startsWith(token, i)) {
-                    Character mapped = REVERSE.get(token);
-                    if (mapped == null) {
-                        throw new IllegalStateException("internal mapping missing for token: " + token);
-                    }
-                    b64Builder.append(mapped);
-                    i += token.length();
-                    matched = true;
-                    break;
-                }
-            }
-            if (!matched) {
-                throw new IllegalArgumentException("cannot parse cipher at pos " + i + ": substring='" +
-                        cipher.substring(i, Math.min(cipher.length(), i + 20)) + "...'. " +
-                        "Possible causes: wrong plants list or salt.");
-            }
+        // 切分 tokenString 为 tokens
+        if (tokenString.length() % TOKEN_CHAR_LENGTH != 0) {
+            throw new IllegalArgumentException("Invalid tokenString length for provided token length");
+        }
+        int tokenCount = tokenString.length() / TOKEN_CHAR_LENGTH;
+        int[] indices = new int[tokenCount];
+        for (int i = 0; i < tokenCount; i++) {
+            String token = tokenString.substring(i * TOKEN_CHAR_LENGTH, (i + 1) * TOKEN_CHAR_LENGTH);
+            // binarySearch 要求 alphabet 已排序，故不用 binarySearch，改用 HashMap 加速查找
+            int idx = Collections.binarySearch(RESORT_PLANTS, token);
         }
 
-        String b64 = b64Builder.toString();
-        // b64 是重建出来的字符串（可能无 '='）
-        int mod = b64.length() % 4;
-        if (mod != 0) {
-            int pad = (4 - mod) % 4;
-            b64 = b64 + "=".repeat(pad);
+        // 构造 map token -> index（加速解码）
+        Map<String, Integer> tokenToIndex = new HashMap<>(RESORT_PLANTS.size() * 2);
+        for (int i = 0; i < RESORT_PLANTS.size(); i++) tokenToIndex.put(RESORT_PLANTS.get(i), i);
+
+        for (int i = 0; i < tokenCount; i++) {
+            String token = tokenString.substring(i * TOKEN_CHAR_LENGTH, (i + 1) * TOKEN_CHAR_LENGTH);
+            Integer idx = tokenToIndex.get(token);
+            if (idx == null) throw new IllegalArgumentException("Invalid token found during decode: " + token);
+            indices[i] = idx;
         }
 
-        byte[] data = Base64.getDecoder().decode(b64);
-        if (compressed) {
-            try {
-                data = decompress(data);
-            } catch (IOException e) {
-                throw new UncheckedIOException(e);
-            }
+        // indices -> bytes
+        byte[] combined = baseNIndicesToBytes(indices, base);
+
+        // split iv + ciphertext
+        if (combined.length < GCM_IV_BYTES + 1) throw new IllegalArgumentException("Decoded bytes too short");
+        byte[] iv = Arrays.copyOfRange(combined, 0, GCM_IV_BYTES);
+        byte[] ct = Arrays.copyOfRange(combined, GCM_IV_BYTES, combined.length);
+
+        // derive key again
+        SecretKeySpec key = deriveKeyFromSalt(SALT);
+
+        byte[] payload;
+        try {
+            Cipher cipher = Cipher.getInstance(AES_ALGO);
+            GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_BITS, iv);
+            cipher.init(Cipher.DECRYPT_MODE, key, spec);
+            payload = cipher.doFinal(ct);
+        } catch (Exception e) {
+            return "";
         }
-        return new String(data, StandardCharsets.UTF_8);
+
+        if (payload.length < 1) throw new IllegalArgumentException("Decrypted payload too short");
+        boolean compressed = payload[0] == 1;
+        byte[] data = Arrays.copyOfRange(payload, 1, payload.length);
+        byte[] plainBytes = compressed ? gzipDecompress(data) : data;
+        return new String(plainBytes, java.nio.charset.StandardCharsets.UTF_8);
     }
 
     /**
      * 压缩字节数组
      */
-    public static byte[] compress(byte[] data) throws IOException {
+    public static byte[] gzipCompress(byte[] data) {
         if (data == null || data.length == 0) {
             return null;
         }
@@ -267,13 +246,15 @@ public final class PlantCipher {
             gzip.write(data);
             gzip.finish();
             return bos.toByteArray();
+        } catch (Exception e) {
+            return null;
         }
     }
 
     /**
      * 解压字节数组
      */
-    public static byte[] decompress(byte[] compressedData) throws IOException {
+    public static byte[] gzipDecompress(byte[] compressedData) {
         if (compressedData == null || compressedData.length == 0) {
             return null;
         }
@@ -286,22 +267,135 @@ public final class PlantCipher {
                 bos.write(buffer, 0, len);
             }
             return bos.toByteArray();
+        } catch (Exception e) {
+            return null;
         }
     }
 
 
-    /**
-     * 通过 salt 生成随机种子
-     */
-    private static long seedFromSalt(String salt) {
+    private static SecretKeySpec deriveKeyFromSalt(String salt) {
         try {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] digest = md.digest((salt == null ? "" : salt).getBytes(StandardCharsets.UTF_8));
-            ByteBuffer bb = ByteBuffer.wrap(digest);
-            return bb.getLong(); // 取前 8 字节作为 long
-        } catch (Exception e) {
-            return (salt == null ? 0L : (long) salt.hashCode());
+            md.update(salt.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            byte[] digest = md.digest(); // 32 bytes
+            return new SecretKeySpec(digest, "AES");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * 对 PLANTS 做确定性打乱（基于 SALT -> sha-256 -> long seed）
+     */
+    private static List<String> shuffledPlantsForSalt(String salt) {
+        // 复制原始表
+        List<String> copy = new ArrayList<>(BASE_PLANTS);
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            md.update(salt.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            byte[] digest = md.digest();
+            long seed = ByteBuffer.wrap(digest).getLong(); // 8 bytes -> long
+            Random rnd = new Random(seed);
+            // Fisher-Yates shuffle with rnd
+            for (int i = copy.size() - 1; i > 0; i--) {
+                int j = rnd.nextInt(i + 1);
+                Collections.swap(copy, i, j);
+            }
+            return copy;
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    /**
+     * 将 bytes (base 256) 转换为 base-N 索引数组（0..base-1）。
+     * 保留前导 0x00 字节，通过在结果最前端填充 index 0 来表示前导零。
+     */
+    private static int[] bytesToBaseNIndices(byte[] input, int base) {
+        if (base < 2) throw new IllegalArgumentException("base must be >= 2");
+        // count leading zero bytes
+        int leadingZeros = 0;
+        while (leadingZeros < input.length && input[leadingZeros] == 0) leadingZeros++;
+
+        // copy the non-zero suffix
+        byte[] src = Arrays.copyOfRange(input, leadingZeros, input.length);
+
+        List<Integer> digits = new ArrayList<>();
+        if (src.length == 0) {
+            // input was all zeros -> output single zero digit (plus leadingZeros handled below)
+            digits.add(0);
+        } else {
+            // base conversion: repeatedly divide src by base, collecting remainders
+            byte[] current = src;
+            while (current.length > 0) {
+                ByteArrayOutputStream next = new ByteArrayOutputStream();
+                int carry = 0;
+                for (byte b : current) {
+                    int val = (carry << 8) | (b & 0xFF);
+                    int q = val / base;
+                    carry = val % base;
+                    if (next.size() > 0 || q != 0) next.write(q);
+                }
+                digits.add(carry); // remainder
+                current = next.toByteArray();
+            }
+            // digits currently least-significant first
+            Collections.reverse(digits);
+        }
+
+        // prepend leadingZeros number of zeros (each corresponds to token index 0)
+        int total = leadingZeros + digits.size();
+        int[] out = new int[total];
+        for (int i = 0; i < leadingZeros; i++) out[i] = 0;
+        for (int i = 0; i < digits.size(); i++) out[leadingZeros + i] = digits.get(i);
+        return out;
+    }
+
+    /**
+     * 将 base-N 索引数组（0..base-1）转换回字节数组（base 256）
+     */
+    private static byte[] baseNIndicesToBytes(int[] indices, int base) {
+        if (base < 2) throw new IllegalArgumentException("base must be >= 2");
+        if (indices.length == 0) return new byte[0];
+
+        // count leading zero indices
+        int leadingZeroIndices = 0;
+        while (leadingZeroIndices < indices.length && indices[leadingZeroIndices] == 0) leadingZeroIndices++;
+
+        // work on the suffix
+        int[] src = Arrays.copyOfRange(indices, leadingZeroIndices, indices.length);
+
+        List<Byte> outBytes = new ArrayList<>();
+        if (src.length == 0) {
+            // all zeros -> produce empty suffix, but leadingZeroIndices will produce zero bytes below
+        } else {
+            // convert from base-N digits to base-256 bytes (schoolbook division)
+            List<Integer> cur = new ArrayList<>();
+            for (int v : src) {
+                if (v < 0 || v >= base) throw new IllegalArgumentException("digit out of range");
+                cur.add(v);
+            }
+            while (!cur.isEmpty()) {
+                int carry = 0;
+                List<Integer> next = new ArrayList<>();
+                for (int d : cur) {
+                    int acc = carry * base + d;
+                    int q = acc / 256;
+                    int r = acc % 256;
+                    if (!next.isEmpty() || q != 0) next.add(q);
+                    carry = r;
+                }
+                outBytes.add((byte) carry); // remainder is next byte (least-significant first)
+                cur = next;
+            }
+            Collections.reverse(outBytes); // now big-endian bytes for suffix
+        }
+
+        // prepend leadingZeroIndices number of 0x00 bytes
+        byte[] result = new byte[leadingZeroIndices + outBytes.size()];
+        for (int i = 0; i < outBytes.size(); i++) result[leadingZeroIndices + i] = outBytes.get(i);
+        // leading zeros default to 0
+        return result;
     }
 
 }
