@@ -47,7 +47,7 @@ public class PlantPlugin extends BasePlugin {
     }
 
     @AnyMessageHandler
-    public boolean encode(BaniraBot bot, AnyMessageEvent event) {
+    public boolean code(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
         String msg = super.replaceCommand(message);
         if (super.isCommand(message)
@@ -55,7 +55,7 @@ public class PlantPlugin extends BasePlugin {
         ) {
             String content;
             if (BaniraUtils.hasReply(event.getArrayMsg())) {
-                content = bot.getReplyContentString(event.getArrayMsg());
+                content = replaceReply(bot.getReplyContentString(event.getArrayMsg()));
             } else {
                 String[] split = msg.split("\\s");
                 if (split.length > 1)
@@ -63,13 +63,25 @@ public class PlantPlugin extends BasePlugin {
                 else
                     return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             }
-            bot.sendMsg(event
-                    , MsgUtils.builder()
-                            .reply(event.getMessageId())
-                            .text(PlantCipher.encode(content))
-                            .build()
-                    , false
-            );
+            if (content.startsWith("阁下请喝") && content.endsWith("茶")) {
+                bot.sendMsg(event
+                        , MsgUtils.builder()
+                                .reply(event.getMessageId())
+                                .text(PlantCipher.decode(content.replaceAll("^阁下请喝|茶$", "")))
+                                .build()
+                        , false
+                );
+            } else {
+                bot.sendMsg(event
+                        , MsgUtils.builder()
+                                .reply(event.getMessageId())
+                                .text("阁下请喝")
+                                .text(PlantCipher.encode(content))
+                                .text("茶")
+                                .build()
+                        , false
+                );
+            }
         }
         return false;
     }

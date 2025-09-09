@@ -38,6 +38,7 @@ public class PluginConfig {
         this.capability.put(McQueryPlugin.class.getName(), 99);
         this.capability.put(ImageFaceToImagePlugin.class.getName(), 99);
         this.capability.put(TapPlugin.class.getName(), 99);
+        this.capability.put(PlantPlugin.class.getName(), 99);
 
     }
 
