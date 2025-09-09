@@ -52,7 +52,8 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendPrivateMsg(long userId, String msg, boolean autoEscape) {
-        ActionData<MsgId> msgId = super.sendPrivateMsg(userId, msg, autoEscape);
+        String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+        ActionData<MsgId> msgId = super.sendPrivateMsg(userId, censoredMsg, autoEscape);
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))
@@ -76,7 +77,8 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendPrivateMsg(long userId, List<ArrayMsg> msg, boolean autoEscape) {
-        ActionData<MsgId> msgId = super.sendPrivateMsg(userId, msg, autoEscape);
+        List<ArrayMsg> censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+        ActionData<MsgId> msgId = super.sendPrivateMsg(userId, censoredMsg, autoEscape);
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))
@@ -101,7 +103,8 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendPrivateMsg(long groupId, long userId, String msg, boolean autoEscape) {
-        ActionData<MsgId> msgId = super.sendPrivateMsg(groupId, userId, msg, autoEscape);
+        String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+        ActionData<MsgId> msgId = super.sendPrivateMsg(groupId, userId, censoredMsg, autoEscape);
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))
@@ -127,7 +130,8 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendPrivateMsg(long groupId, long userId, List<ArrayMsg> msg, boolean autoEscape) {
-        ActionData<MsgId> msgId = super.sendPrivateMsg(groupId, userId, msg, autoEscape);
+        List<ArrayMsg> censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+        ActionData<MsgId> msgId = super.sendPrivateMsg(groupId, userId, censoredMsg, autoEscape);
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))
@@ -152,7 +156,8 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendGroupMsg(long groupId, String msg, boolean autoEscape) {
-        ActionData<MsgId> msgId = super.sendGroupMsg(groupId, msg, autoEscape);
+        String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+        ActionData<MsgId> msgId = super.sendGroupMsg(groupId, censoredMsg, autoEscape);
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))
@@ -176,7 +181,8 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendGroupMsg(long groupId, List<ArrayMsg> msg, boolean autoEscape) {
-        ActionData<MsgId> msgId = super.sendGroupMsg(groupId, msg, autoEscape);
+        List<ArrayMsg> censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+        ActionData<MsgId> msgId = super.sendGroupMsg(groupId, censoredMsg, autoEscape);
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))
@@ -201,7 +207,8 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendGroupMsg(long groupId, long userId, String msg, boolean autoEscape) {
-        ActionData<MsgId> msgId = super.sendGroupMsg(groupId, userId, msg, autoEscape);
+        String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+        ActionData<MsgId> msgId = super.sendGroupMsg(groupId, userId, censoredMsg, autoEscape);
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))
@@ -226,7 +233,8 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendGroupMsg(long groupId, long userId, List<ArrayMsg> msg, boolean autoEscape) {
-        ActionData<MsgId> msgId = super.sendGroupMsg(groupId, userId, msg, autoEscape);
+        List<ArrayMsg> censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+        ActionData<MsgId> msgId = super.sendGroupMsg(groupId, userId, censoredMsg, autoEscape);
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))
@@ -250,7 +258,8 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionRaw}
      */
     public ActionData<MsgId> sendGroupForwardMsg(long groupId, List<Map<String, Object>> msg) {
-        ActionData<MsgId> msgIdData = super.sendGroupForwardMsg(groupId, msg);
+        List<Map<String, Object>> censoredMsg = (List<Map<String, Object>>) BaniraUtils.replaceSensitiveContent(msg);
+        ActionData<MsgId> msgIdData = super.sendGroupForwardMsg(groupId, censoredMsg);
         if (isActionDataMsgIdNotEmpty(msgIdData)) {
             Integer msgId = getActionDataMsgId(msgIdData);
             MessageRecord record = new MessageRecord()
@@ -290,7 +299,8 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionRaw}
      */
     public ActionData<MsgId> sendPrivateForwardMsg(long userId, List<Map<String, Object>> msg) {
-        ActionData<MsgId> msgIdData = super.sendPrivateForwardMsg(userId, msg);
+        List<Map<String, Object>> censoredMsg = (List<Map<String, Object>>) BaniraUtils.replaceSensitiveContent(msg);
+        ActionData<MsgId> msgIdData = super.sendPrivateForwardMsg(userId, censoredMsg);
         if (isActionDataMsgIdNotEmpty(msgIdData)) {
             Integer msgId = getActionDataMsgId(msgIdData);
             MessageRecord record = new MessageRecord()
@@ -330,7 +340,8 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionRaw}
      */
     public ActionData<MsgId> sendForwardMsg(AnyMessageEvent event, List<Map<String, Object>> msg) {
-        ActionData<MsgId> msgIdData = super.sendForwardMsg(event, msg);
+        List<Map<String, Object>> censoredMsg = (List<Map<String, Object>>) BaniraUtils.replaceSensitiveContent(msg);
+        ActionData<MsgId> msgIdData = super.sendForwardMsg(event, censoredMsg);
         if (isActionDataMsgIdNotEmpty(msgIdData)) {
             Integer msgId = getActionDataMsgId(msgIdData);
             MessageRecord record = new MessageRecord()
@@ -376,7 +387,13 @@ public class BaniraBot extends Bot {
      *                <p>参考 {@link com.mikuac.shiro.common.utils.ShiroUtils#generateSingleMsg(long, String, String)}</p>来生成单条聊天记录
      */
     public ActionData<MsgId> sendGroupForwardMsg(long groupId, List<Map<String, Object>> msg, String prompt, String source, String summary, List<Map<String, String>> news) {
-        ActionData<MsgId> msgIdData = super.sendGroupForwardMsg(groupId, msg, prompt, source, summary, news);
+        ActionData<MsgId> msgIdData = super.sendGroupForwardMsg(groupId
+                , (List<Map<String, Object>>) BaniraUtils.replaceSensitiveContent(msg)
+                , BaniraUtils.replaceSensitiveContent(prompt)
+                , BaniraUtils.replaceSensitiveContent(source)
+                , BaniraUtils.replaceSensitiveContent(summary)
+                , (List<Map<String, String>>) BaniraUtils.replaceSensitiveContent(news)
+        );
         if (isActionDataMsgIdNotEmpty(msgIdData)) {
             Integer msgId = getActionDataMsgId(msgIdData);
             MessageRecord record = new MessageRecord()
@@ -419,7 +436,13 @@ public class BaniraBot extends Bot {
      *                <p>参考 {@link com.mikuac.shiro.common.utils.ShiroUtils#generateSingleMsg(long, String, String)}</p>来生成单条聊天记录
      */
     public ActionData<MsgId> sendPrivateForwardMsg(long userId, List<Map<String, Object>> msg, String prompt, String source, String summary, List<Map<String, String>> news) {
-        ActionData<MsgId> msgIdData = super.sendPrivateForwardMsg(userId, msg, prompt, source, summary, news);
+        ActionData<MsgId> msgIdData = super.sendPrivateForwardMsg(userId
+                , (List<Map<String, Object>>) BaniraUtils.replaceSensitiveContent(msg)
+                , BaniraUtils.replaceSensitiveContent(prompt)
+                , BaniraUtils.replaceSensitiveContent(source)
+                , BaniraUtils.replaceSensitiveContent(summary)
+                , (List<Map<String, String>>) BaniraUtils.replaceSensitiveContent(news)
+        );
         if (isActionDataMsgIdNotEmpty(msgIdData)) {
             Integer msgId = getActionDataMsgId(msgIdData);
             MessageRecord record = new MessageRecord()
@@ -448,6 +471,88 @@ public class BaniraBot extends Bot {
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
         return msgIdData;
+    }
+
+    /**
+     * 设置群名
+     *
+     * @param groupId   群号
+     * @param groupName 新群名
+     * @return result {@link ActionRaw}
+     */
+    @Override
+    public ActionRaw setGroupName(long groupId, String groupName) {
+        return super.setGroupName(groupId, BaniraUtils.replaceSensitiveContent(groupName));
+    }
+
+    /**
+     * 设置群组专属头衔
+     *
+     * @param groupId      群号
+     * @param userId       要设置的 QQ 号
+     * @param specialTitle 专属头衔，不填或空字符串表示删除专属头衔
+     * @param duration     专属头衔有效期，单位秒，-1 表示永久，不过此项似乎没有效果，可能是只有某些特殊的时间长度有效，有待测试
+     * @return result {@link ActionRaw}
+     */
+    @Override
+    public ActionRaw setGroupSpecialTitle(long groupId, long userId, String specialTitle, int duration) {
+        return super.setGroupSpecialTitle(groupId, userId, BaniraUtils.replaceSensitiveContent(specialTitle), duration);
+    }
+
+    /**
+     * 设置群名片（群备注）
+     *
+     * @param groupId 群号
+     * @param userId  要设置的 QQ 号
+     * @param card    群名片内容，不填或空字符串表示删除群名片
+     * @return result {@link ActionRaw}
+     */
+    @Override
+    public ActionRaw setGroupCard(long groupId, long userId, String card) {
+        return super.setGroupCard(groupId, userId, BaniraUtils.replaceSensitiveContent(card));
+    }
+
+    /**
+     * 发送群公告
+     *
+     * @param groupId 群号
+     * @param content 公告内容
+     * @return result {@link ActionRaw}
+     */
+    @Override
+    public ActionRaw sendGroupNotice(long groupId, String content) {
+        return super.sendGroupNotice(groupId, BaniraUtils.replaceSensitiveContent(content));
+    }
+
+    /**
+     * 上传群文件
+     * 在不提供 folder 参数的情况下默认上传到根目录
+     * 只能上传本地文件, 需要上传 http 文件的话请先下载到本地
+     *
+     * @param groupId 群号
+     * @param file    本地文件路径
+     * @param name    储存名称
+     * @param folder  父目录ID
+     * @return result {@link ActionRaw}
+     */
+    @Override
+    public ActionRaw uploadGroupFile(long groupId, String file, String name, String folder) {
+        return super.uploadGroupFile(groupId, file, BaniraUtils.replaceSensitiveContent(name), folder);
+    }
+
+    /**
+     * 上传群文件
+     * 在不提供 folder 参数的情况下默认上传到根目录
+     * 只能上传本地文件, 需要上传 http 文件的话请先下载到本地
+     *
+     * @param groupId 群号
+     * @param file    本地文件路径
+     * @param name    储存名称
+     * @return result {@link ActionRaw}
+     */
+    @Override
+    public ActionRaw uploadGroupFile(long groupId, String file, String name) {
+        return super.uploadGroupFile(groupId, file, BaniraUtils.replaceSensitiveContent(name));
     }
 
     // endregion override

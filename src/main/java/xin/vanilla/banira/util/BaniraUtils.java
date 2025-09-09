@@ -4,6 +4,7 @@ import cn.hutool.core.io.FileUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.github.houbb.sensitive.word.core.SensitiveWordHelper;
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.JsonUtils;
 import com.mikuac.shiro.common.utils.MessageConverser;
@@ -47,6 +48,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Slf4j
 public final class BaniraUtils {
@@ -649,6 +651,50 @@ public final class BaniraUtils {
     }
 
     // endregion 合并转发
+
+    // region 敏感内容处理
+
+    public static String replaceSensitiveContent(String msg) {
+        if (StringUtils.isNotNullOrEmpty(msg)) {
+            List<String> sensitiveList = SensitiveWordHelper.findAll(msg);
+            if (CollectionUtils.isNotNullOrEmpty(sensitiveList)) {
+                for (String sensitive : sensitiveList) {
+                    msg = msg.replace(sensitive, PlantCipher.encode(sensitive));
+                }
+            }
+        }
+        return msg;
+    }
+
+    public static List<ArrayMsg> replaceSensitiveContent(List<ArrayMsg> arrayMsgList) {
+        if (CollectionUtils.isNotNullOrEmpty(arrayMsgList)) {
+            arrayMsgList = arrayMsgList.stream()
+                    .filter(e -> e.getType() == MsgTypeEnum.text)
+                    .peek(e -> e.setData(mutableMapOf(
+                            MsgTypeEnum.text.toString()
+                            , replaceSensitiveContent(e.getStringData(MsgTypeEnum.text.toString()))
+                    )))
+                    .collect(Collectors.toList());
+        }
+        return arrayMsgList;
+    }
+
+    public static Object replaceSensitiveContent(Object obj) {
+        if (obj instanceof String str) {
+            return replaceSensitiveContent(str);
+        } else if (obj instanceof Collection<?> list) {
+            return list.stream()
+                    .map(BaniraUtils::replaceSensitiveContent)
+                    .collect(Collectors.toList());
+        } else if (obj instanceof Map<?, ?> map) {
+            return map.entrySet().stream()
+                    .map(e -> Map.entry(e.getKey(), replaceSensitiveContent(e.getValue())))
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        }
+        return obj;
+    }
+
+    // end region 敏感内容处理
 
     // region 其他
 
