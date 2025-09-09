@@ -63,24 +63,29 @@ public class PlantPlugin extends BasePlugin {
                 else
                     return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             }
-            if (content.startsWith("阁下请喝") && content.endsWith("茶")) {
-                bot.sendMsg(event
-                        , MsgUtils.builder()
-                                .reply(event.getMessageId())
-                                .text(PlantCipher.decode(content.replaceAll("^阁下请喝|茶$", "")))
-                                .build()
-                        , false
-                );
-            } else {
-                bot.sendMsg(event
-                        , MsgUtils.builder()
-                                .reply(event.getMessageId())
-                                .text("阁下请喝")
-                                .text(PlantCipher.encode(content))
-                                .text("茶")
-                                .build()
-                        , false
-                );
+            try {
+                if (content.startsWith("阁下请喝") && content.endsWith("茶")) {
+                    bot.sendMsg(event
+                            , MsgUtils.builder()
+                                    .reply(event.getMessageId())
+                                    .text(PlantCipher.decode(content.replaceAll("^阁下请喝|茶$", "")))
+                                    .build()
+                            , false
+                    );
+                } else {
+                    bot.sendMsg(event
+                            , MsgUtils.builder()
+                                    .reply(event.getMessageId())
+                                    .text("阁下请喝")
+                                    .text(PlantCipher.encode(content))
+                                    .text("茶")
+                                    .build()
+                            , false
+                    );
+                }
+            } catch (Exception e) {
+                LOGGER.error("Failed to plant", e);
+                return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             }
         }
         return false;
