@@ -52,8 +52,14 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendPrivateMsg(long userId, String msg, boolean autoEscape) {
-        String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
-        ActionData<MsgId> msgId = super.sendPrivateMsg(userId, censoredMsg, autoEscape);
+        ActionData<MsgId> msgId;
+        if (autoEscape) {
+            String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+            msgId = super.sendPrivateMsg(userId, censoredMsg, autoEscape);
+        } else {
+            List<ArrayMsg> censoredMsg = BaniraUtils.replaceSensitiveContent(MessageConverser.stringToArray(msg));
+            msgId = super.sendPrivateMsg(userId, censoredMsg, autoEscape);
+        }
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))
@@ -103,8 +109,14 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendPrivateMsg(long groupId, long userId, String msg, boolean autoEscape) {
-        String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
-        ActionData<MsgId> msgId = super.sendPrivateMsg(groupId, userId, censoredMsg, autoEscape);
+        ActionData<MsgId> msgId;
+        if (autoEscape) {
+            String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+            msgId = super.sendPrivateMsg(groupId, userId, censoredMsg, autoEscape);
+        } else {
+            List<ArrayMsg> censoredMsg = BaniraUtils.replaceSensitiveContent(MessageConverser.stringToArray(msg));
+            msgId = super.sendPrivateMsg(groupId, userId, censoredMsg, autoEscape);
+        }
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))
@@ -156,8 +168,14 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendGroupMsg(long groupId, String msg, boolean autoEscape) {
-        String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
-        ActionData<MsgId> msgId = super.sendGroupMsg(groupId, censoredMsg, autoEscape);
+        ActionData<MsgId> msgId;
+        if (autoEscape) {
+            String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+            msgId = super.sendGroupMsg(groupId, censoredMsg, autoEscape);
+        } else {
+            List<ArrayMsg> censoredMsg = BaniraUtils.replaceSensitiveContent(MessageConverser.stringToArray(msg));
+            msgId = super.sendGroupMsg(groupId, censoredMsg, autoEscape);
+        }
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))
@@ -207,8 +225,14 @@ public class BaniraBot extends Bot {
      * @return result {@link ActionData} of {@link MsgId}
      */
     public ActionData<MsgId> sendGroupMsg(long groupId, long userId, String msg, boolean autoEscape) {
-        String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
-        ActionData<MsgId> msgId = super.sendGroupMsg(groupId, userId, censoredMsg, autoEscape);
+        ActionData<MsgId> msgId;
+        if (autoEscape) {
+            String censoredMsg = BaniraUtils.replaceSensitiveContent(msg);
+            msgId = super.sendGroupMsg(groupId, userId, censoredMsg, autoEscape);
+        } else {
+            List<ArrayMsg> censoredMsg = BaniraUtils.replaceSensitiveContent(MessageConverser.stringToArray(msg));
+            msgId = super.sendGroupMsg(groupId, userId, censoredMsg, autoEscape);
+        }
         if (isActionDataMsgIdNotEmpty(msgId)) {
             MessageRecord record = new MessageRecord()
                     .setMsgId(getActionDataMsgId(msgId))

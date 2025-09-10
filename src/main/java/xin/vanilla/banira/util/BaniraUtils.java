@@ -669,13 +669,16 @@ public final class BaniraUtils {
 
     public static List<ArrayMsg> replaceSensitiveContent(List<ArrayMsg> arrayMsgList) {
         if (CollectionUtils.isNotNullOrEmpty(arrayMsgList)) {
-            arrayMsgList = arrayMsgList.stream()
-                    .filter(e -> e.getType() == MsgTypeEnum.text)
-                    .peek(e -> e.setData(mutableMapOf(
-                            MsgTypeEnum.text.toString()
-                            , replaceSensitiveContent(e.getStringData(MsgTypeEnum.text.toString()))
-                    )))
-                    .collect(Collectors.toList());
+            arrayMsgList.forEach(arrayMsg -> {
+                if (arrayMsg.getType() == MsgTypeEnum.text) {
+                    arrayMsg.setData(
+                            mutableMapOf(
+                                    MsgTypeEnum.text.toString()
+                                    , replaceSensitiveContent(arrayMsg.getStringData(MsgTypeEnum.text.toString()))
+                            )
+                    );
+                }
+            });
         }
         return arrayMsgList;
     }
@@ -691,6 +694,14 @@ public final class BaniraUtils {
             return map.entrySet().stream()
                     .map(e -> Map.entry(e.getKey(), replaceSensitiveContent(e.getValue())))
                     .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        } else if (obj instanceof ArrayMsg arrayMsg && arrayMsg.getType() == MsgTypeEnum.text) {
+            arrayMsg.setData(
+                    mutableMapOf(
+                            MsgTypeEnum.text.toString()
+                            , replaceSensitiveContent(arrayMsg.getStringData(MsgTypeEnum.text.toString()))
+                    )
+            );
+            return arrayMsg;
         }
         return obj;
     }
