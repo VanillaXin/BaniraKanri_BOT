@@ -34,6 +34,7 @@ import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.*;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.domain.MessageRecord;
+import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
@@ -1042,10 +1043,10 @@ public final class BaniraUtils {
      *
      * @return 文件名称列表
      */
-    public static String downloadFileToCachePath(String url) {
+    public static String downloadFileToCachePath(String url, EnumCacheFileType type) {
         byte[] bytes = HttpUtils.downloadBytes(url);
         if (bytes != null) {
-            File file = new File(String.format("cache/file/%s", StringUtils.md5(bytes)));
+            File file = new File(String.format("cache/%s/%s", type.name(), StringUtils.md5(bytes)));
             file = FileUtil.writeBytes(bytes, file);
             if (file != null) {
                 return file.getName();
@@ -1098,21 +1099,24 @@ public final class BaniraUtils {
                 case unknown: {
                     if (StringUtils.isNotNullOrEmpty(it.getStringData("file_id"))) {
                         it.setType(MsgTypeEnum.text);
-                        String file = getCacheRelativePath("file", strings.get(index++));
+                        String file = getCacheRelativePath(strings.get(index++), EnumCacheFileType.file);
                         it.setData(mutableMapOf("text", FileCode.build(file)));
                     }
                 }
                 break;
                 case image: {
                     it.setType(MsgTypeEnum.text);
-                    String file = getCacheRelativePath("image", strings.get(index++));
+                    String file = getCacheRelativePath(strings.get(index++), EnumCacheFileType.image);
                     it.setData(mutableMapOf("text", ImageCode.build(file)));
                 }
                 break;
                 case video: {
                     it.setType(MsgTypeEnum.text);
-                    String file = getCacheRelativePath("video", strings.get(index++));
+                    String file = getCacheRelativePath(strings.get(index++), EnumCacheFileType.video);
                     it.setData(mutableMapOf("text", VideoCode.build(file)));
+                }
+                break;
+                case record: {
                 }
                 break;
             }
@@ -1123,26 +1127,55 @@ public final class BaniraUtils {
     /**
      * 获取缓存文件相对路径
      */
-    public static String getCacheRelativePath(String fileType, String fileName) {
+    public static String getCacheRelativePath(String fileName, EnumCacheFileType fileType) {
         return String.format("cache/%s/%s", fileType, fileName);
     }
 
     /**
      * 获取缓存文件绝对路径
      */
-    public static String getCacheAbsolutePath(String fileType, String fileName) {
-        return new File(getCacheRelativePath(fileType, fileName)).getAbsolutePath();
+    public static String getCacheAbsolutePath(String fileName, EnumCacheFileType fileType) {
+        if (StringUtils.isNullOrEmpty(fileName)) return null;
+        return new File(getCacheRelativePath(fileName, fileType)).getAbsolutePath();
     }
 
-    public static String convertFileUri(String uri) {
+    public static boolean isLocalFile(String uri) {
         try {
             File file = new File(uri);
-            if (file.exists()) {
-                return file.getAbsolutePath();
-            }
+            return file.exists();
         } catch (Exception ignored) {
+            return false;
         }
-        return uri;
+    }
+
+    public static boolean isLocalCacheFile(String uri) {
+        return Arrays.stream(EnumCacheFileType.values()).anyMatch(it -> isLocalCacheFile(uri, it));
+    }
+
+    public static boolean isLocalCacheFile(String uri, EnumCacheFileType type) {
+        return isLocalFile(getCacheRelativePath(uri, type));
+    }
+
+    /**
+     * 将文件路径转换为绝对路径
+     *
+     * @param uri 本地文件路径|本地缓存文件名|网络文件路径
+     * @return 文件绝对路径
+     */
+    public static String convertFileUri(String uri) {
+        if (isLocalFile(uri)) {
+            return new File(uri).getAbsolutePath();
+        } else if (isLocalCacheFile(uri)) {
+            return Arrays.stream(EnumCacheFileType.values())
+                    .filter(it -> isLocalCacheFile(uri, it))
+                    .findFirst()
+                    .map(it -> getCacheRelativePath(uri, it))
+                    .orElse(uri);
+        } else {
+            String fileName = downloadFileToCachePath(uri, EnumCacheFileType.file);
+            if (StringUtils.isNullOrEmpty(fileName)) return uri;
+            return BaniraUtils.getCacheAbsolutePath(fileName, EnumCacheFileType.file);
+        }
     }
 
     // endregion 文件缓存

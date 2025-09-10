@@ -3,6 +3,7 @@ package xin.vanilla.banira.data;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.enums.EnumCacheFileType;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -18,9 +19,7 @@ public class FolderInitializer implements SmartInitializingSingleton {
     private static final String[] paths = new String[]{
             "data",
             "config",
-            "cache/image",
-            "cache/video",
-            "cache/file",
+            "cache",
     };
 
     @Override
@@ -41,6 +40,15 @@ public class FolderInitializer implements SmartInitializingSingleton {
                 Files.createDirectories(dataPath);
             } catch (IOException e) {
                 throw new IllegalStateException("Failed to create directory for " + path, e);
+            }
+        }
+
+        for (EnumCacheFileType type : EnumCacheFileType.values()) {
+            Path cachePath = Paths.get("cache", type.name()).toAbsolutePath();
+            try {
+                Files.createDirectories(cachePath);
+            } catch (IOException e) {
+                throw new IllegalStateException("Failed to create directory for " + cachePath, e);
             }
         }
     }

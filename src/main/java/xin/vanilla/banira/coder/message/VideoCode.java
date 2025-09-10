@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.domain.BaniraCodeContext;
+import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.enums.EnumCodeType;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
@@ -19,6 +20,7 @@ import xin.vanilla.banira.util.StringUtils;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
+import java.io.File;
 import java.util.List;
 import java.util.Set;
 
@@ -81,17 +83,17 @@ public class VideoCode implements MessageCoder {
                 MsgUtils builder = MsgUtils.builder();
                 if (jsonElement.isJsonArray()) {
                     for (JsonElement element : jsonElement.getAsJsonArray()) {
-                        builder.video(BaniraUtils.convertFileUri(element.getAsString()), cover);
+                        builder.video(downloadVideo(element.getAsString()), cover);
                     }
                 } else if (jsonElement.isJsonPrimitive() && jsonElement.getAsJsonPrimitive().isString()) {
-                    builder.video(BaniraUtils.convertFileUri(jsonElement.getAsString()), cover);
+                    builder.video(downloadVideo(jsonElement.getAsString()), cover);
                 } else {
-                    builder.video(BaniraUtils.convertFileUri(url), cover);
+                    builder.video(downloadVideo(url), cover);
                 }
                 return context.msg(context.msg().replace(placeholder, builder.build()));
             }
         }
-        MsgUtils builder = MsgUtils.builder().video(BaniraUtils.convertFileUri(url), cover);
+        MsgUtils builder = MsgUtils.builder().video(downloadVideo(url), cover);
         return context.msg(context.msg().replace(placeholder, builder.build()));
     }
 
@@ -105,6 +107,17 @@ public class VideoCode implements MessageCoder {
                 + ARG_SEPARATOR + "url" + VAL_SEPARATOR + url
                 + ARG_SEPARATOR + "cover" + VAL_SEPARATOR + cover
                 + CODE_END;
+    }
+
+    private static String downloadVideo(String url) {
+        if (BaniraUtils.isLocalFile(url)) {
+            return new File(url).getAbsolutePath();
+        } else if (BaniraUtils.isLocalCacheFile(url, EnumCacheFileType.video)) {
+            return BaniraUtils.getCacheAbsolutePath(url, EnumCacheFileType.video);
+        } else {
+            String fileName = BaniraUtils.downloadFileToCachePath(url, EnumCacheFileType.video);
+            return BaniraUtils.getCacheAbsolutePath(fileName, EnumCacheFileType.video);
+        }
     }
 
 }
