@@ -71,8 +71,7 @@ public class VideoCode implements MessageCoder {
         if (data == null) return fail(context, code, placeholder);
         String jsonPath = JsonUtils.getString(data, "path", "");
         if (StringUtils.isNullOrEmptyEx(jsonPath)) JsonUtils.getString(data, "jsonpath", "");
-        String url = JsonUtils.getString(data, "url", "");
-        if (StringUtils.isNullOrEmptyEx(url)) url = JsonUtils.getString(data, "value", "");
+        String url = JsonUtils.getString(data, "url", JsonUtils.getString(data, "value", ""));
         if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
         String cover = JsonUtils.getString(data, "cover", DEFAULT_COVER);
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
@@ -92,7 +91,8 @@ public class VideoCode implements MessageCoder {
                 return context.msg(context.msg().replace(placeholder, builder.build()));
             }
         }
-        return context.msg(context.msg().replace(placeholder, MsgUtils.builder().img(url).build()));
+        MsgUtils builder = MsgUtils.builder().video(BaniraUtils.convertFileUri(url), cover);
+        return context.msg(context.msg().replace(placeholder, builder.build()));
     }
 
 
