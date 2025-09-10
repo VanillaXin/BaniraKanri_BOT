@@ -29,7 +29,10 @@ import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.DateUtils;
 import xin.vanilla.banira.util.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 消息记录
@@ -41,10 +44,6 @@ public class RecorderPlugin extends BasePlugin {
 
     @Resource
     private IMessageRecordManager messageRecordManager;
-
-    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "msgrecord"
-    );
 
     /**
      * 获取帮助信息

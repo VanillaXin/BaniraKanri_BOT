@@ -22,7 +22,6 @@ import xin.vanilla.banira.util.StringUtils;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 /**
  * 图片表情转图片
@@ -31,10 +30,6 @@ import java.util.Set;
 @Shiro
 @Component
 public class ImageFaceToImagePlugin extends BasePlugin {
-
-    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "getface", "getimage", "获取表情", "获取图片"
-    );
 
     /**
      * 获取帮助信息
@@ -47,7 +42,7 @@ public class ImageFaceToImagePlugin extends BasePlugin {
     public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
         List<String> result = new ArrayList<>();
         String type = CollectionUtils.getFirst(types);
-        if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+        if (insConfig.get().imageFaceToImage().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             result.add("表情转图片：\n" +
                     "使用指令回复带有图片的消息以获得其中的图片详情。\n\n" +
                     BaniraUtils.getInsPrefixWithSpace() +

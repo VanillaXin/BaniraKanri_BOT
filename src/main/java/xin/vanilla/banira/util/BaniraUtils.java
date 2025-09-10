@@ -799,6 +799,13 @@ public final class BaniraUtils {
     }
 
     /**
+     * 判断是否全局管理员
+     */
+    public static boolean isGlobalOp(@Nonnull Long qq) {
+        return isOwner(qq) || isButler(qq);
+    }
+
+    /**
      * 判断是否女仆
      */
     public static boolean isServant(@Nullable Long groupId, @Nonnull Long qq) {
@@ -1091,6 +1098,7 @@ public final class BaniraUtils {
      * 下载消息中的附件(图片、视频、文件)至缓存路径并将其转为文件码
      */
     public static String replaceBaniraFileCode(String msg) {
+        if (PlantCipher.isPlantToken(msg)) msg = PlantCipher.decode(msg);
         List<ArrayMsg> arrayMsgList = MessageConverser.stringToArray(msg);
         List<String> strings = downloadFileToCachePath(arrayMsgList);
         int index = 0;

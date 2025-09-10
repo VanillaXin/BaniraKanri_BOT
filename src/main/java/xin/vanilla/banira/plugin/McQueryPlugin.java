@@ -54,16 +54,12 @@ public class McQueryPlugin extends BasePlugin {
     private static final File HTML_FILE = new File("config/mc_query_plugin/index.html");
     private static final File CONFIG_FILE = new File("config/mc_query_plugin/config.js");
 
-    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "mc", "mcquery", "mcrcon"
-    );
-
     @Nonnull
     @Override
     public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {
         List<String> result = new ArrayList<>();
         String type = CollectionUtils.getFirst(types);
-        if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+        if (insConfig.get().mcQuery().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
 
             result.add("MC服务器配置 - 增加：\n" +

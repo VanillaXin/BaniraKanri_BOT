@@ -40,14 +40,6 @@ public class TimerPlugin extends BasePlugin {
     @Resource
     private ITimerRecordManager timerRecordManager;
 
-    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "timer", "time", "cron", "定时任务", "定时"
-    );
-
-    private static final Set<String> exampleOperate = BaniraUtils.mutableSetOf(
-            "example", "case", "例子", "实例", "栗子"
-    );
-
     @Nonnull
     @Override
     public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {

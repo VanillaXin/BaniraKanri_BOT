@@ -50,6 +50,10 @@ public class KeywordRecord {
      * 启用状态
      */
     private Boolean enable = true;
+    /**
+     * 审核状态
+     */
+    private Boolean audited = false;
 
 
     public KeywordRecord setGroupId(Long groupId) {

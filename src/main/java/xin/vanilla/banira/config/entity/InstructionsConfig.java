@@ -81,7 +81,7 @@ public class InstructionsConfig {
         this.kanri = new KanriInstructionsConfig();
         this.imageFaceToImage = Arrays.asList("获取表情", "获取图片", "获取表情图片", "getface", "getimage", "getimg");
         this.wife = Arrays.asList("老婆", "wife");
-        this.mcQuery = Arrays.asList("我的世界", "麦块", "mc");
+        this.mcQuery = Arrays.asList("我的世界", "麦块", "mc", "mcquery");
         this.tap = Arrays.asList("戳一戳", "戳", "tap", "poke");
         this.alive = Arrays.asList("存活", "活着", "在线", "活着?", "活着？", "online", "alive", "survival");
         this.plant = Arrays.asList("plant", "tea", "花言草语", "胡言乱语", "喝茶", "品茶");

@@ -13,14 +13,15 @@
         <result property="keyword" column="keyword"/>
         <result property="replyMsg" column="reply_msg"/>
         <result property="enable" column="enable"/>
+        <result property="audited" column="audited"/>
     </resultMap>
 
     <sql id="allColumn">
-        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.keyword_type, t.keyword, t.reply_msg, t.enable
+        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.keyword_type, t.keyword, t.reply_msg, t.enable, t.audited
     </sql>
 
     <sql id="baseColumn">
-        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.keyword_type, t.keyword, t.reply_msg, t.enable
+        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.keyword_type, t.keyword, t.reply_msg, t.enable, t.audited
     </sql>
 
     <sql id="whereSql">
@@ -313,6 +314,13 @@
             AND t.enable = #{enable}
         </if>
 
+        <if test="audited_null != null">
+            AND t.audited IS NULL
+        </if>
+        <if test="audited != null">
+            AND t.audited = #{audited}
+        </if>
+
         <if test="_KEY_WORD_ != null">
             AND (
             t.keyword LIKE #{_KEY_WORD_}
@@ -352,6 +360,8 @@
         <if test="item == 'replyMsg_desc'">t.reply_msg DESC</if>
         <if test="item == 'enable_asc'">t.enable ASC</if>
         <if test="item == 'enable_desc'">t.enable DESC</if>
+        <if test="item == 'audited_asc'">t.audited ASC</if>
+        <if test="item == 'audited_desc'">t.audited DESC</if>
     </sql>
 
     <delete id="deleteByParam" parameterType="java.util.Map">

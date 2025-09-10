@@ -7,6 +7,7 @@ import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -38,7 +39,7 @@ public class PlantPlugin extends BasePlugin {
         String type = CollectionUtils.getFirst(types);
         if (insConfig.get().plant().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             result.add("花言草语：\n" +
-                    "将消息内容进行植物编码。\n\n" +
+                    "将消息内容进行植物编码/解码。\n\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
                     insConfig.get().plant()
             );
@@ -64,21 +65,23 @@ public class PlantPlugin extends BasePlugin {
                     return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             }
             try {
-                if (content.startsWith("阁下请喝") && content.endsWith("茶")) {
+
+                if (PlantCipher.isAroundLocator(content)) {
                     bot.sendMsg(event
                             , MsgUtils.builder()
                                     .reply(event.getMessageId())
-                                    .text(PlantCipher.decode(content.replaceAll("^阁下请喝|茶$", "")))
+                                    .text(PlantCipher.decode(content))
                                     .build()
                             , false
                     );
                 } else {
+                    KeyValue<String, String> locator = CollectionUtils.getRandomElement(PlantCipher.LOCATOR);
                     bot.sendMsg(event
                             , MsgUtils.builder()
                                     .reply(event.getMessageId())
-                                    .text("阁下请喝")
+                                    .text(locator.getKey())
                                     .text(PlantCipher.encode(content))
-                                    .text("茶")
+                                    .text(locator.getValue())
                                     .build()
                             , false
                     );

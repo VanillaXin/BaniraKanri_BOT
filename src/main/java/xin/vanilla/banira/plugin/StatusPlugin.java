@@ -71,10 +71,6 @@ public class StatusPlugin extends BasePlugin {
     private static final File CONFIG_FILE = new File("config/status_plugin/config.js");
     private static final File TEMP_BG_FILE = new File("config/status_plugin/temp.png");
 
-    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "status", "状态"
-    );
-
     /**
      * 获取帮助信息
      *
@@ -86,7 +82,7 @@ public class StatusPlugin extends BasePlugin {
     public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
         List<String> result = new ArrayList<>();
         String type = CollectionUtils.getFirst(types);
-        if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+        if (insConfig.get().base().status().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             result.add("框架状态：\n" +
                     "获取框架及系统状态信息总览。\n\n" +
                     BaniraUtils.getInsPrefixWithSpace() +

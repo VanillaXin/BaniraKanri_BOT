@@ -53,7 +53,8 @@ CREATE TABLE IF NOT EXISTS "keyword_record"
     `keyword_type` TEXT    NOT NULL,
     `keyword`      TEXT    NOT NULL,
     `reply_msg`    TEXT    NOT NULL,
-    `enable`       BOOLEAN NOT NULL DEFAULT TRUE
+    `enable`       BOOLEAN NOT NULL DEFAULT TRUE,
+    `audited`      BOOLEAN NOT NULL DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS id_index ON "keyword_record" (`id`);
 CREATE INDEX IF NOT EXISTS bot_id_index ON "keyword_record" (`bot_id`);
@@ -63,7 +64,10 @@ CREATE INDEX IF NOT EXISTS time_index ON "keyword_record" (`time`);
 CREATE INDEX IF NOT EXISTS keyword_type_index ON "keyword_record" (`keyword_type`);
 CREATE INDEX IF NOT EXISTS keyword_index ON "keyword_record" (`keyword`);
 CREATE INDEX IF NOT EXISTS enable_index ON "keyword_record" (`enable`);
+CREATE INDEX IF NOT EXISTS audited_index ON "keyword_record" (`audited`);
 CREATE INDEX IF NOT EXISTS bot_id_enable_index ON "keyword_record" (`bot_id`, `enable`);
+CREATE INDEX IF NOT EXISTS bot_id_audited_index ON "keyword_record" (`bot_id`, `audited`);
+CREATE INDEX IF NOT EXISTS bot_id_enable_audited_index ON "keyword_record" (`bot_id`, `enable`, `audited`);
 CREATE INDEX IF NOT EXISTS bot_id_group_id_enable_index ON "keyword_record" (`bot_id`, `group_id`, `enable`);
 
 
@@ -77,7 +81,8 @@ CREATE TABLE IF NOT EXISTS "timer_record"
     `time`       INTEGER NOT NULL,
     `cron`       TEXT    NOT NULL,
     `reply_msg`  TEXT    NOT NULL,
-    `enable`     BOOLEAN NOT NULL DEFAULT TRUE
+    `enable`     BOOLEAN NOT NULL DEFAULT TRUE,
+    `audited`    BOOLEAN NOT NULL DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS id_index ON "timer_record" (`id`);
 CREATE INDEX IF NOT EXISTS bot_id_index ON "timer_record" (`bot_id`);
@@ -86,7 +91,10 @@ CREATE INDEX IF NOT EXISTS bot_id_group_id_index ON "timer_record" (`bot_id`, `g
 CREATE INDEX IF NOT EXISTS time_index ON "timer_record" (`time`);
 CREATE INDEX IF NOT EXISTS cron_index ON "timer_record" (`cron`);
 CREATE INDEX IF NOT EXISTS enable_index ON "timer_record" (`enable`);
+CREATE INDEX IF NOT EXISTS audited_index ON "timer_record" (`audited`);
 CREATE INDEX IF NOT EXISTS bot_id_enable_index ON "timer_record" (`bot_id`, `enable`);
+CREATE INDEX IF NOT EXISTS bot_id_audited_index ON "timer_record" (`bot_id`, `audited`);
+CREATE INDEX IF NOT EXISTS bot_id_enable_audited_index ON "timer_record" (`bot_id`, `enable`, `audited`);
 CREATE INDEX IF NOT EXISTS bot_id_group_id_enable_index ON "timer_record" (`bot_id`, `group_id`, `enable`);
 
 

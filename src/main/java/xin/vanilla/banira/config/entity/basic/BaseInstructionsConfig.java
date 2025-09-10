@@ -58,6 +58,11 @@ public class BaseInstructionsConfig {
      */
     private List<String> help;
 
+    /**
+     * 例子
+     */
+    private List<String> example;
+
 
     {
         this.add = Arrays.asList("添加", "add", "put", "insert");
@@ -70,6 +75,7 @@ public class BaseInstructionsConfig {
         this.atAll = Arrays.asList("@全体成员", "@全体", "@所有人", "@all", "@All", "@ALL");
         this.status = Arrays.asList("统计", "状态", "status", "statistics", "stats");
         this.help = Arrays.asList("帮助", "指令帮助", "help", "tips");
+        this.example = Arrays.asList("示例", "例子", "栗子", "🌰", "demo", "example", "case");
     }
 
 }

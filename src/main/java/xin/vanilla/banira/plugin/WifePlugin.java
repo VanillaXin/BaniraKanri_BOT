@@ -66,10 +66,6 @@ public class WifePlugin extends BasePlugin {
             new Dimension(50, 50), CollisionMode.PIXEL_PERFECT
     ).getBufferedImage().createGraphics().getFontMetrics();
 
-    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "wife", "老婆", "抽老婆"
-    );
-
     /**
      * 获取帮助信息
      *
@@ -81,7 +77,7 @@ public class WifePlugin extends BasePlugin {
     public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
         List<String> result = new ArrayList<>();
         String type = CollectionUtils.getFirst(types);
-        if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
+        if (insConfig.get().wife().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             List<WifeConfig> wifeConfig = getWifeConfig(groupId);
             result.add("抽老婆：\n" +
                     "抽取每日群友老婆喵。\n\n" +

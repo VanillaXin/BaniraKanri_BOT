@@ -44,7 +44,6 @@ public class KeyInstructionsConfig {
     {
         this.locator = Arrays.asList(
                 new KeyValue<>("关键词", "回复")
-                , new KeyValue<>("start", "end")
                 , new KeyValue<>("key", "rep")
                 , new KeyValue<>("keyword", "reply")
         );

@@ -24,6 +24,7 @@ public class KeywordRecordQueryParam extends BaniraQueryParam {
     public static final String QUERY_KEYWORD = LambdaUtils.getFiledName(KeywordRecord::getKeyword);
     public static final String QUERY_REPLY_MSG = LambdaUtils.getFiledName(KeywordRecord::getReplyMsg);
     public static final String QUERY_ENABLE = LambdaUtils.getFiledName(KeywordRecord::getEnable);
+    public static final String QUERY_AUDITED = LambdaUtils.getFiledName(KeywordRecord::getAudited);
 
     // endregion
 
@@ -38,6 +39,7 @@ public class KeywordRecordQueryParam extends BaniraQueryParam {
     public static final String ORDER_KEYWORD = LambdaUtils.getFiledName(KeywordRecord::getKeyword);
     public static final String ORDER_REPLY_MSG = LambdaUtils.getFiledName(KeywordRecord::getReplyMsg);
     public static final String ORDER_ENABLE = LambdaUtils.getFiledName(KeywordRecord::getEnable);
+    public static final String ORDER_AUDITED = LambdaUtils.getFiledName(KeywordRecord::getAudited);
 
     // endregion
 
@@ -248,6 +250,11 @@ public class KeywordRecordQueryParam extends BaniraQueryParam {
 
     public KeywordRecordQueryParam setEnable(Boolean enable) {
         addParam(QUERY_ENABLE, enable);
+        return this;
+    }
+
+    public KeywordRecordQueryParam setAudited(Boolean audited) {
+        addParam(QUERY_AUDITED, audited);
         return this;
     }
 

@@ -60,14 +60,6 @@ public class KeywordPlugin extends BasePlugin {
     @Autowired(required = false)
     private List<EventCoder> eventCoders = new ArrayList<>();
 
-    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "keyword", "key", "keyWord", "关键词", "关键词回复"
-    );
-
-    private static final Set<String> exampleOperate = BaniraUtils.mutableSetOf(
-            "example", "case", "例子", "实例", "栗子"
-    );
-
     /**
      * 获取帮助信息
      *
@@ -79,15 +71,16 @@ public class KeywordPlugin extends BasePlugin {
     public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {
         List<String> result = new ArrayList<>();
         String type = CollectionUtils.getFirst(types);
+        KeyInstructionsConfig keyIns = BaniraUtils.getKeyIns();
+        BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
+        String prefixWithSpace = BaniraUtils.getInsPrefixWithSpace();
         String operate = CollectionUtils.getOrDefault(types, 1, "");
-        if (helpType.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
-            KeyInstructionsConfig keyIns = BaniraUtils.getKeyIns();
 
-            if (exampleOperate.contains(operate)) {
+        if (keyIns.locator().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.getKey().equalsIgnoreCase(type))) {
+            if (baseIns.example().contains(operate)) {
                 result.add("关键词回复 - 增加：\n\n" +
                         "例子1：" + "\n" +
-                        BaniraUtils.getInsPrefixWithSpace() +
+                        prefixWithSpace +
                         keyIns.locator().getFirst().getKey() + " " +
                         baseIns.add().getFirst() + " " +
                         keyIns.exactly().getFirst() + " " +
@@ -95,7 +88,7 @@ public class KeywordPlugin extends BasePlugin {
                         keyIns.locator().getFirst().getValue() + " " +
                         "回复内容" + "\n\n" +
                         "例子2：" + "\n" +
-                        BaniraUtils.getInsPrefixWithSpace() +
+                        prefixWithSpace +
                         keyIns.locator().getLast().getKey() + " " +
                         baseIns.add().getLast() + " " +
                         baseIns.global().getFirst() + " " +
@@ -106,7 +99,7 @@ public class KeywordPlugin extends BasePlugin {
                 );
                 result.add("关键词回复 - 删除：\n\n" +
                         "例子1：" + "\n" +
-                        BaniraUtils.getInsPrefixWithSpace() +
+                        prefixWithSpace +
                         keyIns.locator().getFirst().getKey() + " " +
                         baseIns.del().getFirst() + " " +
                         baseIns.global().getFirst() + " " +
@@ -115,7 +108,7 @@ public class KeywordPlugin extends BasePlugin {
                         keyIns.locator().getFirst().getValue() + " " +
                         "回复内容" + "\n\n" +
                         "例子2：" + "\n" +
-                        BaniraUtils.getInsPrefixWithSpace() +
+                        prefixWithSpace +
                         keyIns.locator().getLast().getKey() + " " +
                         baseIns.del().getLast() + " " +
                         baseIns.global().getLast() + " " +
@@ -134,8 +127,9 @@ public class KeywordPlugin extends BasePlugin {
                 keywordTypes.addAll(keyIns.regex());
 
                 result.add("关键词回复 - 增加：\n" +
-                        "增加关键词回复规则。可选帮助参数：" + exampleOperate + "\n\n" +
-                        BaniraUtils.getInsPrefixWithSpace() +
+                        "增加关键词回复规则。可选帮助参数：" + baseIns.example() + "\n\n" +
+                        "用法1：\n" +
+                        prefixWithSpace +
                         keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
                         baseIns.add() + " " +
                         String.format("[%s, %s, <群号>]"
@@ -148,9 +142,9 @@ public class KeywordPlugin extends BasePlugin {
                         "<回复内容>"
                 );
                 result.add("关键词回复 - 删除：\n" +
-                        "删除关键词回复规则。可选帮助参数：" + exampleOperate + "\n\n" +
+                        "删除关键词回复规则。可选帮助参数：" + baseIns.example() + "\n\n" +
                         "用法1：\n" +
-                        BaniraUtils.getInsPrefixWithSpace() +
+                        prefixWithSpace +
                         keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
                         baseIns.del() + " " +
                         String.format("[%s, %s, <群号>]"
@@ -162,17 +156,29 @@ public class KeywordPlugin extends BasePlugin {
                         keyIns.locator().stream().map(KeyValue::getValue).toList() + " " +
                         "<回复内容>" + "\n\n" +
                         "用法2：(根据关键词编号删除)\n" +
-                        BaniraUtils.getInsPrefixWithSpace() +
+                        prefixWithSpace +
                         keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
                         baseIns.del() + " " +
                         "<关键词编号> ..." + "\n\n" +
                         "用法3：(回复添加成功的响应消息)\n" +
-                        BaniraUtils.getInsPrefixWithSpace() +
+                        prefixWithSpace +
                         keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
                         baseIns.del()
                 );
+                result.add("关键词回复 - 启用：\n" +
+                        "启用关键词回复规则。\n\n" +
+                        "用法1：(根据关键词编号启用)\n" +
+                        prefixWithSpace +
+                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
+                        baseIns.enable() + " " +
+                        "<关键词编号> ..." + "\n\n" +
+                        "用法2：(回复添加成功的响应消息)\n" +
+                        prefixWithSpace +
+                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
+                        baseIns.add()
+                );
                 result.add("关键词回复 - 查询：\n\n" +
-                        BaniraUtils.getInsPrefixWithSpace() +
+                        prefixWithSpace +
                         keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
                         baseIns.list() + " " +
                         "[<页数>]" + " " +
@@ -187,6 +193,7 @@ public class KeywordPlugin extends BasePlugin {
     public boolean config(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
         KeyInstructionsConfig keyIns = BaniraUtils.getKeyIns();
+        BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
 
         // 精准添加/删除
         if (super.isKeywordCommand(message)) {
@@ -201,8 +208,6 @@ public class KeywordPlugin extends BasePlugin {
             if (StringUtils.isNullOrEmpty(reply)) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
 
             EnumKeywordType keywordType = EnumKeywordType.valueFrom(type);
-
-            BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
 
             String action = StringUtils.orDefault(matcher.group("keywordAction"), baseIns.add().getFirst());
             String group = StringUtils.orDefault(matcher.group("keywordTarget"), baseIns.that().getFirst());
@@ -223,7 +228,8 @@ public class KeywordPlugin extends BasePlugin {
                         .setTime(event.getTime())
                         .setKeywordType(keywordType)
                         .setKeyword(keyword)
-                        .setReplyMsg(reply);
+                        .setReplyMsg(reply)
+                        .setAudited(BaniraUtils.isGlobalOp(event.getUserId()));
 
                 String reason = "";
                 // 权限及规则判断
@@ -264,7 +270,10 @@ public class KeywordPlugin extends BasePlugin {
 
                 if (StringUtils.isNullOrEmptyEx(reason)) {
                     try {
-                        keywordRecord.setReplyMsg(BaniraUtils.replaceBaniraFileCode(reply));
+                        if (PlantCipher.isPlantToken(keywordRecord.getReplyMsg())) {
+                            keywordRecord.setReplyMsg(PlantCipher.decode(keywordRecord.getReplyMsg()));
+                        }
+                        keywordRecord.setReplyMsg(BaniraUtils.replaceBaniraFileCode(keywordRecord.getReplyMsg()));
                         keywordRecordManager.addKeywordRecord(keywordRecord);
                         if (keywordRecord.getId() == 0) {
                             reason = "添加失败";
@@ -277,7 +286,8 @@ public class KeywordPlugin extends BasePlugin {
                 forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
                         , (keywordRecord.getId() != null && keywordRecord.getId() != 0 ? "关键词编号：" + keywordRecord.getId() + "\n" : "") +
                                 "关键词类型：" + keywordType.getDesc() + "\n" +
-                                "群号：" + keywordRecord.getGroupId()
+                                "群号：" + keywordRecord.getGroupId() + "\n" +
+                                "审核状态：" + (keywordRecord.getAudited() ? "已审核" : "待审核")
                 ));
                 forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
                         , "触发内容：\n" + keywordRecord.getKeyword()
@@ -321,7 +331,7 @@ public class KeywordPlugin extends BasePlugin {
         }
         //
         else {
-            // 回复添加成功记录删除
+            // 回复添加成功记录删除 或 审核
             if (BaniraUtils.hasReply(event.getArrayMsg())) {
                 String msg = BaniraUtils.replaceReply(message);
                 if (super.isCommand(msg)
@@ -329,7 +339,11 @@ public class KeywordPlugin extends BasePlugin {
                         && keyIns.locator().stream().anyMatch(ins -> super.replaceCommand(msg).startsWith(ins.getKey()))
                 ) {
                     String[] split = super.replaceCommand(msg).split("\\s+");
-                    if (split.length != 2 && !BaniraUtils.getBaseIns().del().contains(split[1])) {
+                    String operate = split[1];
+                    if (split.length != 2 && (!baseIns.del().contains(operate)
+                            || !baseIns.add().contains(operate)
+                            || !baseIns.enable().contains(operate))
+                    ) {
                         return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                     }
                     if (BaniraUtils.getReplyUserId(bot, event.getGroupId(), event.getArrayMsg()) != bot.getSelfId()) {
@@ -360,7 +374,11 @@ public class KeywordPlugin extends BasePlugin {
                                     .filter(data -> data > 0).toList();
                             for (Long id : ids) {
                                 KeywordRecord record = keywordRecordManager.getKeywordRecord(id);
-                                this.deleteKeywordRecord(bot, event, record, loginInfoEx, forwardMsg);
+                                if (baseIns.del().contains(operate)) {
+                                    this.deleteKeywordRecord(bot, event, record, loginInfoEx, forwardMsg);
+                                } else {
+                                    this.enableKeywordRecord(bot, event, record, loginInfoEx, forwardMsg);
+                                }
                             }
                             ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, forwardMsg);
                             return bot.isActionDataMsgIdNotEmpty(msgIdData);
@@ -377,10 +395,9 @@ public class KeywordPlugin extends BasePlugin {
                 String[] split = super.replaceCommand(message).split("\\s+");
                 if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
 
-                BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
-
                 // 根据ID删除
-                if (baseIns.del().contains(split[1])) {
+                String operate = split[1];
+                if (baseIns.del().contains(operate) || baseIns.add().contains(operate) || baseIns.enable().contains(operate)) {
                     LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
                     List<Map<String, Object>> forwardMsg = new ArrayList<>();
                     forwardMsg.add(ShiroUtils.generateSingleMsg(event.getUserId(), event.getSender().getNickname(), event.getMessage()));
@@ -396,7 +413,11 @@ public class KeywordPlugin extends BasePlugin {
                         List<KeywordRecord> recordList = keywordRecordManager.getKeywordRecordList(new KeywordRecordQueryParam().setId(ids).setEnable(true));
                         if (!recordList.isEmpty()) {
                             for (KeywordRecord record : recordList) {
-                                this.deleteKeywordRecord(bot, event, record, loginInfoEx, forwardMsg);
+                                if (baseIns.del().contains(operate)) {
+                                    this.deleteKeywordRecord(bot, event, record, loginInfoEx, forwardMsg);
+                                } else {
+                                    this.enableKeywordRecord(bot, event, record, loginInfoEx, forwardMsg);
+                                }
                             }
                         } else {
                             forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
@@ -408,7 +429,7 @@ public class KeywordPlugin extends BasePlugin {
                     return bot.isActionDataMsgIdNotEmpty(msgIdData);
                 }
                 // 查询
-                else if (baseIns.list().contains(split[1])) {
+                else if (baseIns.list().contains(operate)) {
                     long page = StringUtils.toLong(CollectionUtils.getOrDefault(split, 2, ""), 0);
                     String keyWord = String.join("", Arrays.copyOfRange(split, page > 0 && split.length > 3 ? 3 : 2, split.length));
                     if (page <= 0) page = 1;
@@ -439,7 +460,8 @@ public class KeywordPlugin extends BasePlugin {
                             forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
                                     , "关键词编号：" + record.getId() + "\n" +
                                             "关键词类型：" + record.getKeywordType().getDesc() + "\n" +
-                                            "群号：" + record.getGroupId() + "\n\n" +
+                                            "群号：" + record.getGroupId() + "\n" +
+                                            "审核状态：" + (record.getAudited() ? "已审核" : "待审核") + "\n\n" +
                                             "触发内容：\n" + record.getKeyword() + "\n\n" +
                                             "回复内容：\n" + record.getReplyMsg()
                             ));
@@ -534,6 +556,35 @@ public class KeywordPlugin extends BasePlugin {
                 }
             } catch (Exception e) {
                 reason = "\n删除失败：" + e.getMessage();
+            }
+        }
+        forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                , "关键词编号：" + record.getId() + "\n" +
+                        "关键词类型：" + record.getKeywordType().getDesc() + "\n" +
+                        "群号：" + record.getGroupId() + reason + "\n" +
+                        "审核状态：" + (record.getAudited() ? "已审核" : "待审核")
+        ));
+        forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                , "触发内容：\n" + record.getKeyword()
+        ));
+        forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                , "回复内容：\n" + record.getReplyMsg()
+        ));
+    }
+
+    private void enableKeywordRecord(BaniraBot bot, AnyMessageEvent event
+            , KeywordRecord record, LoginInfoResp loginInfoEx, List<Map<String, Object>> forwardMsg
+    ) {
+        String reason = "";
+        if (!BaniraUtils.isGlobalOp(event.getUserId())) {
+            reason = "\n启用失败：权限不足";
+        }
+        if (StringUtils.isNullOrEmptyEx(reason)) {
+            try {
+                keywordRecordManager.modifyKeywordRecord(record.setAudited(true).setEnable(true));
+                reason = "\n启用成功";
+            } catch (Exception e) {
+                reason = "\n启用失败：" + e.getMessage();
             }
         }
         forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()

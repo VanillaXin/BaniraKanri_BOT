@@ -35,7 +35,9 @@ public class KeywordCacheManager implements IKeywordCacheManager {
 
     @Override
     public void loadKeywords() {
-        List<KeywordRecord> allKeywords = keywordRecordManager.getKeywordRecordList(new KeywordRecordQueryParam().setEnable(true));
+        List<KeywordRecord> allKeywords = keywordRecordManager.getKeywordRecordList(
+                new KeywordRecordQueryParam().setEnable(true).setAudited(true)
+        );
 
         // 清空现有缓存
         this.keywordsByType.clear();

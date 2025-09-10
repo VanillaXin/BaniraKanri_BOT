@@ -1,5 +1,7 @@
 package xin.vanilla.banira.util;
 
+import xin.vanilla.banira.domain.KeyValue;
+
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -18,6 +20,11 @@ public final class PlantCipher {
     private PlantCipher() {
     }
 
+    public static final List<KeyValue<String, String>> LOCATOR = List.of(
+            new KeyValue<>("阁下请喝", "茶"),
+            new KeyValue<>("阁下请用", "茶"),
+            new KeyValue<>("阁下请品", "茶")
+    );
     private static final String SALT = "BaniraKanri";
     private static final int TOKEN_CHAR_LENGTH = 1;
     private static final int GCM_TAG_BITS = 128;
@@ -125,6 +132,7 @@ public final class PlantCipher {
      * @return 解密后的明文（UTF-8）
      */
     public static String decode(String tokenString) {
+        tokenString = replaceAroundLocator(tokenString);
         if (tokenString == null) tokenString = "";
 
         int base = RESORT_PLANTS.size();
@@ -178,6 +186,33 @@ public final class PlantCipher {
         byte[] data = Arrays.copyOfRange(payload, 1, payload.length);
         byte[] plainBytes = compressed ? gzipDecompress(data) : data;
         return new String(plainBytes, java.nio.charset.StandardCharsets.UTF_8);
+    }
+
+    public static boolean isPlantToken(String tokenString) {
+        if (StringUtils.isNullOrEmptyEx(tokenString)) return false;
+        String string = replaceAroundLocator(tokenString);
+        return string.length() % TOKEN_CHAR_LENGTH == 0
+                && Arrays.stream(string.split(".{" + TOKEN_CHAR_LENGTH + "}"))
+                .allMatch(BASE_PLANTS::contains);
+
+    }
+
+    public static KeyValue<String, String> getAroundLocator(String tokenString) {
+        if (StringUtils.isNullOrEmptyEx(tokenString)) return null;
+        return LOCATOR.stream().filter(kv ->
+                tokenString.startsWith(kv.getKey()) && tokenString.endsWith(kv.getValue())
+        ).findFirst().orElse(null);
+    }
+
+    public static boolean isAroundLocator(String tokenString) {
+        return getAroundLocator(tokenString) != null;
+    }
+
+    public static String replaceAroundLocator(String tokenString) {
+        KeyValue<String, String> locator = getAroundLocator(tokenString);
+        return locator == null
+                ? tokenString
+                : tokenString.replaceAll(String.format("^%s|%s$", locator.getKey(), locator.getValue()), "");
     }
 
     /**
