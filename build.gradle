@@ -88,16 +88,7 @@ tasks.named('test') {
     enabled = false
 }
 
-def activeProfile = gradle.startParameter.taskNames.any {
-    it.contains("bootJar") || it.contains("build")
-} ? "prod" : "dev"
-
 tasks.named('processResources') {
-    filesMatching('application.yml') {
-        filter { line ->
-            line.replaceAll('active:\\s*\\w+', "active: ${activeProfile}")
-        }
-    }
     from('src/main/java') {
         include 'xin/vanilla/banira/mapper/mybatis/mybatis-*.xml'
     }

@@ -27,6 +27,10 @@ public class GlobalConfig {
      */
     private String wsUrl;
     /**
+     * 运行环境
+     */
+    private String env;
+    /**
      * 机器人昵称
      */
     private Long owner;
@@ -47,6 +51,7 @@ public class GlobalConfig {
     {
         this.token = "";
         this.wsUrl = "ws://127.0.0.1:8080";
+        this.env = "prod";
         this.owner = 0L;
         this.botNick = "香草酱";
         this.backGroup = new ArrayList<>();

@@ -1,0 +1,13 @@
+<service>
+    <id>BaniraKanri</id>
+    <name>BaniraKanri</name>
+    <description>BaniraKanri Service</description>
+    <!-- Java 路径 -->
+    <executable>D:\Programs\Java\corretto-21.0.7\bin\java</executable>
+    <!-- 启动参数 -->
+    <arguments>-Dloader.path=libs/ -jar banira-kanri-1.0.0.jar %*</arguments>
+    <!-- 日志模式 -->
+    <logmode>none</logmode>
+    <!-- 程序异常退出时自动重启 -->
+    <onfailure action="restart"/>
+</service>

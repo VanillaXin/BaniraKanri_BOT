@@ -30,8 +30,13 @@ public class GlobalConfigEnvironmentPostProcessor implements EnvironmentPostProc
 
             String token = getValue(global, "token", String.class);
             String wsUrl = getValue(global, "wsUrl", String.class);
+            String env = getValue(global, "env", String.class);
+            if ("dev".equalsIgnoreCase(env)) env = "dev";
+            else env = "prod";
 
             Map<String, Object> overrideMap = new HashMap<>();
+            overrideMap.put("spring.profiles.active", env);
+
             overrideMap.put("shiro.ws.access-token", token);
 
             boolean client = wsUrl.startsWith("ws://");
