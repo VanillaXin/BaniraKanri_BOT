@@ -30,10 +30,7 @@ import java.util.Set;
 @Component
 public class VideoCode implements MessageCoder {
 
-    private static final String DEFAULT_COVER = ImgUtil.toBase64(
-            ImgUtil.createImage(" ", FontUtil.createFont(), Color.BLACK, Color.BLACK, BufferedImage.TYPE_4BYTE_ABGR)
-            , "JPG"
-    );
+    private static final Image DEFAULT_COVER = ImgUtil.createImage(" ", FontUtil.createFont(), Color.WHITE, Color.BLACK, BufferedImage.TYPE_4BYTE_ABGR);
 
     @Override
     public List<String> getExample() {
@@ -75,7 +72,16 @@ public class VideoCode implements MessageCoder {
         if (StringUtils.isNullOrEmptyEx(jsonPath)) JsonUtils.getString(data, "jsonpath", "");
         String url = JsonUtils.getString(data, "url", JsonUtils.getString(data, "value", ""));
         if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
-        String cover = JsonUtils.getString(data, "cover", DEFAULT_COVER);
+        String cover = JsonUtils.getString(data, "cover", "");
+        if (StringUtils.isNullOrEmptyEx(cover)) {
+            BufferedImage image = ImgUtil.copyImage(DEFAULT_COVER, BufferedImage.TYPE_4BYTE_ABGR);
+            if (context.keywordRecord() != null) {
+                ImgUtil.pressText(image, context.keywordRecord().getKeyword(), Color.BLACK, FontUtil.createFont(), 0, 0, 1f);
+            } else {
+                ImgUtil.pressText(image, url, Color.BLACK, FontUtil.createFont(), 0, 0, 1f);
+            }
+            cover = ImgUtil.toBase64(image, "JPG");
+        }
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
             JsonElement json = JsonUtils.parseJson(HttpUtil.get(url));
             if (json != null && !json.isJsonNull()) {
@@ -99,7 +105,9 @@ public class VideoCode implements MessageCoder {
 
 
     public static String build(String url) {
-        return build(url, DEFAULT_COVER);
+        BufferedImage image = ImgUtil.copyImage(DEFAULT_COVER, BufferedImage.TYPE_4BYTE_ABGR);
+        ImgUtil.pressText(image, url, Color.BLACK, FontUtil.createFont(), 0, 0, 1f);
+        return build(url, ImgUtil.toBase64(image, "JPG"));
     }
 
     public static String build(String url, String cover) {

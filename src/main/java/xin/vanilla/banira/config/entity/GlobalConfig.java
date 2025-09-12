@@ -31,11 +31,11 @@ public class GlobalConfig {
      */
     private String env;
     /**
-     * 机器人昵称
+     * 主人
      */
     private Long owner;
     /**
-     * 主人
+     * 机器人昵称
      */
     private String botNick;
     /**

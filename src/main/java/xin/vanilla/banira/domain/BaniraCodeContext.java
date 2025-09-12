@@ -58,6 +58,11 @@ public class BaniraCodeContext implements Cloneable {
      */
     private Integer msgId;
 
+    /**
+     * 关键词记录
+     */
+    private KeywordRecord keywordRecord;
+
     public BaniraCodeContext(BaniraBot bot, List<ArrayMsg> originalMsg, Long _group, Long _sender, Long _target) {
         this.bot = bot;
         this.originalMsg = originalMsg;

@@ -605,7 +605,8 @@ public class KeywordPlugin extends BasePlugin {
         KeywordRecord matchReply = keywordManager.findMatchReply(context.msg(), context.bot().getSelfId(), context.group());
         if (matchReply != null) {
             context.msg(matchReply.getReplyMsg())
-                    .opId(matchReply.getCreatorId());
+                    .opId(matchReply.getCreatorId())
+                    .keywordRecord(matchReply);
             result = codeHandler.decode(context);
         }
         return result;
