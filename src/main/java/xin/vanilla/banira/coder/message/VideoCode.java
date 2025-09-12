@@ -74,11 +74,11 @@ public class VideoCode implements MessageCoder {
         if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
         String cover = JsonUtils.getString(data, "cover", "");
         if (StringUtils.isNullOrEmptyEx(cover)) {
-            BufferedImage image = ImgUtil.copyImage(DEFAULT_COVER, BufferedImage.TYPE_4BYTE_ABGR);
+            Image image = ImgUtil.copyImage(DEFAULT_COVER, BufferedImage.TYPE_4BYTE_ABGR);
             if (context.keywordRecord() != null) {
-                ImgUtil.pressText(image, context.keywordRecord().getKeyword(), Color.BLACK, FontUtil.createFont(), 0, 0, 1f);
+                image = ImgUtil.pressText(image, context.keywordRecord().getKeyword(), Color.BLACK, FontUtil.createFont(), 0, 0, 1f);
             } else {
-                ImgUtil.pressText(image, url, Color.BLACK, FontUtil.createFont(), 0, 0, 1f);
+                image = ImgUtil.pressText(image, url, Color.BLACK, FontUtil.createFont(), 0, 0, 1f);
             }
             cover = ImgUtil.toBase64(image, "JPG");
         }
@@ -105,8 +105,8 @@ public class VideoCode implements MessageCoder {
 
 
     public static String build(String url) {
-        BufferedImage image = ImgUtil.copyImage(DEFAULT_COVER, BufferedImage.TYPE_4BYTE_ABGR);
-        ImgUtil.pressText(image, url, Color.BLACK, FontUtil.createFont(), 0, 0, 1f);
+        Image image = ImgUtil.copyImage(DEFAULT_COVER, BufferedImage.TYPE_4BYTE_ABGR);
+        image = ImgUtil.pressText(image, url, Color.BLACK, FontUtil.createFont(), 0, 0, 1f);
         return build(url, ImgUtil.toBase64(image, "JPG"));
     }
 
