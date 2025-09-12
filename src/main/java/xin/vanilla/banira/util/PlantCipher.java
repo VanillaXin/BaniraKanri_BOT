@@ -71,6 +71,7 @@ public final class PlantCipher {
             "枳", "柊", "茱", "槠", "櫧", "竹", "苎", "梓"
     );
     private static final List<String> RESORT_PLANTS = shuffledPlantsForSalt(SALT);
+    private static final Set<String> PLANT_SET = new HashSet<>(BASE_PLANTS);
 
     /**
      * 加密
@@ -192,8 +193,7 @@ public final class PlantCipher {
         if (StringUtils.isNullOrEmptyEx(tokenString)) return false;
         String string = replaceAroundLocator(tokenString);
         return string.length() % TOKEN_CHAR_LENGTH == 0
-                && Arrays.stream(string.split(".{" + TOKEN_CHAR_LENGTH + "}"))
-                .allMatch(BASE_PLANTS::contains);
+                && PLANT_SET.containsAll(StringUtils.splitString(string, TOKEN_CHAR_LENGTH));
 
     }
 

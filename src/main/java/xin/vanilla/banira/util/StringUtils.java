@@ -11,8 +11,10 @@ import java.math.RoundingMode;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.IntStream;
 
 @SuppressWarnings("unused")
 public final class StringUtils {
@@ -579,6 +581,12 @@ public final class StringUtils {
             hexString.append(hex);
         }
         return hexString.toString();
+    }
+
+    public static List<String> splitString(String input, int chunkSize) {
+        return IntStream.iterate(0, i -> i < input.length(), i -> i + chunkSize)
+                .mapToObj(i -> input.substring(i, Math.min(input.length(), i + chunkSize)))
+                .toList();
     }
 
 
