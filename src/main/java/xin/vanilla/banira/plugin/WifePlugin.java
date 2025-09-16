@@ -133,6 +133,7 @@ public class WifePlugin extends BasePlugin {
 
                 Matcher matcher = this.getPattern(config).matcher(message);
                 String wifeNick = RegexpHelper.extractParams(matcher, config.nick());
+                if (wifeNick == null) wifeNick = config.nick();
 
                 if (wifeRecord == null) {
                     GroupMemberInfoResp wife = this.getRandomWife(bot, event.getGroupId());

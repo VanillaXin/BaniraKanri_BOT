@@ -320,6 +320,10 @@ public final class StringUtils {
         return result;
     }
 
+    public static boolean isNumber(String s) {
+        return s.matches("\\d+(?:\\.\\d+)?");
+    }
+
     /**
      * 整数转罗马数字
      */

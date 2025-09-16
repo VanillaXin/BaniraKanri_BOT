@@ -1,6 +1,7 @@
 package xin.vanilla.banira.util;
 
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import lombok.Getter;
 
 import java.util.Collection;
@@ -339,17 +340,20 @@ public class RegexpHelper {
         return stringBuilder.toString();
     }
 
+    @Nullable
     public static String extractParams(String regex, String input, String paramExpr) {
         return extractParams(Pattern.compile(regex), input, paramExpr);
     }
 
+    @Nullable
     public static String extractParams(Pattern pattern, String input, String paramExpr) {
         return extractParams(pattern.matcher(input), paramExpr);
     }
 
+    @Nullable
     public static String extractParams(Matcher matcher, String paramExpr) {
         try {
-            if (!matcher.matches()) return paramExpr;
+            if (!matcher.matches()) return null;
 
             Pattern varPattern = Pattern.compile("\\$(\\w+)");
             Matcher varMatcher = varPattern.matcher(paramExpr);
@@ -382,7 +386,7 @@ public class RegexpHelper {
             varMatcher.appendTail(sb);
             return sb.toString();
         } catch (Exception e) {
-            return paramExpr;
+            return null;
         }
     }
 
