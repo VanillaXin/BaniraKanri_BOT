@@ -42,7 +42,7 @@ public class InGroupCode implements EventCoder {
 
     @Override
     public String build(JsonObject data) {
-        Long group = JsonUtils.getLong(data, "group");
+        Long group = JsonUtils.getLong(data, "groupId");
         Long userId = JsonUtils.getLong(data, "userId");
         Long operatorId = JsonUtils.getLong(data, "operatorId");
         StringBuilder sb = new StringBuilder();
