@@ -57,6 +57,10 @@ public class BaniraCodeContext implements Cloneable {
      * 消息ID
      */
     private Integer msgId;
+    /**
+     * 操作者
+     */
+    private Long operator;
 
     /**
      * 关键词记录

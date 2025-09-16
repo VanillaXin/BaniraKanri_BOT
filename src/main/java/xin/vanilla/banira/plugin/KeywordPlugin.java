@@ -2,6 +2,7 @@ package xin.vanilla.banira.plugin;
 
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.annotation.AnyMessageHandler;
+import com.mikuac.shiro.annotation.GroupIncreaseHandler;
 import com.mikuac.shiro.annotation.GroupPokeNoticeHandler;
 import com.mikuac.shiro.annotation.PrivatePokeNoticeHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
@@ -14,6 +15,7 @@ import com.mikuac.shiro.dto.action.response.LoginInfoResp;
 import com.mikuac.shiro.dto.action.response.MsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.dto.event.message.MessageEvent;
+import com.mikuac.shiro.dto.event.notice.GroupIncreaseNoticeEvent;
 import com.mikuac.shiro.dto.event.notice.PokeNoticeEvent;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -23,6 +25,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCodeHandler;
 import xin.vanilla.banira.coder.common.EventCoder;
+import xin.vanilla.banira.coder.event.InGroupCode;
 import xin.vanilla.banira.coder.event.PokeCode;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.KeyInstructionsConfig;
@@ -519,6 +522,35 @@ public class KeywordPlugin extends BasePlugin {
                         , event.getUserId()
                         , event.getTargetId()
                 )
+                        .operator(event.getUserId())
+                        .msg(eventMsg)
+                        .time(event.getTime())
+        );
+        if (context != null) {
+            if (BaniraUtils.isGroupIdValid(event.getGroupId())) {
+                bot.sendGroupMsg(context.group(), context.msg(), false);
+            } else {
+                bot.sendPrivateMsg(context.sender(), context.msg(), false);
+            }
+        }
+    }
+
+    @GroupIncreaseHandler
+    public void reply(BaniraBot bot, GroupIncreaseNoticeEvent event) {
+        JsonObject data = new JsonObject();
+        JsonUtils.setLong(data, "groupId", event.getGroupId());
+        JsonUtils.setLong(data, "userId", event.getUserId());
+        JsonUtils.setLong(data, "operatorId", event.getOperatorId());
+        String eventMsg = getEventCoder(InGroupCode.class).build(data);
+
+        BaniraCodeContext context = this.searchReply(
+                new BaniraCodeContext(bot
+                        , new ArrayList<>()
+                        , event.getGroupId()
+                        , event.getUserId()
+                        , event.getUserId()
+                )
+                        .operator(event.getOperatorId())
                         .msg(eventMsg)
                         .time(event.getTime())
         );
