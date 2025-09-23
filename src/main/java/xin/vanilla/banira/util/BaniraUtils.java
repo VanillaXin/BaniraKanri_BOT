@@ -4,6 +4,8 @@ import cn.hutool.core.io.FileUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.JsonNodeType;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.TextNode;
 import com.github.houbb.sensitive.word.core.SensitiveWordHelper;
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.JsonUtils;
@@ -677,6 +679,13 @@ public final class BaniraUtils {
                                     , replaceSensitiveContent(arrayMsg.getStringData(MsgTypeEnum.text.toString()))
                             )
                     );
+                    JsonNode node = arrayMsg.getData();
+                    if (node instanceof ObjectNode objectNode) {
+                        JsonNode jsonNode = node.get(MsgTypeEnum.text.toString());
+                        if (jsonNode.isNumber()) {
+                            objectNode.set(MsgTypeEnum.text.toString(), new TextNode(jsonNode.asText()));
+                        }
+                    }
                 }
             });
         }
@@ -701,6 +710,13 @@ public final class BaniraUtils {
                             , replaceSensitiveContent(arrayMsg.getStringData(MsgTypeEnum.text.toString()))
                     )
             );
+            JsonNode node = arrayMsg.getData();
+            if (node instanceof ObjectNode objectNode) {
+                JsonNode jsonNode = node.get(MsgTypeEnum.text.toString());
+                if (jsonNode.isNumber()) {
+                    objectNode.set(MsgTypeEnum.text.toString(), new TextNode(jsonNode.asText()));
+                }
+            }
             return arrayMsg;
         }
         return obj;
