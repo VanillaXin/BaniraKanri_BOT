@@ -37,11 +37,6 @@ public class RandomNumCode implements MessageCoder {
     }
 
     @Override
-    public boolean isKanri() {
-        return true;
-    }
-
-    @Override
     public EnumCodeType getType() {
         return EnumCodeType.MSG;
     }
@@ -71,13 +66,13 @@ public class RandomNumCode implements MessageCoder {
         String randVal;
         if (split.length == 1) {
             if (split[0].contains(".")) {
-                randVal = String.valueOf(RANDOM.nextDouble(StringUtils.toDouble(split[0])));
+                randVal = StringUtils.toFixed(RANDOM.nextDouble(StringUtils.toDouble(split[0])), 5);
             } else {
                 randVal = String.valueOf(RANDOM.nextInt(StringUtils.toInt(split[0])));
             }
         } else {
             if (split[0].contains(".") || split[1].contains(".")) {
-                randVal = String.valueOf(RANDOM.nextDouble(StringUtils.toDouble(split[0]), StringUtils.toDouble(split[1])));
+                randVal = StringUtils.toFixed(RANDOM.nextDouble(StringUtils.toDouble(split[0]), StringUtils.toDouble(split[1])), 5);
             } else {
                 randVal = String.valueOf(RANDOM.nextInt(StringUtils.toInt(split[0]), StringUtils.toInt(split[1])));
             }
