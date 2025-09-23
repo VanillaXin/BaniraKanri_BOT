@@ -50,12 +50,13 @@ public class AtAllCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         String atMsg = context.msgId() != null && context.msgId() > 0
                 ? MsgUtils.builder().atAll().build()
                 : "";
-        return context.msg(context.msg().replace(placeholder, atMsg));
+        context.msg(context.msg().replace(placeholder, replaceResult(code, atMsg)));
+        return atMsg;
     }
 
 }

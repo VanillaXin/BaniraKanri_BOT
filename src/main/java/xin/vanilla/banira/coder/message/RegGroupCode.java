@@ -7,7 +7,10 @@ import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumCodeType;
-import xin.vanilla.banira.util.*;
+import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
+import xin.vanilla.banira.util.RegexpHelper;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.List;
 import java.util.Set;
@@ -37,11 +40,11 @@ public class RegGroupCode implements MessageCoder {
     }
 
     /**
-     * 优先级，放在最后防止bkode注入
+     * 是否需要转义CQ码
      */
     @Override
-    public int getPriority() {
-        return Integer.MAX_VALUE;
+    public boolean needEscape() {
+        return true;
     }
 
     @Override
@@ -59,18 +62,21 @@ public class RegGroupCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String groupKey = JsonUtils.getString(data, "value", "");
+
+        String groupKey = getValue(context, code);
         if (StringUtils.isNullOrEmptyEx(groupKey)) return fail(context, code, placeholder);
+
         String match = RegexpHelper.extractParams(context.keywordRecord().getKeyword()
                 , MessageConverser.arraysToString(context.originalMsg())
                 , "$" + groupKey
         );
         if (StringUtils.isNullOrEmptyEx(match)) return fail(context, code, placeholder);
-        return context.msg(context.msg().replace(placeholder, match));
+        context.msg(context.msg().replace(placeholder, replaceResult(code, match)));
+        return match;
     }
 
 }

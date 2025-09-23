@@ -13,7 +13,6 @@ import xin.vanilla.banira.plugin.kanri.KanriHandler;
 import xin.vanilla.banira.plugin.kanri.MuteCommand;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.List;
@@ -65,12 +64,14 @@ public class MuteCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String timeString = JsonUtils.getString(data, "value", "");
+
+        String timeString = getValue(context, code);
         if (StringUtils.isNullOrEmpty(timeString)) return fail(context, code, placeholder);
+
         String[] split = timeString.replace("_", "-")
                 .replace("~", "-")
                 .replace("+", "-")
@@ -97,7 +98,8 @@ public class MuteCode implements MessageCoder {
         String[] args = {String.valueOf(context.sender()), String.valueOf(time / 60d)};
 
         if (muteCommand.execute(kanriContext, args) != KanriHandler.FAIL) {
-            return context.msg(context.msg().replace(placeholder, ""));
+            context.msg(context.msg().replace(placeholder, ""));
+            return "";
         } else {
             return fail(context, code, placeholder);
         }

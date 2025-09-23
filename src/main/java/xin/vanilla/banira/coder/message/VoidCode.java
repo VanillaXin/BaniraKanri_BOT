@@ -49,9 +49,10 @@ public class VoidCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
-        return context.msg("");
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
+        context.msg("");
+        return "";
     }
 
 }

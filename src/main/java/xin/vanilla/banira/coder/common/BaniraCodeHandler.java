@@ -24,17 +24,21 @@ public class BaniraCodeHandler {
         if (textCode == null) return clone;
         clone.msg(textCode.getData().get("text").getAsString());
 
-        for (MessageCoder coder : coders.stream()
-                // .filter(coder -> !coder.isKanri())
-                .sorted(Comparator.comparingInt(MessageCoder::getPriority))
-                .toList()) {
-            for (int i = 0; i < codeList.size(); i++) {
-                BaniraCode code = codeList.get(i);
+        double size = codeList.size();
+        for (int i = 0; i < size; i++) {
+            BaniraCode code = codeList.get(i);
+            int finalI = i;
+            for (MessageCoder coder : coders.stream()
+                    // .filter(coder -> !coder.isKanri())
+                    // 将有$w的coder放在前面
+                    .sorted(Comparator.comparingDouble(c -> c.getPriority() + (c.hasWrite(code) ? (finalI / size) : (size / (size + 1)))))
+                    .toList()) {
                 if (coder.match(code.getType())) {
                     try {
-                        clone = coder.execute(clone, code, BaniraCodeUtils.placeholder(i));
+                        String back = coder.execute(clone, code, BaniraCodeUtils.placeholder(i));
+                        coder.writeValue(clone, code, back);
                     } catch (Exception e) {
-                        clone = coder.fail(clone, code, BaniraCodeUtils.placeholder(i));
+                        coder.fail(clone, code, BaniraCodeUtils.placeholder(i));
                         LOGGER.error("Failed to decode banira code", e);
                     }
                 }

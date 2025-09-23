@@ -5,7 +5,9 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @Accessors(chain = true, fluent = true)
@@ -66,6 +68,11 @@ public class BaniraCodeContext implements Cloneable {
      * 关键词记录
      */
     private KeywordRecord keywordRecord;
+
+    /**
+     * 运行时参数集
+     */
+    private final Map<String, String> values = new HashMap<>();
 
     public BaniraCodeContext(BaniraBot bot, List<ArrayMsg> originalMsg, Long _group, Long _sender, Long _target) {
         this.bot = bot;

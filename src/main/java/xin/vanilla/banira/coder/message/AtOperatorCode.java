@@ -50,12 +50,13 @@ public class AtOperatorCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         String atMsg = context.operator() != null && context.operator() > 0
                 ? MsgUtils.builder().at(context.operator()).build()
                 : "";
-        return context.msg(context.msg().replace(placeholder, atMsg));
+        context.msg(context.msg().replace(placeholder, replaceResult(code, atMsg)));
+        return atMsg;
     }
 
 }

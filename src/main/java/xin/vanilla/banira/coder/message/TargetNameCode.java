@@ -34,6 +34,14 @@ public class TargetNameCode implements MessageCoder {
         return "获取事件作用目标的昵称";
     }
 
+    /**
+     * 是否需要转义CQ码
+     */
+    @Override
+    public boolean needEscape() {
+        return true;
+    }
+
     @Override
     public EnumCodeType getType() {
         return EnumCodeType.MSG;
@@ -49,11 +57,12 @@ public class TargetNameCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         if (!BaniraUtils.isUserIdValid(context.target())) return fail(context, code, placeholder);
         String name = context.bot().getUserNameEx(context.group(), context.target());
-        return context.msg(context.msg().replace(placeholder, name));
+        context.msg(context.msg().replace(placeholder, replaceResult(code, name)));
+        return name;
     }
 
 }

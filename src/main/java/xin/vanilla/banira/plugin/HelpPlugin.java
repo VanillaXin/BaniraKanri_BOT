@@ -40,7 +40,7 @@ public class HelpPlugin extends BasePlugin {
     private List<EventCoder> eventCoders = new ArrayList<>();
 
 
-    private static final Set<String> codeType = Set.of(
+    private static final List<String> codeType = List.of(
             "BaniraCode", "baniracode", "bkode", "bk", "code", "特殊码", "bk码"
     );
 
@@ -89,17 +89,22 @@ public class HelpPlugin extends BasePlugin {
                 LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
                 List<Map<String, Object>> msg = new ArrayList<>();
                 msg.add(ShiroUtils.generateSingleMsg(event.getUserId(), event.getSender().getNickname(), event.getMessage()));
-                msg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                        , "指令帮助：" + "\n\n" +
-                                BaniraUtils.getInsPrefixWithSpace() +
-                                insConfig.get().base().help() + " " +
-                                "[<指令类型>]" + " " + "[<页数>]" + "\n\n" +
-                                "例子：" + "\n" +
-                                BaniraUtils.getInsPrefixWithSpace() +
-                                insConfig.get().base().help().getFirst() + " keyword"
-                ));
                 List<String> helpMsgList;
                 if (type.length > 0 && codeType.contains(CollectionUtils.getOrDefault(type, 0, ""))) {
+                    msg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                            , "指令帮助：" + "\n\n" +
+                                    BaniraUtils.getInsPrefixWithSpace() +
+                                    insConfig.get().base().help() + " " +
+                                    "[<指令类型>]" + " " + "[<页数>]" + "\n\n" +
+                                    "例子：" + "\n" +
+                                    BaniraUtils.getInsPrefixWithSpace() +
+                                    insConfig.get().base().help().getFirst() + " " + CollectionUtils.getRandomElement(codeType) + "\n\n" +
+                                    "BaniraCode可选属性：\n" +
+                                    "$w：将该解析结果写入运行时变量集，$w:变量名称\n" +
+                                    "$r：从运行时变量集读取结果作为value，$r:变量名称\n" +
+                                    "$auto：与$r配合($r:$auto)，将Code的value中$开头的占位符替换为运行时变量集中存在的值\n" +
+                                    "$void：与$w配合($w:xxx,$void:true)，使Code结果仅写入运行时变量集而不体现在回复内容中\n"
+                    ));
                     Set<String> coderType = new HashSet<>();
                     if (type.length > 1) {
                         coderType.addAll(Arrays.asList(type).subList(1, type.length));
@@ -119,6 +124,15 @@ public class HelpPlugin extends BasePlugin {
                                 return buildCodeExample(title, coder.getExample());
                             }).forEach(helpMsgList::add);
                 } else {
+                    msg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                            , "指令帮助：" + "\n\n" +
+                                    BaniraUtils.getInsPrefixWithSpace() +
+                                    insConfig.get().base().help() + " " +
+                                    "[<指令类型>]" + " " + "[<页数>]" + "\n\n" +
+                                    "例子：" + "\n" +
+                                    BaniraUtils.getInsPrefixWithSpace() +
+                                    insConfig.get().base().help().getFirst() + " keyword"
+                    ));
                     helpMsgList = plugins.stream()
                             .map(plugin -> plugin.getHelpInfo(event.getGroupId(), type))
                             .flatMap(List::stream).toList();

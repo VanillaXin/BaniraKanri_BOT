@@ -163,7 +163,7 @@ public class KanriPlugin extends BasePlugin {
                 for (int i = 0; i < codeList.size(); i++) {
                     String placeholder = BaniraCodeUtils.placeholder(i);
                     BaniraCode code = codeList.get(i);
-                    clone = toGroupCode.execute(clone, code, placeholder);
+                    toGroupCode.execute(clone, code, placeholder);
                     if (clone.msg().contains(placeholder)) {
                         clone.msg(clone.msg().replace(placeholder, code.getRaw()));
                     }

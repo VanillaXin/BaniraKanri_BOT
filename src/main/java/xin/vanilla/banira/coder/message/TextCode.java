@@ -37,8 +37,8 @@ public class TextCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        return "";
     }
 
 }

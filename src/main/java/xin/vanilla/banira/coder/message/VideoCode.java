@@ -64,15 +64,17 @@ public class VideoCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String jsonPath = JsonUtils.getString(data, "path", "");
-        if (StringUtils.isNullOrEmptyEx(jsonPath)) JsonUtils.getString(data, "jsonpath", "");
-        String url = JsonUtils.getString(data, "url", JsonUtils.getString(data, "value", ""));
+
+        String url = getValue(context, code, "url");
         if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
-        String cover = JsonUtils.getString(data, "cover", "");
+
+        String jsonPath = getArg(code, "path", "jsonpath");
+
+        String cover = getArg(code, "cover");
         if (StringUtils.isNullOrEmptyEx(cover)) {
             Image image = ImgUtil.copyImage(DEFAULT_COVER, BufferedImage.TYPE_4BYTE_ABGR);
             if (context.keywordRecord() != null) {
@@ -82,11 +84,11 @@ public class VideoCode implements MessageCoder {
             }
             cover = ImgUtil.toBase64(image, "JPG");
         }
+        MsgUtils builder = MsgUtils.builder();
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
             JsonElement json = JsonUtils.parseJson(HttpUtil.get(url));
             if (json != null && !json.isJsonNull()) {
                 JsonElement jsonElement = JsonUtils.getJsonElement(json, ShiroUtils.unescape(jsonPath));
-                MsgUtils builder = MsgUtils.builder();
                 if (jsonElement.isJsonArray()) {
                     for (JsonElement element : jsonElement.getAsJsonArray()) {
                         builder.video(downloadVideo(element.getAsString()), cover);
@@ -96,11 +98,13 @@ public class VideoCode implements MessageCoder {
                 } else {
                     builder.video(downloadVideo(url), cover);
                 }
-                return context.msg(context.msg().replace(placeholder, builder.build()));
+                context.msg(context.msg().replace(placeholder, replaceResult(code, builder.build())));
+                return builder.build();
             }
         }
-        MsgUtils builder = MsgUtils.builder().video(downloadVideo(url), cover);
-        return context.msg(context.msg().replace(placeholder, builder.build()));
+        builder.video(downloadVideo(url), cover);
+        context.msg(context.msg().replace(placeholder, replaceResult(code, builder.build())));
+        return builder.build();
     }
 
 

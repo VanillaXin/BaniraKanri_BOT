@@ -8,7 +8,6 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumCodeType;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.List;
@@ -52,15 +51,18 @@ public class ToGroupCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String group = JsonUtils.getString(data, "value", "");
+
+        String group = getValue(context, code);
         if (StringUtils.isNullOrEmptyEx(group)) return fail(context, code, placeholder);
+
         long groupId = StringUtils.toLong(group);
         if (!BaniraUtils.isGroupIdValid(groupId)) return fail(context, code, placeholder);
-        return context.group(groupId).msg(context.msg().replace(placeholder, ""));
+        context.group(groupId).msg(context.msg().replace(placeholder, ""));
+        return "";
     }
 
 }

@@ -57,20 +57,21 @@ public class ImageCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String jsonPath = JsonUtils.getString(data, "path", "");
-        if (StringUtils.isNullOrEmptyEx(jsonPath)) JsonUtils.getString(data, "jsonpath", "");
-        String url = JsonUtils.getString(data, "url", "");
-        if (StringUtils.isNullOrEmptyEx(url)) url = JsonUtils.getString(data, "value", "");
+
+        String url = getValue(context, code, "url");
         if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
+
+        String jsonPath = getArg(code, "path", "jsonpath");
+
+        MsgUtils builder = MsgUtils.builder();
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
             JsonElement json = JsonUtils.parseJson(HttpUtil.get(url));
             if (json != null && !json.isJsonNull()) {
                 JsonElement jsonElement = JsonUtils.getJsonElement(json, ShiroUtils.unescape(jsonPath));
-                MsgUtils builder = MsgUtils.builder();
                 if (jsonElement.isJsonArray()) {
                     for (JsonElement element : jsonElement.getAsJsonArray()) {
                         builder.img(BaniraUtils.convertFileUri(element.getAsString()));
@@ -80,10 +81,13 @@ public class ImageCode implements MessageCoder {
                 } else {
                     builder.img(BaniraUtils.convertFileUri(url));
                 }
-                return context.msg(context.msg().replace(placeholder, builder.build()));
+                context.msg(context.msg().replace(placeholder, replaceResult(code, builder.build())));
+                return builder.build();
             }
         }
-        return context.msg(context.msg().replace(placeholder, MsgUtils.builder().img(BaniraUtils.convertFileUri(url)).build()));
+        builder.img(BaniraUtils.convertFileUri(url));
+        context.msg(context.msg().replace(placeholder, replaceResult(code, builder.build())));
+        return builder.build();
     }
 
     public static String build(String url) {

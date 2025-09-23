@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 自己昵称
+ * 姬气人昵称
  */
 @Component
 public class BotNameCode implements MessageCoder {
@@ -26,12 +26,20 @@ public class BotNameCode implements MessageCoder {
 
     @Override
     public String getName() {
-        return "自己昵称";
+        return "姬气人昵称";
     }
 
     @Override
     public String getDesc() {
         return "获取姬气人自己的昵称";
+    }
+
+    /**
+     * 是否需要转义CQ码
+     */
+    @Override
+    public boolean needEscape() {
+        return true;
     }
 
     @Override
@@ -49,10 +57,11 @@ public class BotNameCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         String name = context.bot().getUserNameEx(context.group(), context.bot().getSelfId());
-        return context.msg(context.msg().replace(placeholder, name));
+        context.msg(context.msg().replace(placeholder, replaceResult(code, name)));
+        return name;
     }
 
 }

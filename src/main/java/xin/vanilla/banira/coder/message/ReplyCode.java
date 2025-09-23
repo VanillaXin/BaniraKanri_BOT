@@ -50,12 +50,13 @@ public class ReplyCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         String replyMsg = context.msgId() != null && context.msgId() > 0
                 ? MsgUtils.builder().reply(context.msgId()).build()
                 : "";
-        return context.msg(context.msg().replace(placeholder, replyMsg));
+        context.msg(context.msg().replace(placeholder, replaceResult(code, replyMsg)));
+        return replyMsg;
     }
 
 }

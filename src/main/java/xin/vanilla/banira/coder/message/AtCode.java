@@ -1,6 +1,5 @@
 package xin.vanilla.banira.coder.message;
 
-import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
@@ -9,7 +8,6 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumCodeType;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.List;
@@ -53,15 +51,15 @@ public class AtCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
-        JsonObject data = code.getData();
-        if (data == null) return fail(context, code, placeholder);
-        String user = JsonUtils.getString(data, "value", "");
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
+        String user = getValue(context, code);
         if (StringUtils.isNullOrEmptyEx(user)) return fail(context, code, placeholder);
         long userId = StringUtils.toLong(user);
         if (!BaniraUtils.isUserIdValid(userId)) return fail(context, code, placeholder);
-        return context.msg(context.msg().replace(placeholder, MsgUtils.builder().at(userId).build()));
+        String atMsg = MsgUtils.builder().at(userId).build();
+        context.msg(context.msg().replace(placeholder, replaceResult(code, atMsg)));
+        return atMsg;
     }
 
 }

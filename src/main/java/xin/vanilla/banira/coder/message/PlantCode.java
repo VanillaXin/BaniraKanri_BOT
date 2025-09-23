@@ -55,9 +55,11 @@ public class PlantCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
-        return context.msg(PlantCipher.encode(context.msg()));
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
+        String msg = PlantCipher.encode(context.msg());
+        context.msg(replaceResult(code, msg));
+        return msg;
     }
 
 }

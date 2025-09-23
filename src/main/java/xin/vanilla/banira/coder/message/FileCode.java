@@ -56,17 +56,17 @@ public class FileCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String jsonPath = JsonUtils.getString(data, "path", "");
-        if (StringUtils.isNullOrEmptyEx(jsonPath)) JsonUtils.getString(data, "jsonpath", "");
-        String url = JsonUtils.getString(data, "url", "");
-        if (StringUtils.isNullOrEmptyEx(url)) url = JsonUtils.getString(data, "value", "");
+
+        String url = getValue(context, code, "url");
         if (StringUtils.isNullOrEmptyEx(url)) return fail(context, code, placeholder);
-        String name = JsonUtils.getString(data, "name", "");
-        String folder = JsonUtils.getString(data, "folder", "");
+
+        String jsonPath = getArg(code, "path", "jsonpath");
+        String name = getArg(code, "name");
+        String folder = getArg(code, "folder");
         if (StringUtils.isNullOrEmptyEx(name)) name = url.substring(url.replace("\\", "/").lastIndexOf("/") + 1);
 
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
@@ -86,7 +86,8 @@ public class FileCode implements MessageCoder {
         } else {
             uploadFile(context, url, name, folder);
         }
-        return context.msg(context.msg().replace(placeholder, ""));
+        context.msg(context.msg().replace(placeholder, ""));
+        return "";
     }
 
     public static String build(String url) {

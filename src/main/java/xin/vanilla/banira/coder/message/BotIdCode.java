@@ -1,6 +1,5 @@
 package xin.vanilla.banira.coder.message;
 
-import com.mikuac.shiro.common.utils.MsgUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
@@ -13,10 +12,10 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 艾特目标
+ * 姬气人ID
  */
 @Component
-public class AtTargetCode implements MessageCoder {
+public class BotIdCode implements MessageCoder {
 
     @Override
     public List<String> getExample() {
@@ -27,12 +26,12 @@ public class AtTargetCode implements MessageCoder {
 
     @Override
     public String getName() {
-        return "艾特目标";
+        return "姬气人ID";
     }
 
     @Override
     public String getDesc() {
-        return "艾特事件作用目标";
+        return "获取姬气人自己的QQ";
     }
 
     @Override
@@ -41,7 +40,7 @@ public class AtTargetCode implements MessageCoder {
     }
 
     private static final Set<String> types = BaniraUtils.mutableSetOf(
-            "attarget", "att", "@target", "@t"
+            "botid", "bid"
     );
 
     @Override
@@ -52,11 +51,9 @@ public class AtTargetCode implements MessageCoder {
     @Override
     public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
         if (notMatch(code)) return "";
-        String atMsg = context.target() != null && context.target() > 0
-                ? MsgUtils.builder().at(context.target()).build()
-                : "";
-        context.msg(context.msg().replace(placeholder, replaceResult(code, atMsg)));
-        return atMsg;
+        String id = String.valueOf(context.bot().getSelfId());
+        context.msg(context.msg().replace(placeholder, replaceResult(code, id)));
+        return id;
     }
 
 }

@@ -7,7 +7,10 @@ import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.config.entity.extended.McConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumCodeType;
-import xin.vanilla.banira.util.*;
+import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.CollectionUtils;
+import xin.vanilla.banira.util.McQueryHelper;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.List;
 import java.util.Random;
@@ -59,20 +62,23 @@ public class McQueryCode implements MessageCoder {
     }
 
     @Override
-    public BaniraCodeContext execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
-        if (notMatch(code)) return context;
+    public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
+        if (notMatch(code)) return "";
         JsonObject data = code.getData();
         if (data == null) return fail(context, code, placeholder);
-        String name = JsonUtils.getString(data, "name", "");
-        String ip = JsonUtils.getString(data, "host", "");
-        String port = JsonUtils.getString(data, "port", "");
-        if (StringUtils.isNullOrEmptyEx(ip)) ip = JsonUtils.getString(data, "value", "");
+
+        String ip = getValue(context, code, "host");
         if (StringUtils.isNullOrEmptyEx(ip)) return fail(context, code, placeholder);
 
+        String name = getArg(code, "name");
+
+        String port = getArg(code, "port");
         if (StringUtils.isNullOrEmptyEx(port) || StringUtils.toInt(port) == 0) port = "25565";
+
         String info = getQueryInfo(name, ip, StringUtils.toInt(port));
         if (StringUtils.isNullOrEmpty(info)) return fail(context, code, placeholder);
-        return context.msg(context.msg().replace(placeholder, info));
+        context.msg(context.msg().replace(placeholder, replaceResult(code, info)));
+        return info;
     }
 
     public static String getQueryInfo(String name, String ip, Integer port) {
