@@ -72,14 +72,14 @@ public interface MessageCoder {
         JsonObject data = code.getData();
         String result = "";
         if (data != null) {
-            result = JsonUtils.getString(data, "value", null);
+            result = JsonUtils.getString(data, "value", "");
             if (StringUtils.isNullOrEmpty(result)) {
                 for (String key : keys) {
-                    result = JsonUtils.getString(data, key, null);
+                    result = JsonUtils.getString(data, key, "");
                     if (StringUtils.isNotNullOrEmpty(result)) break;
                 }
             }
-            String $r = JsonUtils.getString(data, "$r", null);
+            String $r = JsonUtils.getString(data, "$r", "");
             if (StringUtils.isNotNullOrEmpty(result) && "$auto".equals($r)) {
                 Matcher matcher = READ_VAL_PATTERN.matcher(result);
                 while (matcher.find()) {
@@ -105,7 +105,7 @@ public interface MessageCoder {
     default void writeValue(BaniraCodeContext context, BaniraCode code, String value) {
         JsonObject data = code.getData();
         if (data != null && StringUtils.isNotNullOrEmpty(value)) {
-            String $w = JsonUtils.getString(data, "$w", null);
+            String $w = JsonUtils.getString(data, "$w", "");
             if (StringUtils.isNotNullOrEmpty($w)) {
                 context.values().put($w, value);
             }
@@ -120,7 +120,7 @@ public interface MessageCoder {
         String result = "";
         if (data != null) {
             for (String key : keys) {
-                result = JsonUtils.getString(data, key, null);
+                result = JsonUtils.getString(data, key, "");
                 if (StringUtils.isNotNullOrEmpty(result)) break;
             }
         }
