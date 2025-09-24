@@ -70,17 +70,25 @@ public class RegGroupCode implements MessageCoder {
         String groupKey = getValue(context, code);
         if (StringUtils.isNullOrEmptyEx(groupKey)) return fail(context, code, placeholder);
 
-        String prefix = getArg(code, "p", "prefix");
-        String suffix = getArg(code, "s", "suffix");
+        String prefix = getArg(code, "p", "pre", "prefix");
+        String suffix = getArg(code, "s", "suf", "suffix");
+
+        String prefixEx = getArg(code, "pex", "preex", "prefixex");
+        String suffixEx = getArg(code, "sex", "sufex", "suffixex");
 
         String match = RegexpHelper.extractParams(context.keywordRecord().getKeyword()
                 , MessageConverser.arraysToString(context.originalMsg())
                 , "$" + groupKey
         );
-        match = prefix + match + suffix;
-        if (StringUtils.isNullOrEmptyEx(match)) return fail(context, code, placeholder);
-        context.msg(context.msg().replace(placeholder, replaceResult(code, match)));
-        return match;
+
+        String result = prefix + match + suffix;
+        if (StringUtils.isNotNullOrEmpty(match)) {
+            result = prefixEx + result + suffixEx;
+        }
+
+        if (StringUtils.isNullOrEmptyEx(result)) return fail(context, code, placeholder);
+        context.msg(context.msg().replace(placeholder, replaceResult(code, result)));
+        return result;
     }
 
 }
