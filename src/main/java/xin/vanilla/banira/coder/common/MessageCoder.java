@@ -86,6 +86,8 @@ public interface MessageCoder {
                     String key = matcher.group("g");
                     if (context.values().containsKey(key)) {
                         result = result.replace(key, context.values().get(key));
+                    } else if (context.values().containsKey(key.substring(1))) {
+                        result = result.replace(key, context.values().get(key.substring(1)));
                     }
                 }
             } else if (context.values().containsKey($r)) {
