@@ -1036,7 +1036,7 @@ public final class BaniraUtils {
                 return insConfig.kanri().butler();
             }
             default -> {
-                return List.of();
+                return Arrays.asList();
             }
         }
     }

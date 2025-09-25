@@ -54,11 +54,11 @@ public class McConfig {
 
     {
         this.success = "[name]有[online]/[max]名玩家在线:\n[players]";
-        this.none = List.of("%s一片死寂.");
-        this.unknownHost = List.of("无法定位%s.");
-        this.connectFailed = List.of("%s一片混沌.");
-        this.pswError = List.of("%s.需要..密码...");
-        this.unknownResponse = List.of("%s发回了一串未知的信号.");
+        this.none = Arrays.asList("%s一片死寂.");
+        this.unknownHost = Arrays.asList("无法定位%s.");
+        this.connectFailed = Arrays.asList("%s一片混沌.");
+        this.pswError = Arrays.asList("%s.需要..密码...");
+        this.unknownResponse = Arrays.asList("%s发回了一串未知的信号.");
     }
 
 }

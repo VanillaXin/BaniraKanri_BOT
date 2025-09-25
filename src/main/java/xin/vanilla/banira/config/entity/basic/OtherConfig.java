@@ -8,6 +8,7 @@ import xin.vanilla.banira.config.entity.extended.McConfig;
 import xin.vanilla.banira.config.entity.extended.WifeConfig;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Getter
@@ -39,7 +40,7 @@ public class OtherConfig {
 
     {
         this.randomImgPath = new ArrayList<>();
-        this.wifeConfig = List.of(new WifeConfig("^抽(?<nick>.{2,5})$"
+        this.wifeConfig = Arrays.asList(new WifeConfig("^抽(?<nick>.{2,5})$"
                 , "$nick"
                 , "$atUser 今天你的群友$wifeNick是\n$wifeHead『$wifeName』($wifeId) 喵！"
                 , "$atUser 今天你已经有$wifeNick了喵！")
