@@ -6,8 +6,8 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.domain.KeyValue;
+import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -42,15 +42,15 @@ public class KeyInstructionsConfig {
 
 
     {
-        this.locator = Arrays.asList(
+        this.locator = BaniraUtils.mutableListOf(
                 new KeyValue<>("关键词", "回复")
                 , new KeyValue<>("key", "rep")
                 , new KeyValue<>("keyword", "reply")
         );
-        this.exactly = Arrays.asList("完全", "精准", "exactly", "perfect", "per");
-        this.contain = Arrays.asList("包含", "contain", "include", "inc");
-        this.pinyin = Arrays.asList("拼音", "pinyin", "pin");
-        this.regex = Arrays.asList("正则", "regex", "reg", "regexp");
+        this.exactly = BaniraUtils.mutableListOf("完全", "精准", "exactly", "perfect", "per");
+        this.contain = BaniraUtils.mutableListOf("包含", "contain", "include", "inc");
+        this.pinyin = BaniraUtils.mutableListOf("拼音", "pinyin", "pin");
+        this.regex = BaniraUtils.mutableListOf("正则", "regex", "reg", "regexp");
     }
 
 }

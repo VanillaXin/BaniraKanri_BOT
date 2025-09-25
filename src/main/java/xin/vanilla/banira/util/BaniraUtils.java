@@ -177,6 +177,59 @@ public final class BaniraUtils {
 
     // endregion 配置管理
 
+    // region mutableListOf
+
+    public static <E> List<E> mutableListOf() {
+        return new ArrayList<>();
+    }
+
+    public static <E> List<E> mutableListOf(E e1) {
+        return new ArrayList<>(List.of(e1));
+    }
+
+    public static <E> List<E> mutableListOf(E e1, E e2) {
+        return new ArrayList<>(Arrays.asList(e1, e2));
+    }
+
+    public static <E> List<E> mutableListOf(E e1, E e2, E e3) {
+        return new ArrayList<>(Arrays.asList(e1, e2, e3));
+    }
+
+    public static <E> List<E> mutableListOf(E e1, E e2, E e3, E e4) {
+        return new ArrayList<>(Arrays.asList(e1, e2, e3, e4));
+    }
+
+    public static <E> List<E> mutableListOf(E e1, E e2, E e3, E e4, E e5) {
+        return new ArrayList<>(Arrays.asList(e1, e2, e3, e4, e5));
+    }
+
+    public static <E> List<E> mutableListOf(E e1, E e2, E e3, E e4, E e5, E e6) {
+        return new ArrayList<>(Arrays.asList(e1, e2, e3, e4, e5, e6));
+    }
+
+    public static <E> List<E> mutableListOf(E e1, E e2, E e3, E e4, E e5, E e6, E e7) {
+        return new ArrayList<>(Arrays.asList(e1, e2, e3, e4, e5, e6, e7));
+    }
+
+    public static <E> List<E> mutableListOf(E e1, E e2, E e3, E e4, E e5, E e6, E e7, E e8) {
+        return new ArrayList<>(Arrays.asList(e1, e2, e3, e4, e5, e6, e7, e8));
+    }
+
+    public static <E> List<E> mutableListOf(E e1, E e2, E e3, E e4, E e5, E e6, E e7, E e8, E e9) {
+        return new ArrayList<>(Arrays.asList(e1, e2, e3, e4, e5, e6, e7, e8, e9));
+    }
+
+    public static <E> List<E> mutableListOf(E e1, E e2, E e3, E e4, E e5, E e6, E e7, E e8, E e9, E e10) {
+        return new ArrayList<>(Arrays.asList(e1, e2, e3, e4, e5, e6, e7, e8, e9, e10));
+    }
+
+    @SafeVarargs
+    public static <E> List<E> mutableListOf(E... elements) {
+        return new ArrayList<>(Arrays.asList(elements));
+    }
+
+    // endregion mutableListOf
+
     // region mutableSetOf
 
     public static <E> Set<E> mutableSetOf() {
@@ -963,7 +1016,7 @@ public final class BaniraUtils {
      * 判断是否拥有全部权限
      */
     public static boolean hasAllPermissions(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull EnumPermission... permissions) {
-        return hasAllPermissions(bot, groupId, qq, Arrays.asList(permissions));
+        return hasAllPermissions(bot, groupId, qq, BaniraUtils.mutableListOf(permissions));
     }
 
     /**
@@ -977,7 +1030,7 @@ public final class BaniraUtils {
      * 判断是否拥有任意一个权限
      */
     public static boolean hasAnyPermissions(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq, @Nonnull EnumPermission... permission) {
-        return hasAnyPermissions(bot, groupId, qq, Arrays.asList(permission));
+        return hasAnyPermissions(bot, groupId, qq, BaniraUtils.mutableListOf(permission));
     }
 
     /**
@@ -1036,7 +1089,7 @@ public final class BaniraUtils {
                 return insConfig.kanri().butler();
             }
             default -> {
-                return Arrays.asList();
+                return BaniraUtils.mutableListOf();
             }
         }
     }

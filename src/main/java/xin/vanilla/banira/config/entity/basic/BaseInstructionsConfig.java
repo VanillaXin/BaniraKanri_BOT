@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -65,17 +65,17 @@ public class BaseInstructionsConfig {
 
 
     {
-        this.add = Arrays.asList("添加", "add", "put", "insert");
-        this.del = Arrays.asList("删除", "del", "delete", "remove");
-        this.list = Arrays.asList("查询", "list", "ls", "sel", "get");
-        this.enable = Arrays.asList("启用", "enable", "open");
-        this.disable = Arrays.asList("禁用", "disable", "close");
-        this.global = Arrays.asList("全局", "all", "global");
-        this.that = Arrays.asList("当前", "that", "this", "here");
-        this.atAll = Arrays.asList("@全体成员", "@全体", "@所有人", "@all", "@All", "@ALL");
-        this.status = Arrays.asList("统计", "状态", "status", "statistics", "stats");
-        this.help = Arrays.asList("帮助", "指令帮助", "help", "tips");
-        this.example = Arrays.asList("示例", "例子", "栗子", "🌰", "demo", "example", "case");
+        this.add = BaniraUtils.mutableListOf("添加", "add", "put", "insert");
+        this.del = BaniraUtils.mutableListOf("删除", "del", "delete", "remove");
+        this.list = BaniraUtils.mutableListOf("查询", "list", "ls", "sel", "get");
+        this.enable = BaniraUtils.mutableListOf("启用", "enable", "open");
+        this.disable = BaniraUtils.mutableListOf("禁用", "disable", "close");
+        this.global = BaniraUtils.mutableListOf("全局", "all", "global");
+        this.that = BaniraUtils.mutableListOf("当前", "that", "this", "here");
+        this.atAll = BaniraUtils.mutableListOf("@全体成员", "@全体", "@所有人", "@all", "@All", "@ALL");
+        this.status = BaniraUtils.mutableListOf("统计", "状态", "status", "statistics", "stats");
+        this.help = BaniraUtils.mutableListOf("帮助", "指令帮助", "help", "tips");
+        this.example = BaniraUtils.mutableListOf("示例", "例子", "栗子", "🌰", "demo", "example", "case");
     }
 
 }

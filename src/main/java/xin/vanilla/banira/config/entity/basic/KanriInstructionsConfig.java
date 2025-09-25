@@ -4,9 +4,9 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 /**
@@ -82,20 +82,20 @@ public class KanriInstructionsConfig {
 
     {
         this.prefix = new ArrayList<>();
-        this.tag = Arrays.asList("头衔", "tag");
-        this.card = Arrays.asList("群名片", "card");
-        this.tap = Arrays.asList("戳一戳", "戳", "tap", "slap");
-        this.mute = Arrays.asList("禁言", "mute", "ban");
-        this.loud = Arrays.asList("解除禁言", "解禁", "loud", "unmute", "unban");
-        this.withdraw = Arrays.asList("撤回", "withdraw", "recall", "rec");
-        this.kick = Arrays.asList("踢出群聊", "kick");
-        this.essence = Arrays.asList("精华", "essence");
-        this.admin = Arrays.asList("群管理", "admin", "gad", "ad");
-        this.butler = Arrays.asList("主管", "管家", "女仆长", "butler", "chief");
-        this.maid = Arrays.asList("仆人", "女仆", "妹抖", "servant", "maid");
-        this.op = Arrays.asList("权限", "op", "permission");
-        this.groupName = Arrays.asList("群名", "群名称", "groupname", "gname", "gn");
-        this.approve = Arrays.asList("审批", "审核", "approve");
+        this.tag = BaniraUtils.mutableListOf("头衔", "tag");
+        this.card = BaniraUtils.mutableListOf("群名片", "card");
+        this.tap = BaniraUtils.mutableListOf("戳一戳", "戳", "tap", "slap");
+        this.mute = BaniraUtils.mutableListOf("禁言", "mute", "ban");
+        this.loud = BaniraUtils.mutableListOf("解除禁言", "解禁", "loud", "unmute", "unban");
+        this.withdraw = BaniraUtils.mutableListOf("撤回", "withdraw", "recall", "rec");
+        this.kick = BaniraUtils.mutableListOf("踢出群聊", "kick");
+        this.essence = BaniraUtils.mutableListOf("精华", "essence");
+        this.admin = BaniraUtils.mutableListOf("群管理", "admin", "gad", "ad");
+        this.butler = BaniraUtils.mutableListOf("主管", "管家", "女仆长", "butler", "chief");
+        this.maid = BaniraUtils.mutableListOf("仆人", "女仆", "妹抖", "servant", "maid");
+        this.op = BaniraUtils.mutableListOf("权限", "op", "permission");
+        this.groupName = BaniraUtils.mutableListOf("群名", "群名称", "groupname", "gname", "gn");
+        this.approve = BaniraUtils.mutableListOf("审批", "审核", "approve");
 
     }
 

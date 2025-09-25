@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import xin.vanilla.banira.util.BaniraUtils;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Getter
@@ -55,11 +55,11 @@ public class McConfig {
 
     {
         this.success = "[name]有[online]/[max]名玩家在线:\n[players]";
-        this.none = Arrays.asList("%s一片死寂.");
-        this.unknownHost = Arrays.asList("无法定位%s.");
-        this.connectFailed = Arrays.asList("%s一片混沌.");
-        this.pswError = Arrays.asList("%s.需要..密码...");
-        this.unknownResponse = Arrays.asList("%s发回了一串未知的信号.");
+        this.none = BaniraUtils.mutableListOf("%s一片死寂.");
+        this.unknownHost = BaniraUtils.mutableListOf("无法定位%s.");
+        this.connectFailed = BaniraUtils.mutableListOf("%s一片混沌.");
+        this.pswError = BaniraUtils.mutableListOf("%s.需要..密码...");
+        this.unknownResponse = BaniraUtils.mutableListOf("%s发回了一串未知的信号.");
     }
 
 }

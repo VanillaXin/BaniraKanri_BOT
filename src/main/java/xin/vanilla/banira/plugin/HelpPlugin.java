@@ -107,7 +107,7 @@ public class HelpPlugin extends BasePlugin {
                     ));
                     Set<String> coderType = new HashSet<>();
                     if (type.length > 1) {
-                        coderType.addAll(Arrays.asList(type).subList(1, type.length));
+                        coderType.addAll(BaniraUtils.mutableListOf(type).subList(1, type.length));
                     }
                     helpMsgList = msgCoders.stream()
                             .filter(coder -> coderType.isEmpty() || coderType.contains(coder.getName()))

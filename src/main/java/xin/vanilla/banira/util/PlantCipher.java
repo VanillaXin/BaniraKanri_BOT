@@ -32,7 +32,7 @@ public final class PlantCipher {
     private static final String AES_ALGO = "AES/GCM/NoPadding";
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
-    private static final List<String> BASE_PLANTS = Arrays.asList(
+    private static final List<String> BASE_PLANTS = BaniraUtils.mutableListOf(
             "艾", "桉", "薁", "芭", "菝", "柏", "稗", "蒡", "苞", "枹", "荸",
             "秕", "粃", "荜", "蓽", "蓖", "薜", "篦", "萹", "藨", "槟", "檳",
             "菠", "瓟", "㼎", "檗", "参", "參", "箣", "岑", "梣", "檫", "菖",
