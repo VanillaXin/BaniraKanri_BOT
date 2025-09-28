@@ -12,6 +12,8 @@ ext {
     appMainClassName = 'xin.vanilla.banira.start.BaniraApplication'
 }
 
+def buildJavaVersion = System.getProperty('java.version') ?: JavaVersion.current().toString()
+
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -55,15 +57,15 @@ dependencies {
     implementation 'jakarta.validation:jakarta.validation-api:3.1.1'
     implementation 'org.hibernate.validator:hibernate-validator'
 
-    // tools
+    // Hutool
     implementation 'cn.hutool:hutool-all:5.8.39'
     // PinYin
     implementation 'com.github.houbb:pinyin:0.4.0'
-    // rcon
+    // RCON
     implementation 'xin.vanilla.rcon:rcon:1.2.1'
-    // system info
+    // OSHI
     implementation 'com.github.oshi:oshi-core:6.8.2'
-    // wordle
+    // Word Cloud
     implementation 'com.kennycason:kumo-core:1.28'
     implementation 'com.kennycason:kumo-tokenizers:1.28'
     // Web Testing and Automation
@@ -72,8 +74,14 @@ dependencies {
     implementation 'org.quartz-scheduler:quartz:2.5.0'
     // Sensitive Word
     implementation 'com.github.houbb:sensitive-word:0.29.2'
+    // LangChain
+    implementation 'dev.langchain4j:langchain4j-open-ai:1.6.0'
+    implementation 'dev.langchain4j:langchain4j:1.6.0'
 
+
+    // Libs
     implementation fileTree(dir: 'libs', include: ['*.jar'])
+
 
     // Lombok
     compileOnly 'org.projectlombok:lombok'
@@ -106,6 +114,7 @@ tasks.named('bootJar') {
                 'Implementation-Version': project.version,
                 'Built-By': System.getProperty('user.name'),
                 'Created-By': "Gradle ${gradle.gradleVersion}",
+                'Built-Java': buildJavaVersion,
                 "Manifest-Version": 1.0,
                 'Class-Path': configurations.compileClasspath.files.collect { "libs/$it.name" }.join(' ')
         )

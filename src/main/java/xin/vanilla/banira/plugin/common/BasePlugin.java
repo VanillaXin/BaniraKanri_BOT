@@ -9,7 +9,7 @@ import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.KeyInstructionsConfig;
-import xin.vanilla.banira.event.ConfigReloadedEvent;
+import xin.vanilla.banira.event.GlobalConfigReloadedEvent;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.RegexpHelper;
@@ -247,7 +247,7 @@ public abstract class BasePlugin {
      * 监听配置重载事件并刷新指令匹配模式
      */
     @EventListener
-    public void onGlobalConfigReloaded(ConfigReloadedEvent<GlobalConfig> event) {
+    public void onGlobalConfigReloaded(GlobalConfigReloadedEvent event) {
         BASE_COMMAND_PATTERN = null;
         KANRI_COMMAND_PATTERN = null;
         TIMER_COMMAND_PATTERN.clear();

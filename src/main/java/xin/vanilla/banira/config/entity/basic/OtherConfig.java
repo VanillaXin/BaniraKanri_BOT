@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import xin.vanilla.banira.config.entity.extended.ChatConfig;
 import xin.vanilla.banira.config.entity.extended.McConfig;
 import xin.vanilla.banira.config.entity.extended.WifeConfig;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -37,6 +38,11 @@ public class OtherConfig {
      */
     private McConfig mcConfig;
 
+    /**
+     * AI聊天配置
+     */
+    private ChatConfig chatConfig;
+
 
     {
         this.randomImgPath = new ArrayList<>();
@@ -47,6 +53,7 @@ public class OtherConfig {
         );
         this.statusBgUrl = "bg.png";
         this.mcConfig = new McConfig();
+        this.chatConfig = new ChatConfig();
 
     }
 

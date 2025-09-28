@@ -12,7 +12,12 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
-import xin.vanilla.banira.event.ConfigReloadedEvent;
+import xin.vanilla.banira.config.entity.GlobalConfig;
+import xin.vanilla.banira.config.entity.GroupConfig;
+import xin.vanilla.banira.config.entity.InstructionsConfig;
+import xin.vanilla.banira.event.GlobalConfigReloadedEvent;
+import xin.vanilla.banira.event.GroupConfigReloadedEvent;
+import xin.vanilla.banira.event.InstructionsConfigReloadedEvent;
 import xin.vanilla.banira.util.DateUtils;
 
 import java.io.IOException;
@@ -314,7 +319,13 @@ public class YamlConfigManager<T> {
 
     private void publishEvent(T instance) {
         if (eventPublisher != null) {
-            eventPublisher.publishEvent(new ConfigReloadedEvent<>(this, configName, clazz, instance));
+            if (instance instanceof GlobalConfig config) {
+                eventPublisher.publishEvent(new GlobalConfigReloadedEvent(this, configName, config));
+            } else if (instance instanceof GroupConfig config) {
+                eventPublisher.publishEvent(new GroupConfigReloadedEvent(this, configName, config));
+            } else if (instance instanceof InstructionsConfig config) {
+                eventPublisher.publishEvent(new InstructionsConfigReloadedEvent(this, configName, config));
+            }
         }
     }
 }

@@ -882,6 +882,13 @@ public final class BaniraUtils {
      * 判断是否全局管理员
      */
     public static boolean isGlobalOp(@Nonnull Long qq) {
+        return isGlobalAdmin(qq);
+    }
+
+    /**
+     * 判断是否全局管理员
+     */
+    public static boolean isGlobalAdmin(@Nonnull Long qq) {
         return isOwner(qq) || isButler(qq);
     }
 
@@ -917,6 +924,20 @@ public final class BaniraUtils {
         if (bot == null || !isGroupIdValid(groupId)) return false;
         ActionData<GroupMemberInfoResp> groupMemberInfo = bot.getGroupMemberInfo(groupId, qq, false);
         return bot.isActionDataNotEmpty(groupMemberInfo) && "admin".equalsIgnoreCase(groupMemberInfo.getData().getRole());
+    }
+
+    /**
+     * 判断是否管理员
+     */
+    public static boolean isOp(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq) {
+        return isAdmin(bot, groupId, qq);
+    }
+
+    /**
+     * 判断是否管理员
+     */
+    public static boolean isAdmin(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq) {
+        return isGlobalOp(qq) || isGroupOwner(bot, groupId, qq) || isGroupAdmin(bot, groupId, qq) || isMaid(groupId, qq);
     }
 
     /**

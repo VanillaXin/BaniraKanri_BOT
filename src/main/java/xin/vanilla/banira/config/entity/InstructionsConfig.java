@@ -72,6 +72,11 @@ public class InstructionsConfig {
      */
     private List<String> plant;
 
+    /**
+     * AI聊天
+     */
+    private List<String> aiChat;
+
 
     {
         this.prefix = "/bk";
@@ -85,6 +90,7 @@ public class InstructionsConfig {
         this.tap = BaniraUtils.mutableListOf("戳一戳", "戳", "tap", "poke");
         this.alive = BaniraUtils.mutableListOf("存活", "活着", "在线", "活着?", "活着？", "online", "alive", "survival");
         this.plant = BaniraUtils.mutableListOf("plant", "tea", "花言草语", "胡言乱语", "喝茶", "品茶");
+        this.aiChat = BaniraUtils.mutableListOf("aichat", "chat");
     }
 
 }

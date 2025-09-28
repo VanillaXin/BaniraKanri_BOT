@@ -5,6 +5,7 @@ import lombok.experimental.Accessors;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.util.JavaVersionUtils;
 
 import java.util.jar.Attributes;
 import java.util.jar.Manifest;
@@ -38,6 +39,17 @@ public class BaniraVersionInfo {
             return attributes.getValue("Implementation-Version");
         } catch (Exception e) {
             return "UNKNOWN";
+        }
+    }
+
+    public String getJavaVersion() {
+        try {
+            ClassPathResource resource = new ClassPathResource("META-INF/MANIFEST.MF");
+            Manifest manifest = new Manifest(resource.getInputStream());
+            Attributes attributes = manifest.getMainAttributes();
+            return attributes.getValue("Built-Java");
+        } catch (Exception e) {
+            return JavaVersionUtils.getClassVersion(BaniraVersionInfo.class);
         }
     }
 }

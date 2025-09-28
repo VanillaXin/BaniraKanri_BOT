@@ -3,7 +3,9 @@ package xin.vanilla.banira.domain;
 import com.mikuac.shiro.model.ArrayMsg;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.plugin.common.BaniraBot;
+import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -63,6 +65,10 @@ public class BaniraCodeContext implements Cloneable {
      * 操作者
      */
     private Long operator;
+    /**
+     * 消息类型
+     */
+    private EnumMessageType msgType;
 
     /**
      * 关键词记录
@@ -99,5 +105,12 @@ public class BaniraCodeContext implements Cloneable {
                     .msgId(msgId)
                     ;
         }
+    }
+
+    public EnumMessageType msgType() {
+        return this.msgType != null
+                ? this.msgType
+                : BaniraUtils.isGroupIdValid(this.group) ? EnumMessageType.GROUP : EnumMessageType.FRIEND
+                ;
     }
 }

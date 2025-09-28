@@ -785,6 +785,15 @@ public class BaniraBot extends Bot {
     }
 
     /**
+     * 判断是否管理员
+     * <p>
+     * 主人、管家、群主、群管理员、女仆
+     */
+    public boolean isAdmin(@Nullable Long groupId, @Nonnull Long qq) {
+        return BaniraUtils.isAdmin(this, groupId, qq);
+    }
+
+    /**
      * 判断是否群成员
      */
     public boolean isGroupMember(@Nullable Long groupId, @Nonnull Long qq) {
@@ -881,6 +890,20 @@ public class BaniraBot extends Bot {
      */
     public boolean hasAnyPermissions(@Nullable Long groupId, @Nonnull Long qq, @Nonnull Collection<EnumPermission> permissions) {
         return BaniraUtils.hasAnyPermissions(this, groupId, qq, permissions);
+    }
+
+    /**
+     * 判断是否被AT
+     */
+    public boolean isMentioned(List<ArrayMsg> arrayMsg) {
+        return this.getSelfId() == BaniraUtils.getAtUserId(arrayMsg);
+    }
+
+    /**
+     * 判断是否被AT
+     */
+    public boolean isMentioned(String msg) {
+        return this.getSelfId() == BaniraUtils.getAtUserId(msg);
     }
 
     public List<ArrayMsg> getReplyContentById(Long replyId) {

@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.basic.PluginConfig;
-import xin.vanilla.banira.event.ConfigReloadedEvent;
+import xin.vanilla.banira.event.GlobalConfigReloadedEvent;
 import xin.vanilla.banira.plugin.RecorderPlugin;
 import xin.vanilla.banira.start.SpringContextHolder;
 import xin.vanilla.banira.util.ReflectionUtils;
@@ -39,7 +39,7 @@ public class BotFactoryHandlerSorter implements ApplicationListener<ContextRefre
     }
 
     @EventListener
-    public void onConfigReloaded(ConfigReloadedEvent<GlobalConfig> event) {
+    public void onConfigReloaded(GlobalConfigReloadedEvent event) {
         sortHandlers("Hot update sorting (GlobalConfig reload)");
     }
 

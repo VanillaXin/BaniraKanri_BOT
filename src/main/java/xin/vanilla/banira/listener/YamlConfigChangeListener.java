@@ -4,8 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.GlobalConfig;
-import xin.vanilla.banira.config.entity.GroupConfig;
-import xin.vanilla.banira.event.ConfigReloadedEvent;
+import xin.vanilla.banira.event.GlobalConfigReloadedEvent;
+import xin.vanilla.banira.event.GroupConfigReloadedEvent;
 
 import java.util.function.Supplier;
 
@@ -21,7 +21,7 @@ public class YamlConfigChangeListener {
     }
 
     @EventListener
-    public void onGlobalConfigReloaded(ConfigReloadedEvent<GlobalConfig> event) {
+    public void onGlobalConfigReloaded(GlobalConfigReloadedEvent event) {
         if ((event.getNewConfig().token() != null
                 && !event.getNewConfig().token().equals(globalConfig.token()))
                 || (event.getNewConfig().wsUrl() != null
@@ -35,7 +35,7 @@ public class YamlConfigChangeListener {
     }
 
     @EventListener
-    public void onGroupConfigReloaded(ConfigReloadedEvent<GroupConfig> event) {
+    public void onGroupConfigReloaded(GroupConfigReloadedEvent event) {
 
     }
 }

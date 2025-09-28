@@ -241,7 +241,7 @@ public class StatusPlugin extends BasePlugin {
                     DateUtils.formatDuration(DateUtils.dateOfTwo(systemStartDate, now))
             );
             JsonUtils.setString(uptimeObject, "compilation", String.format("Compiled by %s | %s %s"
-                    , JavaVersionUtils.getClassVersion(StatusPlugin.class)
+                    , baniraVersionInfo.getJavaVersion()
                     , osInfo.getFamily()
                     , System.getProperty("os.arch")
             ));

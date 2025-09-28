@@ -57,8 +57,13 @@ public class BaseInstructionsConfig {
      * 帮助 (如: 指令帮助)
      */
     private List<String> help;
+    /**
+     * 刷新
+     */
+    private List<String> refresh;
 
     /**
+     * /**
      * 例子
      */
     private List<String> example;
@@ -75,6 +80,7 @@ public class BaseInstructionsConfig {
         this.atAll = BaniraUtils.mutableListOf("@全体成员", "@全体", "@所有人", "@all", "@All", "@ALL");
         this.status = BaniraUtils.mutableListOf("统计", "状态", "status", "statistics", "stats");
         this.help = BaniraUtils.mutableListOf("帮助", "指令帮助", "help", "tips");
+        this.refresh = BaniraUtils.mutableListOf("刷新", "重载", "reload", "refresh");
         this.example = BaniraUtils.mutableListOf("示例", "例子", "栗子", "🌰", "demo", "example", "case");
     }
 

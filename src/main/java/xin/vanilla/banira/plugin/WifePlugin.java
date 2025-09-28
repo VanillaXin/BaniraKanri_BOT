@@ -35,8 +35,8 @@ import xin.vanilla.banira.util.*;
 
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
-import java.util.List;
 import java.util.*;
+import java.util.List;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -187,6 +187,8 @@ public class WifePlugin extends BasePlugin {
             String operate = split[1];
             // 启用
             if (insConfig.get().base().enable().contains(operate)) {
+                if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
+                    return bot.setMsgEmojiLikeNo(event.getMessageId());
                 groupConfig.get().otherConfig()
                         .computeIfAbsent(event.getGroupId(), k -> new OtherConfig())
                         .wifeConfig()
@@ -198,6 +200,8 @@ public class WifePlugin extends BasePlugin {
             }
             // 禁用
             else if (insConfig.get().base().disable().contains(operate)) {
+                if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
+                    return bot.setMsgEmojiLikeNo(event.getMessageId());
                 groupConfig.get().otherConfig()
                         .computeIfAbsent(event.getGroupId(), k -> new OtherConfig())
                         .wifeConfig()
@@ -207,6 +211,8 @@ public class WifePlugin extends BasePlugin {
             }
             // 添加
             else if (insConfig.get().base().add().contains(operate)) {
+                if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
+                    return bot.setMsgEmojiLikeNo(event.getMessageId());
                 String[] args = argString.split("\\r\\n|\\r|\\n");
                 if (args.length < 2 || args.length > 5) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                 WifeConfig wifeConfig = new WifeConfig(args[1]
@@ -222,6 +228,8 @@ public class WifePlugin extends BasePlugin {
             }
             // 删除
             else if (insConfig.get().base().del().contains(operate)) {
+                if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
+                    return bot.setMsgEmojiLikeNo(event.getMessageId());
                 String[] args = argString.split("\\r\\n|\\r|\\n");
                 if (args.length < 2 || args.length > 5) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                 WifeConfig wifeConfig = new WifeConfig(args[1]

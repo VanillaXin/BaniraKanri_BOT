@@ -34,6 +34,7 @@ import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.domain.KeywordRecord;
 import xin.vanilla.banira.domain.PageResult;
 import xin.vanilla.banira.enums.EnumKeywordType;
+import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.mapper.param.KeywordRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
@@ -492,6 +493,7 @@ public class KeywordPlugin extends BasePlugin {
                         .msg(message.get())
                         .msgId(event.getMessageId())
                         .time(event.getTime())
+                        .msgType(EnumMessageType.getType(event))
         );
         if (context != null) {
             ActionData<MsgId> msgId;
