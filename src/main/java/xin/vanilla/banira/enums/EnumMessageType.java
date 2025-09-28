@@ -1,8 +1,9 @@
 package xin.vanilla.banira.enums;
 
+import com.mikuac.shiro.constant.ActionParams;
 import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import com.mikuac.shiro.dto.event.message.MessageEvent;
-import com.mikuac.shiro.dto.event.message.PrivateMessageEvent;
+import xin.vanilla.banira.util.BaniraUtils;
 
 public enum EnumMessageType {
     FRIEND(),
@@ -13,11 +14,16 @@ public enum EnumMessageType {
 
 
     public static EnumMessageType getType(MessageEvent event) {
-        return switch (event) {
-            case GroupMessageEvent ignored -> GROUP;
-            case PrivateMessageEvent friend when friend.getSubType().equalsIgnoreCase("friend") -> FRIEND;
-            case PrivateMessageEvent friend when friend.getSubType().equalsIgnoreCase("group") -> MEMBER;
-            default -> STRANGER;
-        };
+        if (ActionParams.GROUP.equals(event.getMessageType())) {
+            return EnumMessageType.GROUP;
+        } else if (ActionParams.PRIVATE.equals(event.getMessageType())) {
+            if (event instanceof GroupMessageEvent groupEvent && BaniraUtils.isGroupIdValid(groupEvent.getGroupId())) {
+                return EnumMessageType.MEMBER;
+            } else {
+                return EnumMessageType.FRIEND;
+            }
+        } else {
+            return EnumMessageType.STRANGER;
+        }
     }
 }
