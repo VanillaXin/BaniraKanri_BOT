@@ -52,12 +52,12 @@ public class WifeRecordQueryParam extends BaniraQueryParam {
         super(all);
     }
 
-    public WifeRecordQueryParam(long startIndex, long pageSize) {
-        super(startIndex, pageSize);
+    public WifeRecordQueryParam(long page, long pageSize) {
+        super(page, pageSize);
     }
 
-    public WifeRecordQueryParam(boolean all, long startIndex, long pageSize) {
-        super(all, startIndex, pageSize);
+    public WifeRecordQueryParam(boolean all, long page, long pageSize) {
+        super(all, page, pageSize);
     }
 
     public WifeRecordQueryParam(WifeRecord data) {

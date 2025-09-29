@@ -52,12 +52,12 @@ public class TimerRecordQueryParam extends BaniraQueryParam {
         super(all);
     }
 
-    public TimerRecordQueryParam(long startIndex, long pageSize) {
-        super(startIndex, pageSize);
+    public TimerRecordQueryParam(long page, long pageSize) {
+        super(page, pageSize);
     }
 
-    public TimerRecordQueryParam(boolean all, long startIndex, long pageSize) {
-        super(all, startIndex, pageSize);
+    public TimerRecordQueryParam(boolean all, long page, long pageSize) {
+        super(all, page, pageSize);
     }
 
     public TimerRecordQueryParam(TimerRecord data) {

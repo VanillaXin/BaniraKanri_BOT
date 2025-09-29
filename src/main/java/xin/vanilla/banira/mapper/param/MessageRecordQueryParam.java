@@ -57,12 +57,12 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
         super(all);
     }
 
-    public MessageRecordQueryParam(long startIndex, long pageSize) {
-        super(startIndex, pageSize);
+    public MessageRecordQueryParam(long page, long pageSize) {
+        super(page, pageSize);
     }
 
-    public MessageRecordQueryParam(boolean all, long startIndex, long pageSize) {
-        super(all, startIndex, pageSize);
+    public MessageRecordQueryParam(boolean all, long page, long pageSize) {
+        super(all, page, pageSize);
     }
 
     public MessageRecordQueryParam(MessageRecord data) {

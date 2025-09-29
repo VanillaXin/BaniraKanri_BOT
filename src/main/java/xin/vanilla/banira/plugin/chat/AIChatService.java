@@ -129,7 +129,7 @@ public class AIChatService {
     }
 
     private List<MessageRecord> getHistoryRecords(BaniraBot bot, BaniraCodeContext ctx) {
-        MessageRecordQueryParam msgRecordParam = new MessageRecordQueryParam(true, 0, cfg.historyLimit());
+        MessageRecordQueryParam msgRecordParam = new MessageRecordQueryParam(true, 1, cfg.historyLimit());
         msgRecordParam.setBotId(bot.getSelfId());
         msgRecordParam.setMsgType(ctx.msgType().name());
         if (ctx.msgType() == EnumMessageType.GROUP) {

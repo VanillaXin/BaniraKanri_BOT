@@ -7,8 +7,10 @@ import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.VideoContent;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.HttpUtils;
 import xin.vanilla.banira.util.StringUtils;
 
+import java.util.Base64;
 import java.util.List;
 
 public final class MessageConvert {
@@ -25,18 +27,22 @@ public final class MessageConvert {
                 break;
                 case image: {
                     if (retainMedia) {
-                        result = new ImageContent(arrayMsg.getStringData("url"));
+                        String url = arrayMsg.getStringData("url");
+                        String base64 = Base64.getEncoder().encodeToString(HttpUtils.downloadBytes(url));
+                        result = new ImageContent(base64, "image/gif");
                     } else {
                         result = new TextContent("[图片]");
                     }
                 }
                 break;
                 case video: {
-                    if (retainMedia) {
-                        result = new VideoContent(arrayMsg.getStringData("url"));
-                    } else {
-                        result = new TextContent("[视频]");
-                    }
+                    // if (retainMedia) {
+                    //     String url = arrayMsg.getStringData("url");
+                    //     String base64 = Base64.getEncoder().encodeToString(HttpUtils.downloadBytes(url));
+                    //     result = new VideoContent(base64, "video/mp4");
+                    // } else {
+                    //     result = new TextContent("[视频]");
+                    // }
                 }
                 case reply: {
                     String replyContent = BaniraUtils.getReplyContentString(bot, List.of(arrayMsg));

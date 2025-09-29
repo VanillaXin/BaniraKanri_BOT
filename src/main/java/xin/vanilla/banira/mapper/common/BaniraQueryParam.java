@@ -32,15 +32,15 @@ public class BaniraQueryParam extends HashMap<String, Object> {
         this.put(ALL_FIELDS, all);
     }
 
-    public BaniraQueryParam(long startIndex, long pageSize) {
+    public BaniraQueryParam(long page, long pageSize) {
         this(false);
-        this.put(PAGE, startIndex);
+        this.put(PAGE, Math.max(1, page));
         this.put(SIZE, pageSize);
     }
 
-    public BaniraQueryParam(boolean all, long startIndex, long pageSize) {
+    public BaniraQueryParam(boolean all, long page, long pageSize) {
         this(all);
-        this.put(PAGE, startIndex);
+        this.put(PAGE, Math.max(1, page));
         this.put(SIZE, pageSize);
     }
 

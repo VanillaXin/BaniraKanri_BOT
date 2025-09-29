@@ -60,12 +60,12 @@ public class MinecraftRecordQueryParam extends BaniraQueryParam {
         super(all);
     }
 
-    public MinecraftRecordQueryParam(long startIndex, long pageSize) {
-        super(startIndex, pageSize);
+    public MinecraftRecordQueryParam(long page, long pageSize) {
+        super(page, pageSize);
     }
 
-    public MinecraftRecordQueryParam(boolean all, long startIndex, long pageSize) {
-        super(all, startIndex, pageSize);
+    public MinecraftRecordQueryParam(boolean all, long page, long pageSize) {
+        super(all, page, pageSize);
     }
 
     public MinecraftRecordQueryParam(MinecraftRecord data) {

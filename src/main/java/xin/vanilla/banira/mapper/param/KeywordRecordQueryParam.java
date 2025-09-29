@@ -56,12 +56,12 @@ public class KeywordRecordQueryParam extends BaniraQueryParam {
         super(all);
     }
 
-    public KeywordRecordQueryParam(long startIndex, long pageSize) {
-        super(startIndex, pageSize);
+    public KeywordRecordQueryParam(long page, long pageSize) {
+        super(page, pageSize);
     }
 
-    public KeywordRecordQueryParam(boolean all, long startIndex, long pageSize) {
-        super(all, startIndex, pageSize);
+    public KeywordRecordQueryParam(boolean all, long page, long pageSize) {
+        super(all, page, pageSize);
     }
 
     public KeywordRecordQueryParam(KeywordRecord data) {
