@@ -7,42 +7,53 @@ import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.VideoContent;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.List;
 
 public final class MessageConvert {
 
     public static Content toContent(BaniraBot bot, Long groupId, ArrayMsg arrayMsg, boolean retainMedia) {
-        switch (arrayMsg.getType()) {
-            case at: {
-                long qq = arrayMsg.getLongData("qq");
-                if (qq == 0) return new TextContent("@全体成员");
-                else return new TextContent("@" + bot.getUserNameEx(groupId, qq));
-            }
-            case image: {
-                if (retainMedia) {
-                    return new ImageContent(arrayMsg.getStringData("url"));
-                } else {
-                    return new TextContent("[图片]");
+        Content result = null;
+        try {
+            switch (arrayMsg.getType()) {
+                case at: {
+                    long qq = arrayMsg.getLongData("qq");
+                    if (qq == 0) result = new TextContent("@全体成员");
+                    else result = new TextContent(String.format("@%s ", bot.getUserNameEx(groupId, qq)));
+                }
+                break;
+                case image: {
+                    if (retainMedia) {
+                        result = new ImageContent(arrayMsg.getStringData("url"));
+                    } else {
+                        result = new TextContent("[图片]");
+                    }
+                }
+                break;
+                case video: {
+                    if (retainMedia) {
+                        result = new VideoContent(arrayMsg.getStringData("url"));
+                    } else {
+                        result = new TextContent("[视频]");
+                    }
+                }
+                case reply: {
+                    String replyContent = BaniraUtils.getReplyContentString(bot, List.of(arrayMsg));
+                    if (!StringUtils.isNullOrEmptyEx(replyContent)) {
+                        result = new TextContent(String.format("引用[%s]", replyContent));
+                    }
+                }
+                case text: {
+                    String text = arrayMsg.toCQCode();
+                    if (!StringUtils.isNullOrEmptyEx(text)) {
+                        result = new TextContent(text);
+                    }
                 }
             }
-            case video: {
-                if (retainMedia) {
-                    return new VideoContent(arrayMsg.getStringData("url"));
-                } else {
-                    return new TextContent("[视频]");
-                }
-            }
-            case reply: {
-                return new TextContent(String.format("引用[%s]", BaniraUtils.getReplyContentString(bot, List.of(arrayMsg))));
-            }
-            case text: {
-                return new TextContent(arrayMsg.toCQCode());
-            }
-            default:
-                return null;
+        } catch (Exception ignored) {
         }
-
+        return result;
     }
 
 }

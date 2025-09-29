@@ -75,8 +75,9 @@ dependencies {
     // Sensitive Word
     implementation 'com.github.houbb:sensitive-word:0.29.2'
     // LangChain
-    implementation 'dev.langchain4j:langchain4j-open-ai:1.6.0'
     implementation 'dev.langchain4j:langchain4j:1.6.0'
+    implementation 'dev.langchain4j:langchain4j-open-ai:1.6.0'
+    implementation 'dev.langchain4j:langchain4j-http-client-jdk:1.6.0'
 
 
     // Libs

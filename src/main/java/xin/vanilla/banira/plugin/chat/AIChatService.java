@@ -8,6 +8,7 @@ import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.openai.OpenAiChatModel;
+import lombok.extern.slf4j.Slf4j;
 import xin.vanilla.banira.config.entity.extended.ChatConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.MessageRecord;
@@ -22,6 +23,7 @@ import xin.vanilla.banira.util.StringUtils;
 import java.time.Duration;
 import java.util.*;
 
+@Slf4j
 public class AIChatService {
 
     private final ChatConfig cfg;
@@ -61,8 +63,12 @@ public class AIChatService {
         prompt.add(SystemMessage.systemMessage("回复应尽量简短"));
         List<MessageRecord> records = getHistoryRecords(bot, ctx);
         for (MessageRecord record : records) {
-            prompt.add(convertMessage(record.getMsgRecode(), bot, record.getGroupId(), record.getSenderId()));
+            ChatMessage message = convertMessage(record.getMsgRecode(), bot, record.getGroupId(), record.getSenderId());
+            if (message != null) prompt.add(message);
         }
+        ChatMessage message = convertMessage(ctx.msg(), bot, ctx.group(), ctx.sender());
+        if (message == null) return null;
+        prompt.add(message);
         ChatResponse chatResponse = this.chatModel.chat(prompt);
         return chatResponse.aiMessage().text();
     }
@@ -102,7 +108,7 @@ public class AIChatService {
     }
 
     private static ChatMessage convertMessage(String msgRecode, BaniraBot bot, Long groupId, Long senderId) {
-        ChatMessage result;
+        ChatMessage result = null;
         String senderName = bot.getUserNameEx(groupId, senderId);
         if (bot.getSelfId() == senderId) {
             result = AiMessage.aiMessage(msgRecode);
@@ -115,7 +121,9 @@ public class AIChatService {
                     contents.add(content);
                 }
             }
-            result = UserMessage.userMessage(senderName, contents);
+            if (!contents.isEmpty()) {
+                result = UserMessage.userMessage(senderName, contents);
+            }
         }
         return result;
     }
@@ -132,7 +140,7 @@ public class AIChatService {
         } else {
             msgRecordParam.setTargetId(ctx.sender());
         }
-        msgRecordParam.addOrderBy(MessageRecordQueryParam.ORDER_TIME, false);
+        msgRecordParam.addOrderBy(MessageRecordQueryParam.ORDER_ID, false);
         return getMessageRecordManager().getMessageRecordList(msgRecordParam);
     }
 
