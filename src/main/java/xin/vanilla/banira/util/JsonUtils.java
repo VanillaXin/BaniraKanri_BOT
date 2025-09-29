@@ -267,7 +267,7 @@ public final class JsonUtils {
         }
     }
 
-    public <T> T fromJson(String json, Class<T> classOfT) {
+    public static <T> T fromJson(String json, Class<T> classOfT) {
         try {
             return JsonUtils.GSON.fromJson(json, classOfT);
         } catch (Exception e) {

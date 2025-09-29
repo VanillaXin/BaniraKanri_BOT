@@ -1,4 +1,4 @@
-package xin.vanilla.banira.util.ai;
+package xin.vanilla.banira.plugin.chat;
 
 import lombok.extern.slf4j.Slf4j;
 import xin.vanilla.banira.config.entity.extended.ChatConfig;

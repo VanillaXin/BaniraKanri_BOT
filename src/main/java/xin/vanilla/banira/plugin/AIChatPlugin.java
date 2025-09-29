@@ -18,7 +18,7 @@ import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
-import xin.vanilla.banira.util.ai.AIChatService;
+import xin.vanilla.banira.plugin.chat.AIChatService;
 
 import java.util.ArrayList;
 import java.util.List;

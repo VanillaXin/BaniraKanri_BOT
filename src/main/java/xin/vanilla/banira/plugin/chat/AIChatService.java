@@ -1,11 +1,10 @@
-package xin.vanilla.banira.util.ai;
+package xin.vanilla.banira.plugin.chat;
 
+import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.dto.action.response.LoginInfoResp;
-import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.SystemMessage;
-import dev.langchain4j.data.message.UserMessage;
+import com.mikuac.shiro.model.ArrayMsg;
+import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.openai.OpenAiChatModel;
@@ -35,7 +34,7 @@ public class AIChatService {
         this.cfg = Objects.requireNonNull(cfg, "cfg");
         this.chatModel = OpenAiChatModel.builder()
                 .apiKey(cfg.apiKey())
-                .modelName(StringUtils.isNullOrEmptyEx(cfg.modelName()) ? "gpt-3.5-turbo" : cfg.modelName())
+                .modelName(StringUtils.isNullOrEmptyEx(cfg.modelName()) ? "gpt-4o" : cfg.modelName())
                 .temperature(cfg.temperature())
                 .timeout(Duration.ofSeconds(cfg.timeout()))
                 .maxRetries(cfg.maxRetries())
@@ -51,19 +50,18 @@ public class AIChatService {
      */
     public String generateReply(BaniraBot bot, BaniraCodeContext ctx) {
         if (!decisionMaker.shouldReply(ctx, bot.isMentioned(ctx.originalMsg()))) return null;
+        LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
         Date now = new Date();
         List<ChatMessage> prompt = new ArrayList<>();
-        prompt.add(SystemMessage.systemMessage("现在是" + DateUtils.toDateTimeString(now)));
         for (String sysPrompt : cfg.systemPrompt()) {
             prompt.add(SystemMessage.from(sysPrompt));
         }
+        prompt.add(SystemMessage.systemMessage("当前时间是：" + DateUtils.toDateTimeString(now)));
+        prompt.add(SystemMessage.systemMessage("你的昵称为：" + loginInfoEx.getNickname()));
+        prompt.add(SystemMessage.systemMessage("回复应尽量简短"));
         List<MessageRecord> records = getHistoryRecords(bot, ctx);
         for (MessageRecord record : records) {
-            if (bot.getSelfId() == record.getSenderId()) {
-                prompt.add(AiMessage.aiMessage(record.getMsgRecode()));
-            } else {
-                prompt.add(UserMessage.userMessage(bot.getUserNameEx(record.getGroupId(), record.getSenderId()), record.getMsgRecode()));
-            }
+            prompt.add(convertMessage(record.getMsgRecode(), bot, record.getGroupId(), record.getSenderId()));
         }
         ChatResponse chatResponse = this.chatModel.chat(prompt);
         return chatResponse.aiMessage().text();
@@ -101,6 +99,25 @@ public class AIChatService {
             }
         }
         return true;
+    }
+
+    private static ChatMessage convertMessage(String msgRecode, BaniraBot bot, Long groupId, Long senderId) {
+        ChatMessage result;
+        String senderName = bot.getUserNameEx(groupId, senderId);
+        if (bot.getSelfId() == senderId) {
+            result = AiMessage.aiMessage(msgRecode);
+        } else {
+            List<ArrayMsg> arrayMsgList = MessageConverser.stringToArray(msgRecode);
+            List<Content> contents = new ArrayList<>();
+            for (ArrayMsg arrayMsg : arrayMsgList) {
+                Content content = MessageConvert.toContent(bot, groupId, arrayMsg, true);
+                if (content != null) {
+                    contents.add(content);
+                }
+            }
+            result = UserMessage.userMessage(senderName, contents);
+        }
+        return result;
     }
 
     private List<MessageRecord> getHistoryRecords(BaniraBot bot, BaniraCodeContext ctx) {

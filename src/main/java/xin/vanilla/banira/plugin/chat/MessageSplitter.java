@@ -1,4 +1,4 @@
-package xin.vanilla.banira.util.ai;
+package xin.vanilla.banira.plugin.chat;
 
 import xin.vanilla.banira.config.entity.extended.ChatConfig;
 
