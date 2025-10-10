@@ -215,6 +215,7 @@ public class KeywordPlugin extends BasePlugin {
 
             String action = StringUtils.orDefault(matcher.group("keywordAction"), baseIns.add().getFirst());
             String group = StringUtils.orDefault(matcher.group("keywordTarget"), baseIns.that().getFirst());
+            if (group.startsWith("<") && group.endsWith(">")) group = group.substring(1, group.length() - 1);
 
             if (baseIns.that().contains(group)) group = String.valueOf(event.getGroupId());
             if (baseIns.global().contains(group)) group = "0";
