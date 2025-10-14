@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.domain.BaniraCodeContext;
+import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.enums.EnumCodeType;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -21,6 +22,7 @@ import xin.vanilla.banira.util.StringUtils;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -74,6 +76,19 @@ public class VideoCode implements MessageCoder {
 
         String jsonPath = getArg(code, "path", "jsonpath");
 
+        String headers = ShiroUtils.unescape(getArg(code, "headers", "header"));
+        KeyValue<String, String>[] headerArray = null;
+        if (StringUtils.isNotNullOrEmpty(headers)) {
+            JsonObject jsonObject = JsonUtils.parseJsonObject(headers);
+            if (jsonObject != null && !jsonObject.isJsonNull()) {
+                List<KeyValue<String, String>> headerList = new ArrayList<>();
+                for (String key : jsonObject.keySet()) {
+                    headerList.add(new KeyValue<>(key, JsonUtils.getString(jsonObject, key)));
+                }
+                headerArray = headerList.toArray(new KeyValue[0]);
+            }
+        }
+
         String cover = getArg(code, "cover");
         if (StringUtils.isNullOrEmptyEx(cover)) {
             Image image = ImgUtil.copyImage(DEFAULT_COVER, BufferedImage.TYPE_4BYTE_ABGR);
@@ -91,18 +106,18 @@ public class VideoCode implements MessageCoder {
                 JsonElement jsonElement = JsonUtils.getJsonElement(json, ShiroUtils.unescape(jsonPath));
                 if (jsonElement.isJsonArray()) {
                     for (JsonElement element : jsonElement.getAsJsonArray()) {
-                        builder.video(downloadVideo(element.getAsString()), cover);
+                        builder.video(downloadVideo(element.getAsString(), headerArray), cover);
                     }
                 } else if (jsonElement.isJsonPrimitive() && jsonElement.getAsJsonPrimitive().isString()) {
-                    builder.video(downloadVideo(jsonElement.getAsString()), cover);
+                    builder.video(downloadVideo(jsonElement.getAsString(), headerArray), cover);
                 } else {
-                    builder.video(downloadVideo(url), cover);
+                    builder.video(downloadVideo(url, headerArray), cover);
                 }
                 context.msg(context.msg().replace(placeholder, replaceResult(code, builder.build())));
                 return builder.build();
             }
         }
-        builder.video(downloadVideo(url), cover);
+        builder.video(downloadVideo(url, headerArray), cover);
         context.msg(context.msg().replace(placeholder, replaceResult(code, builder.build())));
         return builder.build();
     }
@@ -121,13 +136,13 @@ public class VideoCode implements MessageCoder {
                 + CODE_END;
     }
 
-    private static String downloadVideo(String url) {
+    private static String downloadVideo(String url, KeyValue<String, String>[] headerArray) {
         if (BaniraUtils.isLocalFile(url)) {
             return new File(url).getAbsolutePath();
         } else if (BaniraUtils.isLocalCacheFile(url, EnumCacheFileType.video)) {
             return BaniraUtils.getCacheAbsolutePath(url, EnumCacheFileType.video);
         } else {
-            String fileName = BaniraUtils.downloadFileToCachePath(url, EnumCacheFileType.video);
+            String fileName = BaniraUtils.downloadFileToCachePath(url, EnumCacheFileType.video, headerArray);
             return BaniraUtils.getCacheAbsolutePath(fileName, EnumCacheFileType.video);
         }
     }

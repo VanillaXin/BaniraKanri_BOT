@@ -9,12 +9,14 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.domain.BaniraCodeContext;
+import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.enums.EnumCodeType;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -67,6 +69,19 @@ public class ImageCode implements MessageCoder {
 
         String jsonPath = getArg(code, "path", "jsonpath");
 
+        String headers = ShiroUtils.unescape(getArg(code, "headers", "header"));
+        KeyValue<String, String>[] headerArray = null;
+        if (StringUtils.isNotNullOrEmpty(headers)) {
+            JsonObject jsonObject = JsonUtils.parseJsonObject(headers);
+            if (jsonObject != null && !jsonObject.isJsonNull()) {
+                List<KeyValue<String, String>> headerList = new ArrayList<>();
+                for (String key : jsonObject.keySet()) {
+                    headerList.add(new KeyValue<>(key, JsonUtils.getString(jsonObject, key)));
+                }
+                headerArray = headerList.toArray(new KeyValue[0]);
+            }
+        }
+
         MsgUtils builder = MsgUtils.builder();
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
             JsonElement json = JsonUtils.parseJson(HttpUtil.get(url));
@@ -74,18 +89,18 @@ public class ImageCode implements MessageCoder {
                 JsonElement jsonElement = JsonUtils.getJsonElement(json, ShiroUtils.unescape(jsonPath));
                 if (jsonElement.isJsonArray()) {
                     for (JsonElement element : jsonElement.getAsJsonArray()) {
-                        builder.img(BaniraUtils.convertFileUri(element.getAsString()));
+                        builder.img(BaniraUtils.convertFileUri(element.getAsString(), headerArray));
                     }
                 } else if (jsonElement.isJsonPrimitive() && jsonElement.getAsJsonPrimitive().isString()) {
-                    builder.img(BaniraUtils.convertFileUri(jsonElement.getAsString()));
+                    builder.img(BaniraUtils.convertFileUri(jsonElement.getAsString(), headerArray));
                 } else {
-                    builder.img(BaniraUtils.convertFileUri(url));
+                    builder.img(BaniraUtils.convertFileUri(url, headerArray));
                 }
                 context.msg(context.msg().replace(placeholder, replaceResult(code, builder.build())));
                 return builder.build();
             }
         }
-        builder.img(BaniraUtils.convertFileUri(url));
+        builder.img(BaniraUtils.convertFileUri(url, headerArray));
         context.msg(context.msg().replace(placeholder, replaceResult(code, builder.build())));
         return builder.build();
     }

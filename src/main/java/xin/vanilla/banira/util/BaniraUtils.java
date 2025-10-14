@@ -1151,8 +1151,9 @@ public final class BaniraUtils {
      *
      * @return 文件名称列表
      */
-    public static String downloadFileToCachePath(String url, EnumCacheFileType type) {
-        byte[] bytes = HttpUtils.downloadBytes(url);
+    @SafeVarargs
+    public static String downloadFileToCachePath(String url, EnumCacheFileType type, KeyValue<String, String>... headers) {
+        byte[] bytes = HttpUtils.downloadBytes(url, headers);
         if (bytes != null) {
             File file = new File(String.format("cache/%s/%s", type.name(), StringUtils.md5(bytes)));
             file = FileUtil.writeBytes(bytes, file);
@@ -1271,7 +1272,8 @@ public final class BaniraUtils {
      * @param uri 本地文件路径|本地缓存文件名|网络文件路径
      * @return 文件绝对路径
      */
-    public static String convertFileUri(String uri) {
+    @SafeVarargs
+    public static String convertFileUri(String uri, KeyValue<String, String>... headers) {
         if (isLocalFile(uri)) {
             return new File(uri).getAbsolutePath();
         } else if (isLocalCacheFile(uri)) {
@@ -1281,7 +1283,7 @@ public final class BaniraUtils {
                     .map(it -> getCacheRelativePath(uri, it))
                     .orElse(uri);
         } else {
-            String fileName = downloadFileToCachePath(uri, EnumCacheFileType.file);
+            String fileName = downloadFileToCachePath(uri, EnumCacheFileType.file, headers);
             if (StringUtils.isNullOrEmpty(fileName)) return uri;
             return BaniraUtils.getCacheAbsolutePath(fileName, EnumCacheFileType.file);
         }

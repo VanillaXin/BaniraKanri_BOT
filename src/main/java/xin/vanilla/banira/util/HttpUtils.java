@@ -1,6 +1,7 @@
 package xin.vanilla.banira.util;
 
 import lombok.extern.slf4j.Slf4j;
+import xin.vanilla.banira.domain.KeyValue;
 
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -20,12 +21,18 @@ public final class HttpUtils {
     /**
      * 下载远程文件到 byte[]
      */
-    public static byte[] downloadBytes(String url) {
+    @SafeVarargs
+    public static byte[] downloadBytes(String url, KeyValue<String, String>... headers) {
         try {
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(url))
-                    .GET()
-                    .build();
+                    .GET();
+            if (CollectionUtils.isNotNullOrEmpty(headers)) {
+                for (KeyValue<String, String> header : headers) {
+                    builder.header(header.getKey(), header.getValue());
+                }
+            }
+            HttpRequest request = builder.build();
             HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
             if (response.statusCode() >= 200 && response.statusCode() < 300) {
                 return response.body();
