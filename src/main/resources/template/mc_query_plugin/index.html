@@ -358,7 +358,14 @@
 
         const avatar = document.createElement("div");
         avatar.className = "player-avatar";
-        avatar.innerHTML = '<img class="player-icon" src="https://crafatar.com/avatars/' + player.uuid + '?overlay=true" alt="ServerIcon">';
+        const img = document.createElement('img');
+        img.className = "player-icon";
+        img.src = "https://crafatar.com/avatars/' + player.uuid + '?overlay=true";
+        img.alt = "ServerIcon";
+        img.addEventListener('error', function () {
+            avatar.style.display = 'none';
+        });
+        avatar.appendChild(img);
 
         const name = document.createElement("div");
         name.className = "player-name";
