@@ -564,7 +564,8 @@ public class McQueryPlugin extends BasePlugin {
         for (KeyValue<String, String> kv : mcQuery.playerList()) {
             JsonObject playerObject = new JsonObject();
             JsonUtils.setString(playerObject, "name", kv.getKey());
-            JsonUtils.setString(playerObject, "uuid", kv.getValue().replace("-", ""));
+            JsonUtils.setString(playerObject, "uuid", kv.getValue());
+            JsonUtils.setString(playerObject, "uuidSimple", kv.getValue().replace("-", ""));
             players.add(playerObject);
         }
         result.add("onlinePlayers", players);
