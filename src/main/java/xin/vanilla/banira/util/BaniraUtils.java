@@ -29,6 +29,7 @@ import org.springframework.core.ResolvableType;
 import xin.vanilla.banira.coder.message.FileCode;
 import xin.vanilla.banira.coder.message.ImageCode;
 import xin.vanilla.banira.coder.message.VideoCode;
+import xin.vanilla.banira.coder.message.VoiceCode;
 import xin.vanilla.banira.config.YamlConfigManager;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
@@ -1227,6 +1228,9 @@ public final class BaniraUtils {
                 }
                 break;
                 case record: {
+                    it.setType(MsgTypeEnum.text);
+                    String file = getCacheRelativePath(strings.get(index++), EnumCacheFileType.voice);
+                    it.setData(mutableMapOf("text", VoiceCode.build(file)));
                 }
                 break;
             }
