@@ -43,9 +43,9 @@ public class InstructionsConfig {
     private KanriInstructionsConfig kanri;
 
     /**
-     * 获取表情图片
+     * 获取媒体资源
      */
-    private List<String> imageFaceToImage;
+    private List<String> media;
 
     /**
      * 获取老婆
@@ -84,7 +84,7 @@ public class InstructionsConfig {
         this.key = new KeyInstructionsConfig();
         this.timer = new TimerInstructionsConfig();
         this.kanri = new KanriInstructionsConfig();
-        this.imageFaceToImage = BaniraUtils.mutableListOf("获取表情", "获取图片", "获取表情图片", "getface", "getimage", "getimg");
+        this.media = BaniraUtils.mutableListOf("获取文件", "获取链接", "下载文件", "getfile", "download", "geturl");
         this.wife = BaniraUtils.mutableListOf("老婆", "wife");
         this.mcQuery = BaniraUtils.mutableListOf("我的世界", "麦块", "mc", "mcquery");
         this.tap = BaniraUtils.mutableListOf("戳一戳", "戳", "tap", "poke");
