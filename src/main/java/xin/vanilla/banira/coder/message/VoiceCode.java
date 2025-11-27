@@ -111,7 +111,7 @@ public class VoiceCode implements MessageCoder {
 
     private static String downloadVoice(String url, KeyValue<String, String>[] headerArray) {
         if (BaniraUtils.allowTraversingFiles(url)) {
-            return RandomFileUtils.getRandomFileName(url).orElse(url);
+            return RandomFileUtils.getRandomFileName(url).orElse(null);
         } else if (BaniraUtils.isLocalFile(url)) {
             return new File(url).getAbsolutePath();
         } else if (BaniraUtils.isLocalCacheFile(url, EnumCacheFileType.voice)) {

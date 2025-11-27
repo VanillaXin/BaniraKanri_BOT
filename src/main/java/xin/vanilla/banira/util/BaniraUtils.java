@@ -1265,7 +1265,7 @@ public final class BaniraUtils {
     public static boolean allowTraversingFiles(String uri) {
         try {
             if (isLocalFolder(uri)) {
-                File file = new File(uri, "traversing.txt");
+                File file = new File(uri, RandomFileUtils.CERT_FILE_NAME);
                 return file.exists()
                         && file.isFile()
                         && FileUtil.readString(file, StandardCharsets.UTF_8).equalsIgnoreCase("allow traversing");
@@ -1301,7 +1301,7 @@ public final class BaniraUtils {
     @SafeVarargs
     public static String convertFileUri(String uri, KeyValue<String, String>... headers) {
         if (allowTraversingFiles(uri)) {
-            return RandomFileUtils.getRandomFileName(uri).orElse(uri);
+            return RandomFileUtils.getRandomFileName(uri).orElse(null);
         } else if (isLocalFile(uri)) {
             return new File(uri).getAbsolutePath();
         } else if (isLocalCacheFile(uri)) {
@@ -1309,10 +1309,10 @@ public final class BaniraUtils {
                     .filter(it -> isLocalCacheFile(uri, it))
                     .findFirst()
                     .map(it -> getCacheRelativePath(uri, it))
-                    .orElse(uri);
+                    .orElse(null);
         } else {
             String fileName = downloadFileToCachePath(uri, EnumCacheFileType.file, headers);
-            if (StringUtils.isNullOrEmpty(fileName)) return uri;
+            if (StringUtils.isNullOrEmpty(fileName)) return null;
             return BaniraUtils.getCacheAbsolutePath(fileName, EnumCacheFileType.file);
         }
     }
