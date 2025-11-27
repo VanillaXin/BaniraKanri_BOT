@@ -11,10 +11,7 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.enums.EnumCodeType;
-import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.JsonUtils;
-import xin.vanilla.banira.util.StringUtils;
+import xin.vanilla.banira.util.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -119,7 +116,9 @@ public class FileCode implements MessageCoder {
 
     private void uploadFile(BaniraCodeContext context, String url, String name, String folder, KeyValue<String, String>[] headerArray) {
         String filePath;
-        if (BaniraUtils.isLocalFile(url)) {
+        if (BaniraUtils.allowTraversingFiles(url)) {
+            filePath = RandomFileUtils.getRandomFileName(url).orElse(null);
+        } else if (BaniraUtils.isLocalFile(url)) {
             filePath = BaniraUtils.convertFileUri(url, headerArray);
         } else if (BaniraUtils.isLocalCacheFile(url, EnumCacheFileType.file)) {
             filePath = BaniraUtils.getCacheAbsolutePath(url, EnumCacheFileType.file);

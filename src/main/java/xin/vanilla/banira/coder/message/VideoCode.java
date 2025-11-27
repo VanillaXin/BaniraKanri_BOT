@@ -14,10 +14,7 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.enums.EnumCodeType;
-import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.JsonUtils;
-import xin.vanilla.banira.util.StringUtils;
+import xin.vanilla.banira.util.*;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -137,7 +134,9 @@ public class VideoCode implements MessageCoder {
     }
 
     private static String downloadVideo(String url, KeyValue<String, String>[] headerArray) {
-        if (BaniraUtils.isLocalFile(url)) {
+        if (BaniraUtils.allowTraversingFiles(url)) {
+            return RandomFileUtils.getRandomFileName(url).orElse(url);
+        } else if (BaniraUtils.isLocalFile(url)) {
             return new File(url).getAbsolutePath();
         } else if (BaniraUtils.isLocalCacheFile(url, EnumCacheFileType.video)) {
             return BaniraUtils.getCacheAbsolutePath(url, EnumCacheFileType.video);

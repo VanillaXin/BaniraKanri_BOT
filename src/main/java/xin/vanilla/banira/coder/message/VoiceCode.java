@@ -12,10 +12,7 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.enums.EnumCodeType;
-import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.JsonUtils;
-import xin.vanilla.banira.util.StringUtils;
+import xin.vanilla.banira.util.*;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -113,7 +110,9 @@ public class VoiceCode implements MessageCoder {
     }
 
     private static String downloadVoice(String url, KeyValue<String, String>[] headerArray) {
-        if (BaniraUtils.isLocalFile(url)) {
+        if (BaniraUtils.allowTraversingFiles(url)) {
+            return RandomFileUtils.getRandomFileName(url).orElse(url);
+        } else if (BaniraUtils.isLocalFile(url)) {
             return new File(url).getAbsolutePath();
         } else if (BaniraUtils.isLocalCacheFile(url, EnumCacheFileType.voice)) {
             return BaniraUtils.getCacheAbsolutePath(url, EnumCacheFileType.voice);

@@ -1253,10 +1253,32 @@ public final class BaniraUtils {
         return new File(getCacheRelativePath(fileName, fileType)).getAbsolutePath();
     }
 
+    public static boolean isLocalFolder(String uri) {
+        try {
+            File file = new File(uri);
+            return file.exists() && file.isDirectory();
+        } catch (Exception ignored) {
+            return false;
+        }
+    }
+
+    public static boolean allowTraversingFiles(String uri) {
+        try {
+            if (isLocalFolder(uri)) {
+                File file = new File(uri, "traversing.txt");
+                return file.exists()
+                        && file.isFile()
+                        && FileUtil.readString(file, StandardCharsets.UTF_8).equalsIgnoreCase("allow traversing");
+            }
+        } catch (Exception ignored) {
+        }
+        return false;
+    }
+
     public static boolean isLocalFile(String uri) {
         try {
             File file = new File(uri);
-            return file.exists();
+            return file.exists() && file.isFile();
         } catch (Exception ignored) {
             return false;
         }
@@ -1278,7 +1300,9 @@ public final class BaniraUtils {
      */
     @SafeVarargs
     public static String convertFileUri(String uri, KeyValue<String, String>... headers) {
-        if (isLocalFile(uri)) {
+        if (allowTraversingFiles(uri)) {
+            return RandomFileUtils.getRandomFileName(uri).orElse(uri);
+        } else if (isLocalFile(uri)) {
             return new File(uri).getAbsolutePath();
         } else if (isLocalCacheFile(uri)) {
             return Arrays.stream(EnumCacheFileType.values())
