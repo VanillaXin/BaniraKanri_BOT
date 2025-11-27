@@ -115,6 +115,11 @@ public class KeywordCacheManager implements IKeywordCacheManager {
          */
         private final String replyMsg;
 
+        /**
+         * 权重
+         */
+        private final Integer priority;
+
         public CachedKeyword(KeywordRecord keywordRecord) {
             this.id = keywordRecord.getId();
             this.botId = keywordRecord.getBotId();
@@ -124,6 +129,7 @@ public class KeywordCacheManager implements IKeywordCacheManager {
             this.keywordType = keywordRecord.getKeywordType();
             this.keyword = keywordRecord.getKeyword();
             this.replyMsg = keywordRecord.getReplyMsg();
+            this.priority = keywordRecord.getPriority();
         }
 
         public KeywordRecord toKeywordRecord() {
@@ -135,7 +141,8 @@ public class KeywordCacheManager implements IKeywordCacheManager {
                     .setTime(time)
                     .setKeywordType(keywordType)
                     .setKeyword(keyword)
-                    .setReplyMsg(replyMsg);
+                    .setReplyMsg(replyMsg)
+                    .setPriority(priority);
         }
 
         public Long getGroupId() {

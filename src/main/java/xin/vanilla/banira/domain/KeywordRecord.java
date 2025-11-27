@@ -55,6 +55,11 @@ public class KeywordRecord {
      */
     private Boolean audited = false;
 
+    /**
+     * 权重
+     */
+    private Integer priority = 1;
+
 
     public KeywordRecord setGroupId(Long groupId) {
         this.groupId = groupId != null ? groupId : 0L;

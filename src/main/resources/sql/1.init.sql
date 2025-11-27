@@ -54,7 +54,8 @@ CREATE TABLE IF NOT EXISTS "keyword_record"
     `keyword`      TEXT    NOT NULL,
     `reply_msg`    TEXT    NOT NULL,
     `enable`       BOOLEAN NOT NULL DEFAULT TRUE,
-    `audited`      BOOLEAN NOT NULL DEFAULT FALSE
+    `audited`      BOOLEAN NOT NULL DEFAULT FALSE,
+    `priority`     INTEGER NOT NULL DEFAULT 1
 );
 CREATE INDEX IF NOT EXISTS id_index ON "keyword_record" (`id`);
 CREATE INDEX IF NOT EXISTS bot_id_index ON "keyword_record" (`bot_id`);

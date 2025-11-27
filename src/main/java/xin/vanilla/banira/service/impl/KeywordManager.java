@@ -14,7 +14,7 @@ import xin.vanilla.banira.util.BaniraUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.Random;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Service("keywordManager")
 public class KeywordManager implements IKeywordManager {
@@ -23,8 +23,6 @@ public class KeywordManager implements IKeywordManager {
     private IKeywordCacheManager keywordCacheService;
     @Resource
     private MatchStrategyFactory strategyFactory;
-
-    private final Random random = new Random();
 
     @Override
     public KeywordRecord findMatchReply(String input, Long botId, Long groupId) {
@@ -76,8 +74,8 @@ public class KeywordManager implements IKeywordManager {
         );
         if (matches.isEmpty()) return null;
 
-        // 随机返回一条匹配记录
-        return matches.get(this.random.nextInt(matches.size())).toKeywordRecord();
+        // 根据权重随机返回一条匹配记录
+        return weightedRandom(matches).toKeywordRecord();
     }
 
     private List<KeywordCacheManager.CachedKeyword> findExactMatches(String input) {
@@ -92,5 +90,23 @@ public class KeywordManager implements IKeywordManager {
         }
 
         return result;
+    }
+
+    private static KeywordCacheManager.CachedKeyword weightedRandom(List<KeywordCacheManager.CachedKeyword> items) {
+        long totalWeight = 0;
+        for (KeywordCacheManager.CachedKeyword item : items) {
+            totalWeight += item.getPriority();
+        }
+
+        long randomValue = ThreadLocalRandom.current().nextLong(totalWeight);
+        int currentWeight = 0;
+
+        for (KeywordCacheManager.CachedKeyword item : items) {
+            currentWeight += item.getPriority();
+            if (randomValue < currentWeight) {
+                return item;
+            }
+        }
+        return items.getLast();
     }
 }
