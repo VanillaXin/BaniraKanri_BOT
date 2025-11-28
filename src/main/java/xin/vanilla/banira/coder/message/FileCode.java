@@ -80,7 +80,6 @@ public class FileCode implements MessageCoder {
 
         String name = getArg(code, "name");
         String folder = getArg(code, "folder");
-        if (StringUtils.isNullOrEmptyEx(name)) name = url.substring(url.replace("\\", "/").lastIndexOf("/") + 1);
 
         if (StringUtils.isNotNullOrEmpty(jsonPath)) {
             JsonElement json = JsonUtils.parseJson(HttpUtil.get(url));
@@ -127,6 +126,9 @@ public class FileCode implements MessageCoder {
             filePath = BaniraUtils.getCacheAbsolutePath(fileName, EnumCacheFileType.file);
         }
         if (StringUtils.isNotNullOrEmpty(filePath)) {
+            if (StringUtils.isNullOrEmpty(name)) {
+                name = filePath.replace("\\", "/").substring(filePath.lastIndexOf("/") + 1);
+            }
             name = name.replaceAll("[\\\\/:*?\"<>|]", "");
             if (BaniraUtils.isGroupIdValid(context.group())) {
                 context.bot().uploadGroupFile(context.group(), filePath, name, folder);
