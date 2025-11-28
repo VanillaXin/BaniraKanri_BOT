@@ -127,9 +127,11 @@ public class FileCode implements MessageCoder {
         }
         if (StringUtils.isNotNullOrEmpty(filePath)) {
             if (StringUtils.isNullOrEmpty(name)) {
-                name = filePath.replace("\\", "/").substring(filePath.lastIndexOf("/") + 1);
+                name = filePath;
             }
-            name = name.replaceAll("[\\\\/:*?\"<>|]", "");
+            name = name.replace("\\", "/")
+                    .substring(name.lastIndexOf("/") + 1)
+                    .replaceAll("[/:*?\"<>|]", "");
             if (BaniraUtils.isGroupIdValid(context.group())) {
                 context.bot().uploadGroupFile(context.group(), filePath, name, folder);
             } else {
