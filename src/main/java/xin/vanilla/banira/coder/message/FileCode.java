@@ -126,12 +126,10 @@ public class FileCode implements MessageCoder {
             filePath = BaniraUtils.getCacheAbsolutePath(fileName, EnumCacheFileType.file);
         }
         if (StringUtils.isNotNullOrEmpty(filePath)) {
-            if (StringUtils.isNullOrEmpty(name)) {
-                name = filePath;
-            }
-            name = name.replace("\\", "/")
-                    .substring(name.lastIndexOf("/") + 1)
-                    .replaceAll("[/:*?\"<>|]", "");
+            if (StringUtils.isNullOrEmpty(name)) name = filePath;
+            name = name.replace("\\", "/");
+            name = name.substring(name.lastIndexOf("/") + 1)
+                    .replaceAll("[/:*?\"<>|]", "_");
             if (BaniraUtils.isGroupIdValid(context.group())) {
                 context.bot().uploadGroupFile(context.group(), filePath, name, folder);
             } else {
