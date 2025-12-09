@@ -5,9 +5,12 @@ import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.util.JsonUtils;
+import xin.vanilla.banira.util.RegexpHelper;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,91 +19,56 @@ public class DouyinParser implements SocialMediaParser {
 
     private static final String DOUYIN_API = "https://apis.jxcxin.cn/api/douyin?url=%s";
 
-    private static final Pattern DOUYIN_PATTERN = Pattern.compile(
-            // 标准链接
-            "((https?://)?(www\\.)?douyin\\.com/(video|note)/(\\d{18,}))" +
-                    "|" +
-                    // 分享链接
-                    "((https?://)?(www\\.)?iesdouyin\\.com/share/video/(\\d{18,}))" +
-                    "|" +
-                    // 短链接
-                    "((https?://)?v\\.douyin\\.com/(\\w{6,12})(/?))" +
-                    "|" +
-                    // 纯数字ID
-                    "((?<!\\d)(\\d{18,})(?!\\d))"
-    );
-
-    // 提取标准链接中的视频ID
-    private static final Pattern STANDARD_URL_PATTERN =
-            Pattern.compile("douyin\\.com/(video|note)/(\\d{18,})");
-
-    // 提取分享链接中的视频ID
-    private static final Pattern SHARE_URL_PATTERN =
-            Pattern.compile("iesdouyin\\.com/share/video/(\\d{18,})");
-
-    // 提取短链接中的路径
-    private static final Pattern SHORT_URL_PATTERN =
-            Pattern.compile("v\\.douyin\\.com/([0-9A-Za-z]{6,12})");
+    // 使用命名捕获组统一提取视频ID和短链接ID（包含模式，匹配文本中任何位置的链接）
+    private static final Pattern DOUYIN_PATTERN = new RegexpHelper()
+            .groupNonIg(
+                    // 标准链接: https://www.douyin.com/video/123456789012345678
+                    "(?:https?://)?(?:www\\.)?douyin\\.com/(?:video|note)/(?<videoId>\\d{18,})",
+                    // 分享链接: https://www.iesdouyin.com/share/video/123456789012345678
+                    "(?:https?://)?(?:www\\.)?iesdouyin\\.com/share/video/(?<shareVideoId>\\d{18,})",
+                    // 短链接: https://v.douyin.com/xxxxxx (支持6-20个字符，更宽松)
+                    "(?:https?://)?v\\.douyin\\.com/(?<shortId>[0-9A-Za-z]{6,20})(?:/|\\s|$)",
+                    // 纯数字ID: 123456789012345678
+                    "(?<!\\d)(?<pureId>\\d{18,})(?!\\d)"
+            )
+            .compile();
 
     private List<String> extractVideoIds(String msg) {
-        List<String> videoIds = new ArrayList<>();
+        Set<String> videoIds = new LinkedHashSet<>();
 
         if (msg == null || msg.trim().isEmpty()) {
-            return videoIds;
+            return new ArrayList<>(videoIds);
         }
 
         Matcher matcher = DOUYIN_PATTERN.matcher(msg);
 
         while (matcher.find()) {
-            String match = matcher.group();
-
-            // 跳过空匹配
-            if (match == null || match.trim().isEmpty()) {
+            String videoId = matcher.group("videoId");
+            if (videoId != null && !videoId.isEmpty()) {
+                videoIds.add(videoId);
                 continue;
             }
 
-            if (match.contains("v.douyin.com/")) {
-                // 短链接
-                Matcher shortMatcher = SHORT_URL_PATTERN.matcher(match);
-                if (shortMatcher.find()) {
-                    String shortId = shortMatcher.group(1);
-                    if (shortId != null && !shortId.isEmpty()) {
-                        videoIds.add(shortId);
-                    }
-                }
-            } else if (match.contains("iesdouyin.com/")) {
-                // 分享链接
-                Matcher shareMatcher = SHARE_URL_PATTERN.matcher(match);
-                if (shareMatcher.find()) {
-                    String videoId = shareMatcher.group(1);
-                    if (videoId != null && !videoId.isEmpty()) {
-                        videoIds.add(videoId);
-                    }
-                }
-            } else if (match.contains("douyin.com/")) {
-                // 标准链接
-                Matcher standardMatcher = STANDARD_URL_PATTERN.matcher(match);
-                if (standardMatcher.find()) {
-                    String videoId = standardMatcher.group(2);
-                    if (videoId != null && !videoId.isEmpty()) {
-                        videoIds.add(videoId);
-                    }
-                }
-            } else if (match.matches("\\d{18,}")) {
-                // 纯数字ID
-                videoIds.add(match);
+            String shareVideoId = matcher.group("shareVideoId");
+            if (shareVideoId != null && !shareVideoId.isEmpty()) {
+                videoIds.add(shareVideoId);
+                continue;
+            }
+
+            String shortId = matcher.group("shortId");
+            if (shortId != null && !shortId.isEmpty()) {
+                shortId = shortId.trim();
+                videoIds.add(shortId);
+                continue;
+            }
+
+            String pureId = matcher.group("pureId");
+            if (pureId != null && !pureId.isEmpty()) {
+                videoIds.add(pureId);
             }
         }
 
-        // 去重
-        List<String> uniqueIds = new ArrayList<>();
-        for (String id : videoIds) {
-            if (!uniqueIds.contains(id)) {
-                uniqueIds.add(id);
-            }
-        }
-
-        return uniqueIds;
+        return new ArrayList<>(videoIds);
     }
 
     @Override
@@ -114,21 +82,22 @@ public class DouyinParser implements SocialMediaParser {
     @Override
     public List<SocialMediaContent> parse(String msg) {
         List<SocialMediaContent> contents = new ArrayList<>();
-
-        List<String> videoUrls = new ArrayList<>();
         List<String> videoIds = extractVideoIds(msg);
+
         for (String videoId : videoIds) {
+            String url;
             if (videoId.startsWith("http")) {
-                videoUrls.add(videoId);
+                url = videoId;
             } else if (videoId.matches("\\d{18,}")) {
-                videoUrls.add("https://www.douyin.com/video/" + videoId);
+                // 纯数字ID转换为标准链接
+                url = "https://www.douyin.com/video/" + videoId;
             } else {
-                videoUrls.add("https://v.douyin.com/" + videoId);
+                // 短链接ID
+                url = "https://v.douyin.com/" + videoId;
             }
-        }
-        for (String url : videoUrls) {
-            String string = HttpUtil.get(DOUYIN_API.formatted(url));
-            JsonObject jsonObject = JsonUtils.parseJsonObject(string);
+
+            String response = HttpUtil.get(DOUYIN_API.formatted(url));
+            JsonObject jsonObject = JsonUtils.parseJsonObject(response);
             if (jsonObject != null && JsonUtils.getInt(jsonObject, "code", 201) == 200) {
                 SocialMediaContent content = new SocialMediaContent();
                 content.title(JsonUtils.getString(jsonObject, "data.title"));
@@ -143,6 +112,7 @@ public class DouyinParser implements SocialMediaParser {
                 contents.add(content);
             }
         }
+
         return contents;
     }
 

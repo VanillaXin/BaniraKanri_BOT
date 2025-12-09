@@ -5,9 +5,12 @@ import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.util.JsonUtils;
+import xin.vanilla.banira.util.RegexpHelper;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -16,62 +19,55 @@ public class BilibiliParser implements SocialMediaParser {
 
     private static final String BILIBILI_API = "https://api.mir6.com/api/bzjiexi?type=json&url=%s";
 
-    private static final Pattern BILIBILI_PATTERN =
-            Pattern.compile(
-                    // 标准链接
-                    "(https?://)?(www\\.)?bilibili\\.com/video/(BV[0-9A-Za-z]{10,})" +
-                            "|" +
-                            // 短链接
-                            "(https?://)?b23\\.tv/([0-9A-Za-z]{6,12})" +
-                            "|" +
-                            // 纯BV号
-                            "(BV[0-9A-Za-z]{10,})" +
-                            "|" +
-                            // 纯AV号
-                            "av([0-9]+)"
-            );
-
-    private static final Pattern STANDARD_URL_PATTERN =
-            Pattern.compile("bilibili\\.com/video/(BV[0-9A-Za-z]{10,})");
-
-    private static final Pattern SHORT_URL_PATTERN =
-            Pattern.compile("b23\\.tv/([0-9A-Za-z]{6,12})");
+    private static final Pattern BILIBILI_PATTERN = new RegexpHelper()
+            .groupNonIg(
+                    // 标准链接: https://www.bilibili.com/video/BVxxxxx
+                    "(?:https?://)?(?:www\\.)?bilibili\\.com/video/(?<bvId>BV[0-9A-Za-z]{10,})",
+                    // 短链接: https://b23.tv/xxxxxx (支持6-20个字符，更宽松)
+                    "(?:https?://)?b23\\.tv/(?<shortId>[0-9A-Za-z]{6,20})(?:/|\\s|$)",
+                    // 纯BV号: BVxxxxx
+                    "(?<pureBvId>BV[0-9A-Za-z]{10,})",
+                    // 纯AV号: av123456
+                    "av(?<avId>\\d+)"
+            )
+            .compile();
 
     private List<String> extractVideoIds(String msg) {
-        List<String> videoIds = new ArrayList<>();
+        Set<String> videoIds = new LinkedHashSet<>();
+
         if (msg == null || msg.trim().isEmpty()) {
-            return videoIds;
+            return new ArrayList<>(videoIds);
         }
+
         Matcher matcher = BILIBILI_PATTERN.matcher(msg);
+
         while (matcher.find()) {
-            String match = matcher.group();
-            if (match.contains("bilibili.com/video/")) {
-                // 标准链接
-                Matcher standardMatcher = STANDARD_URL_PATTERN.matcher(match);
-                if (standardMatcher.find()) {
-                    String bvId = standardMatcher.group(1);
-                    if (bvId != null && !bvId.isEmpty()) {
-                        videoIds.add(bvId);
-                    }
-                }
-            } else if (match.contains("b23.tv/")) {
-                // 短链接
-                Matcher shortMatcher = SHORT_URL_PATTERN.matcher(match);
-                if (shortMatcher.find()) {
-                    String shortId = shortMatcher.group(1);
-                    if (shortId != null && !shortId.isEmpty()) {
-                        videoIds.add(shortId);
-                    }
-                }
-            } else if (match.startsWith("BV")) {
-                // 纯BV号
-                videoIds.add(match);
-            } else if (match.startsWith("av")) {
-                // 纯AV号
-                videoIds.add(match.substring(2));
+            String bvId = matcher.group("bvId");
+            if (bvId != null && !bvId.isEmpty()) {
+                videoIds.add(bvId);
+                continue;
+            }
+
+            String shortId = matcher.group("shortId");
+            if (shortId != null && !shortId.isEmpty()) {
+                shortId = shortId.trim();
+                videoIds.add(shortId);
+                continue;
+            }
+
+            String pureBvId = matcher.group("pureBvId");
+            if (pureBvId != null && !pureBvId.isEmpty()) {
+                videoIds.add(pureBvId);
+                continue;
+            }
+
+            String avId = matcher.group("avId");
+            if (avId != null && !avId.isEmpty()) {
+                videoIds.add("av" + avId);
             }
         }
-        return videoIds;
+
+        return new ArrayList<>(videoIds);
     }
 
     @Override
@@ -85,20 +81,20 @@ public class BilibiliParser implements SocialMediaParser {
     @Override
     public List<SocialMediaContent> parse(String msg) {
         List<SocialMediaContent> contents = new ArrayList<>();
+        List<String> videoIds = extractVideoIds(msg);
 
-        List<String> videoUrls = new ArrayList<>();
-        for (String videoId : extractVideoIds(msg)) {
+        for (String videoId : videoIds) {
+            String url;
             if (videoId.startsWith("http")) {
-                videoUrls.add(videoId);
-            } else if (videoId.startsWith("BV")) {
-                videoUrls.add("https://www.bilibili.com/video/" + videoId);
+                url = videoId;
+            } else if (videoId.startsWith("BV") || videoId.startsWith("av")) {
+                url = "https://www.bilibili.com/video/" + videoId;
             } else {
-                videoUrls.add("https://b23.tv/" + videoId);
+                url = "https://b23.tv/" + videoId;
             }
-        }
-        for (String url : videoUrls) {
-            String string = HttpUtil.get(BILIBILI_API.formatted(url));
-            JsonObject jsonObject = JsonUtils.parseJsonObject(string);
+
+            String response = HttpUtil.get(BILIBILI_API.formatted(url));
+            JsonObject jsonObject = JsonUtils.parseJsonObject(response);
             if (jsonObject != null && JsonUtils.getInt(jsonObject, "code", 201) == 200) {
                 SocialMediaContent content = new SocialMediaContent();
                 content.title(JsonUtils.getString(jsonObject, "title"));
@@ -113,6 +109,7 @@ public class BilibiliParser implements SocialMediaParser {
                 contents.add(content);
             }
         }
+
         return contents;
     }
 
