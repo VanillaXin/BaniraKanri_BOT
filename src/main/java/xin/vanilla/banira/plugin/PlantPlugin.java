@@ -7,6 +7,7 @@ import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
@@ -49,9 +50,9 @@ public class PlantPlugin extends BasePlugin {
 
     @AnyMessageHandler
     public boolean code(BaniraBot bot, AnyMessageEvent event) {
-        String message = event.getMessage();
-        String msg = super.replaceCommand(message);
-        if (super.isCommand(message)
+        BaniraCodeContext context = new BaniraCodeContext(bot, event);
+        String msg = super.deleteCommandPrefix(context);
+        if (super.isCommand(context)
                 && insConfig.get().plant().stream().anyMatch(msg::startsWith)
         ) {
             String content;

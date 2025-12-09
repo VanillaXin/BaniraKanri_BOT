@@ -1121,7 +1121,7 @@ public final class BaniraUtils {
     // region 指令
 
     public static String getInsPrefix() {
-        String prefix = getInsConfig().prefix();
+        String prefix = getInsConfig().prefix().getFirst();
         return StringUtils.isNotNullOrEmpty(prefix) ? prefix : "";
     }
 
@@ -1131,7 +1131,7 @@ public final class BaniraUtils {
 
     public static String getKanriInsPrefix() {
         InstructionsConfig insConfig = getInsConfig();
-        String prefix = StringUtils.isNotNullOrEmpty(insConfig.prefix()) ? insConfig.prefix().trim() + " " : "";
+        String prefix = CollectionUtils.isNotNullOrEmpty(insConfig.prefix()) ? insConfig.prefix().getFirst().trim() + " " : "";
         if (CollectionUtils.isNotNullOrEmpty(insConfig.kanri().prefix())) {
             prefix += CollectionUtils.getRandomElement(insConfig.kanri().prefix());
         }

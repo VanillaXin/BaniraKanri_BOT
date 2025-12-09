@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.WifeConfig;
+import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.WifeRecord;
 import xin.vanilla.banira.mapper.param.WifeRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
@@ -35,8 +36,8 @@ import xin.vanilla.banira.util.*;
 
 import java.awt.*;
 import java.io.ByteArrayOutputStream;
-import java.util.*;
 import java.util.List;
+import java.util.*;
 import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -176,11 +177,11 @@ public class WifePlugin extends BasePlugin {
      */
     @GroupMessageHandler
     public boolean config(BaniraBot bot, GroupMessageEvent event) {
-        String message = event.getMessage();
-        if (super.isCommand(message)
-                && insConfig.get().wife().stream().anyMatch(ins -> super.replaceCommand(message).startsWith(ins))
+        BaniraCodeContext context = new BaniraCodeContext(bot, event);
+        if (super.isCommand(context)
+                && insConfig.get().wife().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins))
         ) {
-            String argString = super.replaceCommand(message);
+            String argString = super.deleteCommandPrefix(context);
             String[] split = argString.split("\\s+");
             if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
 

@@ -28,6 +28,7 @@ import oshi.hardware.GlobalMemory;
 import oshi.hardware.VirtualMemory;
 import oshi.software.os.OperatingSystem;
 import xin.vanilla.banira.config.BaniraVersionInfo;
+import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
@@ -94,10 +95,10 @@ public class StatusPlugin extends BasePlugin {
 
     @AnyMessageHandler
     public boolean status(BaniraBot bot, AnyMessageEvent event) {
-        String message = event.getMessage();
-        if (super.isCommand(message)
+        BaniraCodeContext context = new BaniraCodeContext(bot, event);
+        if (super.isCommand(context)
                 && insConfig.get().base().status() != null
-                && insConfig.get().base().status().contains(super.replaceCommand(message))
+                && insConfig.get().base().status().contains(super.deleteCommandPrefix(context))
         ) {
             // 限制访问
             if (System.currentTimeMillis() - lastRenderTime < 1000 * 60)
@@ -155,10 +156,10 @@ public class StatusPlugin extends BasePlugin {
 
     @AnyMessageHandler
     public boolean alive(BaniraBot bot, AnyMessageEvent event) {
-        String message = event.getMessage();
-        if (super.isCommand(message)
+        BaniraCodeContext context = new BaniraCodeContext(bot, event);
+        if (super.isCommand(context)
                 && insConfig.get().alive() != null
-                && insConfig.get().alive().contains(super.replaceCommand(message))
+                && insConfig.get().alive().contains(super.deleteCommandPrefix(context))
         ) {
             if (BaniraUtils.isGroupIdValid(event.getGroupId())) {
                 return bot.setMsgEmojiLike(event.getMessageId(), 66);

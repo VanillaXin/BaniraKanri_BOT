@@ -70,13 +70,13 @@ public class AIChatPlugin extends BasePlugin {
     @AnyMessageHandler
     public boolean config(BaniraBot bot, AnyMessageEvent event) {
         if (!BaniraUtils.isGlobalOp(event.getUserId())) return false;
+        BaniraCodeContext context = new BaniraCodeContext(bot, event);
 
-        String message = event.getMessage();
         BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
-        if (super.isCommand(message)
-                && insConfig.get().aiChat().stream().anyMatch(s -> super.replaceCommand(message).startsWith(s))
+        if (super.isCommand(context)
+                && insConfig.get().aiChat().stream().anyMatch(s -> super.deleteCommandPrefix(context).startsWith(s))
         ) {
-            String argString = super.replaceCommand(message);
+            String argString = super.deleteCommandPrefix(context);
             String[] split = argString.split("\\s+");
             if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
 

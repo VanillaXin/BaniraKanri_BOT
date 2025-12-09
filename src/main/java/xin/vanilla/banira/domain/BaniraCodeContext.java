@@ -1,5 +1,6 @@
 package xin.vanilla.banira.domain;
 
+import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import com.mikuac.shiro.model.ArrayMsg;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -89,6 +90,14 @@ public class BaniraCodeContext implements Cloneable {
         this.sender = _sender;
         this._target = _target;
         this.target = _target;
+    }
+
+    public BaniraCodeContext(BaniraBot bot, GroupMessageEvent event) {
+        this(bot, event.getArrayMsg(), event.getGroupId(), event.getUserId(), event.getUserId());
+        this.msg(event.getMessage());
+        this.msgId(event.getMessageId());
+        this.time(event.getTime());
+        this.msgType(EnumMessageType.getType(event));
     }
 
     public BaniraCodeContext clone() {

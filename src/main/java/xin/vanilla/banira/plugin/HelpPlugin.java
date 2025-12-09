@@ -15,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.EventCoder;
 import xin.vanilla.banira.coder.common.MessageCoder;
+import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -52,14 +53,14 @@ public class HelpPlugin extends BasePlugin {
 
     @AnyMessageHandler
     public boolean help(BaniraBot bot, AnyMessageEvent event) {
-        String message = event.getMessage();
-        if (super.isCommand(message)
+        BaniraCodeContext context = new BaniraCodeContext(bot, event);
+        if (super.isCommand(context)
                 && insConfig.get().base().help() != null
-                && insConfig.get().base().help().stream().anyMatch(ins -> super.replaceCommand(message).startsWith(ins))
+                && insConfig.get().base().help().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins))
         ) {
             try {
 
-                String argString = super.replaceCommand(message);
+                String argString = super.deleteCommandPrefix(context);
                 String[] split = argString.split("\\s+");
 
                 long page = StringUtils.toLong(CollectionUtils.getLast(split), -1);

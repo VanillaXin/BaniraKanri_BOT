@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.message.McQueryCode;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
+import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.domain.MinecraftRecord;
 import xin.vanilla.banira.domain.PageResult;
@@ -152,11 +153,11 @@ public class McQueryPlugin extends BasePlugin {
 
     @AnyMessageHandler
     public boolean config(BaniraBot bot, AnyMessageEvent event) {
-        String message = event.getMessage();
-        if (super.isCommand(message)
-                && insConfig.get().mcQuery().stream().anyMatch(ins -> super.replaceCommand(message).startsWith(ins))
+        BaniraCodeContext context = new BaniraCodeContext(bot, event);
+        if (super.isCommand(context)
+                && insConfig.get().mcQuery().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins))
         ) {
-            String[] split = super.replaceCommand(message).split("\\s+");
+            String[] split = super.deleteCommandPrefix(context).split("\\s+");
             if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             String operate = split[1];
             String[] args = Arrays.copyOfRange(split, 2, split.length);

@@ -1,5 +1,6 @@
 package xin.vanilla.banira.coder.common;
 
+import com.mikuac.shiro.model.ArrayMsg;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -40,6 +41,27 @@ public class BaniraCodeHandler {
                     } catch (Exception e) {
                         coder.fail(clone, code, BaniraCodeUtils.placeholder(i));
                         LOGGER.error("Failed to decode banira code", e);
+                    }
+                }
+            }
+        }
+        return clone;
+    }
+
+    public BaniraCodeContext encode(BaniraCodeContext context) {
+        BaniraCodeContext clone = context.clone();
+        double size = context.originalMsg().size();
+        for (int i = 0; i < size; i++) {
+            ArrayMsg code = context.originalMsg().get(i);
+            for (MessageCoder coder : coders.stream()
+                    // .filter(coder -> !coder.isKanri())
+                    .sorted(Comparator.comparingDouble(MessageCoder::getPriority))
+                    .toList()) {
+                if (coder.matchEncode(code)) {
+                    try {
+                        coder.executeEncode(clone, code);
+                    } catch (Exception e) {
+                        LOGGER.error("Failed to encode banira code", e);
                     }
                 }
             }

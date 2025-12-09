@@ -16,6 +16,7 @@ import xin.vanilla.banira.coder.common.BaniraCodeUtils;
 import xin.vanilla.banira.coder.message.ToGroupCode;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KanriContext;
+import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.kanri.KanriHandler;
@@ -102,8 +103,19 @@ public class KanriPlugin extends BasePlugin {
     }
 
     private boolean execute(BaniraBot bot, MessageEvent event, String message, long groupId, int msgId) {
-        if (!super.isKanriCommand(message)) return false;
-        message = super.replaceKanriCommand(message);
+        BaniraCodeContext codeContext = new BaniraCodeContext(bot
+                , event.getArrayMsg()
+                , groupId
+                , event.getUserId()
+                , event.getUserId()
+        )
+                .msg(message)
+                .msgId(msgId)
+                .time(event.getTime())
+                .msgType(EnumMessageType.getType(event));
+
+        if (!super.isKanriCommand(codeContext)) return false;
+        message = super.replaceKanriCommand(codeContext);
 
         String[] parts = message.split("\\s+");
         String kanriAction = parts[0].trim();

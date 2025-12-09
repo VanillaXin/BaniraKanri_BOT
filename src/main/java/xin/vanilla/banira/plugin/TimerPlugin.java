@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.TimerInstructionsConfig;
+import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.PageResult;
 import xin.vanilla.banira.domain.TimerRecord;
 import xin.vanilla.banira.mapper.param.TimerRecordQueryParam;
@@ -49,13 +50,14 @@ public class TimerPlugin extends BasePlugin {
 
     @AnyMessageHandler
     public boolean config(BaniraBot bot, AnyMessageEvent event) {
-        String message = event.getMessage();
+        BaniraCodeContext context = new BaniraCodeContext(bot, event);
+
         TimerInstructionsConfig timerIns = BaniraUtils.getTimerIns();
         BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
 
         // 精准添加/删除
-        if (super.isTimerCommand(message)) {
-            Matcher matcher = super.getTimerCommandMatcher(message);
+        if (super.isTimerCommand(context)) {
+            Matcher matcher = super.getTimerCommandMatcher(context);
             if (matcher == null || !matcher.find()) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
 
             String cron = matcher.group("timerKey");
@@ -170,12 +172,11 @@ public class TimerPlugin extends BasePlugin {
         else {
             // 回复添加成功记录删除
             if (BaniraUtils.hasReply(event.getArrayMsg())) {
-                String msg = BaniraUtils.replaceReply(message);
-                if (super.isCommand(msg)
+                if (super.isCommand(context)
                         && timerIns.locator() != null
-                        && timerIns.locator().stream().anyMatch(ins -> super.replaceCommand(msg).startsWith(ins.getKey()))
+                        && timerIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey()))
                 ) {
-                    String[] split = super.replaceCommand(msg).split("\\s+");
+                    String[] split = super.deleteCommandPrefix(context).split("\\s+");
                     if (split.length != 2 && !BaniraUtils.getBaseIns().del().contains(split[1])) {
                         return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                     }
@@ -217,11 +218,11 @@ public class TimerPlugin extends BasePlugin {
                 } else return false;
             }
             //
-            else if (super.isCommand(message)
+            else if (super.isCommand(context)
                     && timerIns.locator() != null
-                    && timerIns.locator().stream().anyMatch(ins -> super.replaceCommand(message).startsWith(ins.getKey()))
+                    && timerIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey()))
             ) {
-                String[] split = super.replaceCommand(message).split("\\s+");
+                String[] split = super.deleteCommandPrefix(context).split("\\s+");
                 if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
 
                 // 根据ID删除

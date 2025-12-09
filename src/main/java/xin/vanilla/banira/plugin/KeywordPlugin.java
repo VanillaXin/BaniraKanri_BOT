@@ -23,7 +23,6 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.coder.common.BaniraCodeHandler;
 import xin.vanilla.banira.coder.common.EventCoder;
 import xin.vanilla.banira.coder.event.InGroupCode;
 import xin.vanilla.banira.coder.event.PokeCode;
@@ -59,8 +58,6 @@ public class KeywordPlugin extends BasePlugin {
     private IKeywordManager keywordManager;
     @Resource
     private IKeywordRecordManager keywordRecordManager;
-    @Resource
-    private BaniraCodeHandler codeHandler;
     @Autowired(required = false)
     private List<EventCoder> eventCoders = new ArrayList<>();
 
@@ -195,13 +192,14 @@ public class KeywordPlugin extends BasePlugin {
 
     @AnyMessageHandler
     public boolean config(BaniraBot bot, AnyMessageEvent event) {
-        String message = event.getMessage();
+        BaniraCodeContext context = new BaniraCodeContext(bot, event);
+
         KeyInstructionsConfig keyIns = BaniraUtils.getKeyIns();
         BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
 
         // 精准添加/删除
-        if (super.isKeywordCommand(message)) {
-            Matcher matcher = super.getKeywordCommandMatcher(message);
+        if (super.isKeywordCommand(context)) {
+            Matcher matcher = super.getKeywordCommandMatcher(context);
             if (matcher == null || !matcher.find()) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
 
             String type = matcher.group("keywordType");
@@ -338,12 +336,11 @@ public class KeywordPlugin extends BasePlugin {
         else {
             // 回复添加成功记录删除 或 审核
             if (BaniraUtils.hasReply(event.getArrayMsg())) {
-                String msg = BaniraUtils.replaceReply(message);
-                if (super.isCommand(msg)
+                if (super.isCommand(context)
                         && keyIns.locator() != null
-                        && keyIns.locator().stream().anyMatch(ins -> super.replaceCommand(msg).startsWith(ins.getKey()))
+                        && keyIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey()))
                 ) {
-                    String[] split = super.replaceCommand(msg).split("\\s+");
+                    String[] split = super.deleteCommandPrefix(context).split("\\s+");
                     String operate = split[1];
                     if (split.length != 2 && (!baseIns.del().contains(operate)
                             || !baseIns.add().contains(operate)
@@ -393,11 +390,11 @@ public class KeywordPlugin extends BasePlugin {
                 } else return false;
             }
             //
-            else if (super.isCommand(message)
+            else if (super.isCommand(context)
                     && keyIns.locator() != null
-                    && keyIns.locator().stream().anyMatch(ins -> super.replaceCommand(message).startsWith(ins.getKey()))
+                    && keyIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey()))
             ) {
-                String[] split = super.replaceCommand(message).split("\\s+");
+                String[] split = super.deleteCommandPrefix(context).split("\\s+");
                 if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
 
                 // 根据ID删除

@@ -4,11 +4,13 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import org.springframework.context.event.EventListener;
+import xin.vanilla.banira.coder.common.BaniraCodeHandler;
 import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.KeyInstructionsConfig;
+import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.event.GlobalConfigReloadedEvent;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
@@ -28,6 +30,8 @@ public abstract class BasePlugin {
     protected Supplier<GroupConfig> groupConfig;
     @Resource
     protected Supplier<InstructionsConfig> insConfig;
+    @Resource
+    protected BaniraCodeHandler codeHandler;
 
     private Pattern BASE_COMMAND_PATTERN;
     private Pattern KANRI_COMMAND_PATTERN;
@@ -36,6 +40,10 @@ public abstract class BasePlugin {
 
     public static String replaceReply(String msg) {
         return BaniraUtils.replaceReply(msg);
+    }
+
+    private String encodeCode(BaniraCodeContext context) {
+        return BaniraUtils.replaceReply(codeHandler.encode(context).msg());
     }
 
     // region 基础指令
@@ -53,7 +61,8 @@ public abstract class BasePlugin {
     /**
      * 是否是指令
      */
-    public boolean isCommand(String msg) {
+    public boolean isCommand(BaniraCodeContext context) {
+        String msg = encodeCode(context);
         return baseCommand()
                 .matcher(replaceReply(msg))
                 .find();
@@ -62,7 +71,8 @@ public abstract class BasePlugin {
     /**
      * 删除指令前缀
      */
-    public String replaceCommand(String msg) {
+    public String deleteCommandPrefix(BaniraCodeContext context) {
+        String msg = encodeCode(context);
         return baseCommand()
                 .matcher(replaceReply(msg))
                 .replaceAll("");
@@ -89,14 +99,16 @@ public abstract class BasePlugin {
     /**
      * 是否是群管指令
      */
-    public boolean isKanriCommand(String msg) {
+    public boolean isKanriCommand(BaniraCodeContext context) {
+        String msg = encodeCode(context);
         return kanriCommand().matcher(replaceReply(msg)).find();
     }
 
     /**
      * 删除群管指令前缀
      */
-    public String replaceKanriCommand(String msg) {
+    public String replaceKanriCommand(BaniraCodeContext context) {
+        String msg = encodeCode(context);
         return kanriCommand().matcher(replaceReply(msg)).replaceAll("");
     }
 
@@ -143,7 +155,8 @@ public abstract class BasePlugin {
     /**
      * 是否是定时器指令
      */
-    public boolean isTimerCommand(String msg) {
+    public boolean isTimerCommand(BaniraCodeContext context) {
+        String msg = encodeCode(context);
         return timerCommand().stream()
                 .anyMatch(pattern ->
                         pattern.matcher(replaceReply(msg)).find()
@@ -153,7 +166,8 @@ public abstract class BasePlugin {
     /**
      * 获取定时器指令匹配器
      */
-    public Matcher getTimerCommandMatcher(String msg) {
+    public Matcher getTimerCommandMatcher(BaniraCodeContext context) {
+        String msg = encodeCode(context);
         return timerCommand().stream()
                 .filter(pattern ->
                         pattern.matcher(replaceReply(msg)).find()
@@ -218,7 +232,8 @@ public abstract class BasePlugin {
     /**
      * 是否是关键词指令
      */
-    public boolean isKeywordCommand(String msg) {
+    public boolean isKeywordCommand(BaniraCodeContext context) {
+        String msg = encodeCode(context);
         return keywordCommand().stream()
                 .anyMatch(pattern ->
                         pattern.matcher(replaceReply(msg)).find()
@@ -228,7 +243,8 @@ public abstract class BasePlugin {
     /**
      * 获取关键词指令匹配器
      */
-    public Matcher getKeywordCommandMatcher(String msg) {
+    public Matcher getKeywordCommandMatcher(BaniraCodeContext context) {
+        String msg = encodeCode(context);
         return keywordCommand().stream()
                 .filter(pattern ->
                         pattern.matcher(replaceReply(msg)).find()

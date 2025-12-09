@@ -2,6 +2,7 @@ package xin.vanilla.banira.coder.common;
 
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.ShiroUtils;
+import com.mikuac.shiro.model.ArrayMsg;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumCodeType;
 import xin.vanilla.banira.util.JsonUtils;
@@ -55,6 +56,13 @@ public interface MessageCoder {
 
     String execute(BaniraCodeContext context, BaniraCode code, String placeholder);
 
+    default boolean matchEncode(ArrayMsg msg) {
+        return false;
+    }
+
+    default ArrayMsg executeEncode(BaniraCodeContext context, ArrayMsg msg) {
+        return msg;
+    }
 
     default boolean notMatch(BaniraCode code) {
         return !match(code.getType());

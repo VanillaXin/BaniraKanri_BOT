@@ -1,5 +1,7 @@
 package xin.vanilla.banira.coder.message;
 
+import com.mikuac.shiro.enums.MsgTypeEnum;
+import com.mikuac.shiro.model.ArrayMsg;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
@@ -9,6 +11,7 @@ import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -16,6 +19,8 @@ import java.util.Set;
  */
 @Component
 public class TargetIdCode implements MessageCoder {
+
+    public static final String DEFAULT_CODE = CODE_START + "tid" + CODE_END;
 
     @Override
     public List<String> getExample() {
@@ -55,6 +60,25 @@ public class TargetIdCode implements MessageCoder {
         String id = String.valueOf(context.target());
         context.msg(context.msg().replace(placeholder, replaceResult(code, id)));
         return id;
+    }
+
+    @Override
+    public boolean matchEncode(ArrayMsg msg) {
+        return msg.getType() == MsgTypeEnum.text;
+    }
+
+    @Override
+    public ArrayMsg executeEncode(BaniraCodeContext context, ArrayMsg msg) {
+        if (context.target() == null) return msg;
+        String stringData = msg.toCQCode();
+        String regex = "(?<!\\d)(" + context.target() + ")(?!\\d)";
+        if (!stringData.matches(regex)) return msg;
+        stringData = stringData.replaceAll(regex, DEFAULT_CODE);
+        ArrayMsg arrayMsg = new ArrayMsg();
+        arrayMsg.setType(MsgTypeEnum.text);
+        arrayMsg.setData(Map.of(MsgTypeEnum.text.name(), stringData));
+        context.msg(context.msg().replace(msg.toCQCode(), stringData));
+        return arrayMsg;
     }
 
 }

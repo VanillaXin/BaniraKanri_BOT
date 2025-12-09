@@ -1,6 +1,9 @@
 package xin.vanilla.banira.coder.message;
 
 import com.mikuac.shiro.common.utils.MsgUtils;
+import com.mikuac.shiro.common.utils.ShiroUtils;
+import com.mikuac.shiro.enums.MsgTypeEnum;
+import com.mikuac.shiro.model.ArrayMsg;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
@@ -10,6 +13,7 @@ import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -17,6 +21,8 @@ import java.util.Set;
  */
 @Component
 public class AtAllCode implements MessageCoder {
+
+    public static final String DEFAULT_CODE = CODE_START + "@a" + CODE_END;
 
     @Override
     public List<String> getExample() {
@@ -33,6 +39,14 @@ public class AtAllCode implements MessageCoder {
     @Override
     public String getDesc() {
         return "艾特全体成员";
+    }
+
+    /**
+     * 优先级
+     */
+    @Override
+    public int getPriority() {
+        return MessageCoder.super.getPriority() - 1;
     }
 
     @Override
@@ -59,4 +73,17 @@ public class AtAllCode implements MessageCoder {
         return atMsg;
     }
 
+    @Override
+    public boolean matchEncode(ArrayMsg msg) {
+        return ShiroUtils.isAtAll(BaniraUtils.mutableListOf(msg));
+    }
+
+    @Override
+    public ArrayMsg executeEncode(BaniraCodeContext context, ArrayMsg msg) {
+        ArrayMsg arrayMsg = new ArrayMsg();
+        arrayMsg.setType(MsgTypeEnum.text);
+        arrayMsg.setData(Map.of(MsgTypeEnum.text.name(), DEFAULT_CODE));
+        context.msg(context.msg().replace(msg.toCQCode(), DEFAULT_CODE));
+        return arrayMsg;
+    }
 }

@@ -43,6 +43,11 @@ public class OtherConfig {
      */
     private ChatConfig chatConfig;
 
+    /**
+     * 社交媒体解析
+     */
+    private boolean socialMedia;
+
 
     {
         this.randomImgPath = new ArrayList<>();
@@ -54,6 +59,7 @@ public class OtherConfig {
         this.statusBgUrl = "bg.png";
         this.mcConfig = new McConfig();
         this.chatConfig = new ChatConfig();
+        this.socialMedia = false;
 
     }
 

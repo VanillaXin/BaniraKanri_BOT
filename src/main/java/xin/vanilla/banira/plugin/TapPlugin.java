@@ -7,6 +7,7 @@ import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -49,11 +50,11 @@ public class TapPlugin extends BasePlugin {
 
     @AnyMessageHandler
     public boolean tap(BaniraBot bot, AnyMessageEvent event) {
-        String message = event.getMessage();
-        if (super.isCommand(message)
-                && insConfig.get().tap().stream().anyMatch(s -> super.replaceCommand(message).startsWith(s))
+        BaniraCodeContext context = new BaniraCodeContext(bot, event);
+        if (super.isCommand(context)
+                && insConfig.get().tap().stream().anyMatch(s -> super.deleteCommandPrefix(context).startsWith(s))
         ) {
-            val split = super.replaceCommand(message).split("\\s+");
+            val split = super.deleteCommandPrefix(context).split("\\s+");
             val args = Arrays.copyOfRange(split, 1, split.length);
 
             val groupId = event.getGroupId();

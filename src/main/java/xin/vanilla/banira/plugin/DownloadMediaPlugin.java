@@ -13,6 +13,7 @@ import com.mikuac.shiro.model.ArrayMsg;
 import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.plugin.common.BaniraBot;
@@ -56,9 +57,9 @@ public class DownloadMediaPlugin extends BasePlugin {
 
     @AnyMessageHandler
     public boolean convert(BaniraBot bot, AnyMessageEvent event) {
-        String message = event.getMessage();
-        if (super.isCommand(message)
-                && insConfig.get().media().contains(super.replaceCommand(message))
+        BaniraCodeContext context = new BaniraCodeContext(bot, event);
+        if (super.isCommand(context)
+                && insConfig.get().media().contains(super.deleteCommandPrefix(context))
         ) {
             if (BaniraUtils.hasReply(event.getArrayMsg())) {
                 List<ArrayMsg> replyContent = bot.getReplyContent(event.getArrayMsg());

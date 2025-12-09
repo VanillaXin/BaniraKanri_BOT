@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import xin.vanilla.banira.coder.message.AtBotCode;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.KanriInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.KeyInstructionsConfig;
@@ -24,7 +25,7 @@ public class InstructionsConfig {
     /**
      * 前缀
      */
-    private String prefix;
+    private List<String> prefix;
     /**
      * 基础指令
      */
@@ -77,9 +78,14 @@ public class InstructionsConfig {
      */
     private List<String> aiChat;
 
+    /**
+     * 社交媒体解析
+     */
+    private List<String> socialMedia;
+
 
     {
-        this.prefix = "/bk";
+        this.prefix = BaniraUtils.mutableListOf("/bk", AtBotCode.DEFAULT_CODE);
         this.base = new BaseInstructionsConfig();
         this.key = new KeyInstructionsConfig();
         this.timer = new TimerInstructionsConfig();
@@ -91,6 +97,7 @@ public class InstructionsConfig {
         this.alive = BaniraUtils.mutableListOf("存活", "活着", "在线", "活着?", "活着？", "online", "alive", "survival");
         this.plant = BaniraUtils.mutableListOf("plant", "tea", "花言草语", "胡言乱语", "喝茶", "品茶");
         this.aiChat = BaniraUtils.mutableListOf("aichat", "chat");
+        this.socialMedia = BaniraUtils.mutableListOf("social", "socialmedia", "社交媒体解析", "媒体解析");
     }
 
 }
