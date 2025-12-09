@@ -24,7 +24,7 @@ public class DouyinParser implements SocialMediaParser {
                     "((https?://)?(www\\.)?iesdouyin\\.com/share/video/(\\d{18,}))" +
                     "|" +
                     // 短链接
-                    "((https?://)?v\\.douyin\\.com/([0-9A-Za-z]{6,12})(/?))" +
+                    "((https?://)?v\\.douyin\\.com/(\\w{6,12})(/?))" +
                     "|" +
                     // 纯数字ID
                     "((?<!\\d)(\\d{18,})(?!\\d))"
@@ -59,13 +59,13 @@ public class DouyinParser implements SocialMediaParser {
                 continue;
             }
 
-            if (match.contains("douyin.com/")) {
-                // 标准链接
-                Matcher standardMatcher = STANDARD_URL_PATTERN.matcher(match);
-                if (standardMatcher.find()) {
-                    String videoId = standardMatcher.group(2);
-                    if (videoId != null && !videoId.isEmpty()) {
-                        videoIds.add(videoId);
+            if (match.contains("v.douyin.com/")) {
+                // 短链接
+                Matcher shortMatcher = SHORT_URL_PATTERN.matcher(match);
+                if (shortMatcher.find()) {
+                    String shortId = shortMatcher.group(1);
+                    if (shortId != null && !shortId.isEmpty()) {
+                        videoIds.add(shortId);
                     }
                 }
             } else if (match.contains("iesdouyin.com/")) {
@@ -77,13 +77,13 @@ public class DouyinParser implements SocialMediaParser {
                         videoIds.add(videoId);
                     }
                 }
-            } else if (match.contains("v.douyin.com/")) {
-                // 短链接
-                Matcher shortMatcher = SHORT_URL_PATTERN.matcher(match);
-                if (shortMatcher.find()) {
-                    String shortId = shortMatcher.group(1);
-                    if (shortId != null && !shortId.isEmpty()) {
-                        videoIds.add(shortId);
+            } else if (match.contains("douyin.com/")) {
+                // 标准链接
+                Matcher standardMatcher = STANDARD_URL_PATTERN.matcher(match);
+                if (standardMatcher.find()) {
+                    String videoId = standardMatcher.group(2);
+                    if (videoId != null && !videoId.isEmpty()) {
+                        videoIds.add(videoId);
                     }
                 }
             } else if (match.matches("\\d{18,}")) {
