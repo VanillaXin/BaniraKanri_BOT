@@ -83,6 +83,11 @@ public class InstructionsConfig {
      */
     private List<String> socialMedia;
 
+    /**
+     * mcmod百科检测
+     */
+    private List<String> mcModComment;
+
 
     {
         this.prefix = BaniraUtils.mutableListOf("/bk", AtBotCode.DEFAULT_CODE);
@@ -92,12 +97,13 @@ public class InstructionsConfig {
         this.kanri = new KanriInstructionsConfig();
         this.media = BaniraUtils.mutableListOf("获取文件", "获取链接", "下载文件", "getfile", "download", "geturl");
         this.wife = BaniraUtils.mutableListOf("老婆", "wife");
-        this.mcQuery = BaniraUtils.mutableListOf("我的世界", "麦块", "mc", "mcquery");
+        this.mcQuery = BaniraUtils.mutableListOf("我的世界", "麦块", "mcquery");
         this.tap = BaniraUtils.mutableListOf("戳一戳", "戳", "tap", "poke");
         this.alive = BaniraUtils.mutableListOf("存活", "活着", "在线", "活着?", "活着？", "online", "alive", "survival");
         this.plant = BaniraUtils.mutableListOf("plant", "tea", "花言草语", "胡言乱语", "喝茶", "品茶");
         this.aiChat = BaniraUtils.mutableListOf("aichat", "chat");
         this.socialMedia = BaniraUtils.mutableListOf("social", "socialmedia", "社交媒体解析", "媒体解析");
+        this.mcModComment = BaniraUtils.mutableListOf("mcmod", "mcmodcomment", "mcmod百科检测", "mc百科检测", "mcmod检测");
     }
 
 }

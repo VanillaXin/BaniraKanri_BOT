@@ -6,6 +6,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.config.entity.extended.ChatConfig;
 import xin.vanilla.banira.config.entity.extended.McConfig;
+import xin.vanilla.banira.config.entity.extended.McModCommentConfig;
 import xin.vanilla.banira.config.entity.extended.WifeConfig;
 import xin.vanilla.banira.util.BaniraUtils;
 
@@ -48,6 +49,11 @@ public class OtherConfig {
      */
     private boolean socialMedia;
 
+    /**
+     * MCMod评论监控配置
+     */
+    private McModCommentConfig mcModCommentConfig;
+
 
     {
         this.randomImgPath = new ArrayList<>();
@@ -60,6 +66,7 @@ public class OtherConfig {
         this.mcConfig = new McConfig();
         this.chatConfig = new ChatConfig();
         this.socialMedia = false;
+        this.mcModCommentConfig = new McModCommentConfig();
 
     }
 

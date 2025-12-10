@@ -628,6 +628,16 @@ public class BaniraBot extends Bot {
     }
 
     /**
+     * 设置消息表情回复 爱心❤
+     *
+     * @param msgId 消息Id
+     * @return 是否成功
+     */
+    public boolean setMsgEmojiLikeHeart(int msgId) {
+        return setMsgEmojiLike(msgId, 66);
+    }
+
+    /**
      * 设置消息表情回复 心碎💔
      *
      * @param msgId 消息Id
