@@ -4,8 +4,10 @@ import cn.hutool.http.HttpUtil;
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.util.HttpUtils;
 import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.RegexpHelper;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
@@ -22,9 +24,9 @@ public class BilibiliParser implements SocialMediaParser {
     private static final Pattern BILIBILI_PATTERN = new RegexpHelper()
             .groupNonIg(
                     // 标准链接: https://www.bilibili.com/video/BVxxxxx
-                    "(?:https?://)?(?:www\\.)?bilibili\\.com/video/(?<bvId>BV[0-9A-Za-z]{10,})",
-                    // 短链接: https://b23.tv/xxxxxx (支持6-20个字符，更宽松)
-                    "(?:https?://)?b23\\.tv/(?<shortId>[0-9A-Za-z]{6,20})(?:/|\\s|$)",
+                    "(?:https?:\\\\?/\\\\?/)?(?:www\\.)?bilibili\\.com\\\\?/video\\\\?/(?<bvId>BV[0-9A-Za-z]{10,})",
+                    // 短链接: https://b23.tv/xxxxxx
+                    "(?:https?:\\\\?/\\\\?/)?b23\\.tv\\\\?/(?<shortId>[0-9A-Za-z]{6,20})(?:/|\\s|\\?|$)",
                     // 纯BV号: BVxxxxx
                     "(?<pureBvId>BV[0-9A-Za-z]{10,})",
                     // 纯AV号: av123456
@@ -51,7 +53,11 @@ public class BilibiliParser implements SocialMediaParser {
             String shortId = matcher.group("shortId");
             if (shortId != null && !shortId.isEmpty()) {
                 shortId = shortId.trim();
-                videoIds.add(shortId);
+                String original = "https://b23.tv/" + shortId;
+                String url = HttpUtils.getRedirectedUrl(original);
+                if (!original.equalsIgnoreCase(url) && StringUtils.isNotNullOrEmpty(url)) {
+                    videoIds.addAll(extractVideoIds(url));
+                }
                 continue;
             }
 
@@ -90,7 +96,7 @@ public class BilibiliParser implements SocialMediaParser {
             } else if (videoId.startsWith("BV") || videoId.startsWith("av")) {
                 url = "https://www.bilibili.com/video/" + videoId;
             } else {
-                url = "https://b23.tv/" + videoId;
+                url = HttpUtils.getRedirectedUrl("https://b23.tv/" + videoId);
             }
 
             String response = HttpUtil.get(BILIBILI_API.formatted(url));
