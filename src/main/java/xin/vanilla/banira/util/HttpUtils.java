@@ -2,15 +2,21 @@ package xin.vanilla.banira.util;
 
 import lombok.extern.slf4j.Slf4j;
 import xin.vanilla.banira.domain.KeyValue;
+import xin.vanilla.banira.util.http.HttpMethod;
+import xin.vanilla.banira.util.http.HttpRequestBuilder;
+import xin.vanilla.banira.util.http.HttpResponse;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Slf4j
 public final class HttpUtils {
@@ -18,9 +24,12 @@ public final class HttpUtils {
     private HttpUtils() {
     }
 
-    private static final HttpClient client = HttpClient.newBuilder()
+    static final HttpClient client = HttpClient.newBuilder()
             .followRedirects(HttpClient.Redirect.NEVER)
             .build();
+
+    private static final String DEFAULT_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36";
 
     /**
      * 下载远程文件到 byte[]
@@ -50,7 +59,7 @@ public final class HttpUtils {
                 }
             }
             HttpRequest request = builder.build();
-            HttpResponse<byte[]> response = client.send(request, HttpResponse.BodyHandlers.ofByteArray());
+            java.net.http.HttpResponse<byte[]> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.ofByteArray());
             // 处理重定向
             if (response.statusCode() >= 300 && response.statusCode() < 400) {
                 String redirectUrl = response.headers().firstValue("Location").orElse(null);
@@ -74,7 +83,7 @@ public final class HttpUtils {
     /**
      * 检查并编码URL
      */
-    private static String encodeUrlIfNeeded(String url) {
+    public static String encodeUrlIfNeeded(String url) {
         try {
             // 尝试直接创建URI，如果成功说明URL是有效的
             new URI(url);
@@ -161,6 +170,7 @@ public final class HttpUtils {
      * 获取重定向后的最终URL
      *
      * @param url 原始URL
+     * @return 重定向后的最终URL
      */
     public static String getRedirectedUrl(String url) {
         return getRedirectedUrl(url, 10);
@@ -174,56 +184,67 @@ public final class HttpUtils {
      * @return 重定向后的最终URL
      */
     public static String getRedirectedUrl(String url, int maxRedirects) {
-        HttpURLConnection connection = null;
-        String currentUrl = url;
+        return getRedirectedUrl(url, maxRedirects, (KeyValue<String, String>[]) null);
+    }
+
+    /**
+     * 获取重定向后的最终URL
+     *
+     * @param url     原始URL
+     * @param headers 请求头
+     * @return 重定向后的最终URL
+     */
+    @SafeVarargs
+    public static String getRedirectedUrl(String url, KeyValue<String, String>... headers) {
+        return getRedirectedUrl(url, 10, headers);
+    }
+
+    /**
+     * 获取重定向后的最终URL
+     *
+     * @param url          原始URL
+     * @param maxRedirects 最大重定向次数
+     * @param headers      请求头
+     * @return 重定向后的最终URL
+     */
+    @SafeVarargs
+    public static String getRedirectedUrl(String url, int maxRedirects, KeyValue<String, String>... headers) {
+        String currentUrl = encodeUrlIfNeeded(url);
         int redirectCount = 0;
         try {
             while (redirectCount < maxRedirects) {
-                URL urlObj = new URI(currentUrl).toURL();
-                connection = (HttpURLConnection) urlObj.openConnection();
-                // 设置请求参数
-                connection.setRequestMethod("GET");
-                connection.setInstanceFollowRedirects(false);
-                connection.setConnectTimeout(10000);
-                connection.setReadTimeout(10000);
-                connection.setRequestProperty("User-Agent",
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
-                int responseCode = connection.getResponseCode();
-                // 如果是重定向，获取新的URL
-                if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
-                        responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
-                        responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
-                        responseCode == 307 || responseCode == 308) {
-                    String location = connection.getHeaderField("Location");
-                    if (location == null || location.isEmpty()) {
+                HttpRequest.Builder builder = HttpRequest.newBuilder()
+                        .uri(URI.create(currentUrl))
+                        .method(HttpMethod.HEAD.name(), HttpRequest.BodyPublishers.noBody())
+                        .header("User-Agent", DEFAULT_USER_AGENT);
+
+                // 添加自定义请求头
+                if (CollectionUtils.isNotNullOrEmpty(headers)) {
+                    for (KeyValue<String, String> header : headers) {
+                        builder.header(header.getKey(), header.getValue());
+                    }
+                }
+
+                HttpRequest request = builder.build();
+                java.net.http.HttpResponse<Void> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.discarding());
+                if (isRedirect(response.statusCode())) {
+                    Optional<String> locationOpt = response.headers().firstValue("Location");
+                    if (locationOpt.isEmpty()) {
                         break;
                     }
-                    // 处理相对路径的Location
-                    if (location.startsWith("/")) {
-                        URL baseUrl = new URI(currentUrl).toURL();
-                        location = baseUrl.getProtocol() + "://" +
-                                baseUrl.getHost() + location;
-                    } else if (!location.startsWith("http")) {
-                        URI baseUrl = new URI(currentUrl);
-                        location = baseUrl.resolve(location).toString();
-                    }
-                    currentUrl = location;
+                    currentUrl = resolveRedirectLocation(currentUrl, locationOpt.get());
                     redirectCount++;
-                    connection.disconnect();
                 } else {
-                    break; // 不是重定向，结束循环
+                    break;
                 }
             }
             if (redirectCount >= maxRedirects) {
                 throw new IOException("Too many redirects (max: " + maxRedirects + ")");
             }
             return currentUrl;
-        } catch (IOException | URISyntaxException e) {
+        } catch (Exception e) {
+            LOGGER.error("Failed to get redirected URL for: {}", url, e);
             return url;
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
         }
     }
 
@@ -234,51 +255,139 @@ public final class HttpUtils {
      * @return 重定向链列表
      */
     public static List<String> getRedirectChain(String url) {
+        return getRedirectChain(url, (KeyValue<String, String>[]) null);
+    }
+
+    /**
+     * 获取重定向链（支持自定义请求头）
+     *
+     * @param url     原始URL
+     * @param headers 请求头（如 Cookie 等）
+     * @return 重定向链列表
+     */
+    @SafeVarargs
+    public static List<String> getRedirectChain(String url, KeyValue<String, String>... headers) {
         List<String> redirectChain = new ArrayList<>();
-        HttpURLConnection connection = null;
-        String currentUrl = url;
+        String currentUrl = encodeUrlIfNeeded(url);
         redirectChain.add(currentUrl);
 
         try {
             while (true) {
-                URL urlObj = new URI(currentUrl).toURL();
-                connection = (HttpURLConnection) urlObj.openConnection();
+                HttpRequest.Builder builder = HttpRequest.newBuilder()
+                        .uri(URI.create(currentUrl))
+                        .method(HttpMethod.HEAD.name(), HttpRequest.BodyPublishers.noBody())
+                        .header("User-Agent", DEFAULT_USER_AGENT);
 
-                connection.setRequestMethod("HEAD");
-                connection.setInstanceFollowRedirects(false);
-                connection.setConnectTimeout(5000);
-                connection.setReadTimeout(5000);
+                // 添加自定义请求头
+                if (CollectionUtils.isNotNullOrEmpty(headers)) {
+                    for (KeyValue<String, String> header : headers) {
+                        builder.header(header.getKey(), header.getValue());
+                    }
+                }
 
-                int responseCode = connection.getResponseCode();
+                HttpRequest request = builder.build();
+                java.net.http.HttpResponse<Void> response = client.send(request, java.net.http.HttpResponse.BodyHandlers.discarding());
 
-                if (responseCode == HttpURLConnection.HTTP_MOVED_PERM ||
-                        responseCode == HttpURLConnection.HTTP_MOVED_TEMP ||
-                        responseCode == HttpURLConnection.HTTP_SEE_OTHER ||
-                        responseCode == 307 || responseCode == 308) {
-
-                    String location = connection.getHeaderField("Location");
-                    if (location == null || location.isEmpty()) {
+                if (isRedirect(response.statusCode())) {
+                    Optional<String> locationOpt = response.headers().firstValue("Location");
+                    if (locationOpt.isEmpty()) {
                         break;
                     }
-                    // 处理相对路径
-                    if (!location.startsWith("http")) {
-                        URI baseUrl = new URI(currentUrl);
-                        location = baseUrl.resolve(location).toString();
-                    }
-                    currentUrl = location;
+                    currentUrl = resolveRedirectLocation(currentUrl, locationOpt.get());
                     redirectChain.add(currentUrl);
-                    connection.disconnect();
                 } else {
                     break;
                 }
             }
             return redirectChain;
-        } catch (URISyntaxException | IOException e) {
+        } catch (Exception e) {
+            LOGGER.error("Failed to get redirect chain for: {}", url, e);
             return BaniraUtils.mutableListOf(currentUrl);
-        } finally {
-            if (connection != null) {
-                connection.disconnect();
-            }
         }
+    }
+
+    /**
+     * 便捷 GET（返回构建器）
+     */
+    public static HttpRequestBuilder get(String url) {
+        return new HttpRequestBuilder(client, HttpMethod.GET, url);
+    }
+
+    /**
+     * 便捷 POST（返回构建器）
+     */
+    public static HttpRequestBuilder post(String url) {
+        return new HttpRequestBuilder(client, HttpMethod.POST, url);
+    }
+
+    /**
+     * 便捷 GET（直接执行）
+     */
+    @SafeVarargs
+    public static HttpResponse get(String url, KeyValue<String, String>... headers) {
+        return get(url).headers(headers).execute();
+    }
+
+    /**
+     * 便捷 POST（直接执行）
+     */
+    @SafeVarargs
+    public static HttpResponse post(String url, Object body, KeyValue<String, String>... headers) {
+        return post(url).headers(headers).body(body).execute();
+    }
+
+    /**
+     * 便捷 GET（字符串）
+     */
+    @SafeVarargs
+    public static String getString(String url, KeyValue<String, String>... headers) {
+        HttpResponse response = get(url, headers);
+        return response != null ? response.getBodyAsString() : null;
+    }
+
+    /**
+     * 便捷 POST（字符串）
+     */
+    @SafeVarargs
+    public static String postString(String url, Object body, KeyValue<String, String>... headers) {
+        HttpResponse response = post(url, body, headers);
+        return response != null ? response.getBodyAsString() : null;
+    }
+
+    /**
+     * 便捷 GET（字节）
+     */
+    @SafeVarargs
+    public static byte[] getBytes(String url, KeyValue<String, String>... headers) {
+        HttpResponse response = get(url, headers);
+        return response != null ? response.getBodyAsBytes() : null;
+    }
+
+    /**
+     * 便捷 POST（字节）
+     */
+    @SafeVarargs
+    public static byte[] postBytes(String url, Object body, KeyValue<String, String>... headers) {
+        HttpResponse response = post(url, body, headers);
+        return response != null ? response.getBodyAsBytes() : null;
+    }
+
+    private static boolean isRedirect(int statusCode) {
+        return statusCode == HttpURLConnection.HTTP_MOVED_PERM ||
+                statusCode == HttpURLConnection.HTTP_MOVED_TEMP ||
+                statusCode == HttpURLConnection.HTTP_SEE_OTHER ||
+                statusCode == 307 || statusCode == 308;
+    }
+
+    private static String resolveRedirectLocation(String currentUrl, String location) throws URISyntaxException {
+        if (location == null || location.isEmpty()) return currentUrl;
+        URI baseUrl = new URI(currentUrl);
+        if (location.startsWith("/")) {
+            return baseUrl.resolve(location).toString();
+        }
+        if (!location.startsWith("http")) {
+            return baseUrl.resolve(location).toString();
+        }
+        return location;
     }
 }

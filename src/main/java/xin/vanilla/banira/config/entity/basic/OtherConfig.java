@@ -4,10 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import xin.vanilla.banira.config.entity.extended.ChatConfig;
-import xin.vanilla.banira.config.entity.extended.McConfig;
-import xin.vanilla.banira.config.entity.extended.McModCommentConfig;
-import xin.vanilla.banira.config.entity.extended.WifeConfig;
+import xin.vanilla.banira.config.entity.extended.*;
 import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.ArrayList;
@@ -54,6 +51,11 @@ public class OtherConfig {
      */
     private McModCommentConfig mcModCommentConfig;
 
+    /**
+     * MCMod Cookie 配置
+     */
+    private McModCookieConfig mcModCookieConfig;
+
 
     {
         this.randomImgPath = new ArrayList<>();
@@ -67,6 +69,7 @@ public class OtherConfig {
         this.chatConfig = new ChatConfig();
         this.socialMedia = false;
         this.mcModCommentConfig = new McModCommentConfig();
+        this.mcModCookieConfig = new McModCookieConfig();
 
     }
 

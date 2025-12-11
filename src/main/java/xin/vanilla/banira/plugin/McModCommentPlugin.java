@@ -17,11 +17,11 @@ import xin.vanilla.banira.config.entity.extended.McModCommentConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
-import xin.vanilla.banira.plugin.mcmodcomment.CommentInfo;
 import xin.vanilla.banira.plugin.mcmodcomment.McModCommentScheduler;
 import xin.vanilla.banira.plugin.mcmodcomment.McModCommentService;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
+import xin.vanilla.banira.util.mcmod.McModCommentRow;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -169,7 +169,7 @@ public class McModCommentPlugin extends BasePlugin {
             // 注意：初始化缓存后，首次定时任务执行时不会发送通知（因为缓存已存在）
             commentService.loadCacheFromFile(modId);
             if (!commentService.isCacheInitialized(modId)) {
-                List<CommentInfo> comments = commentService.fetchComments(modId);
+                List<McModCommentRow> comments = commentService.fetchComments(modId);
                 if (comments != null && !comments.isEmpty()) {
                     commentService.initCache(modId, comments);
                     LOGGER.info("Initialized cache for mod {} with {} comments", modId, comments.size());

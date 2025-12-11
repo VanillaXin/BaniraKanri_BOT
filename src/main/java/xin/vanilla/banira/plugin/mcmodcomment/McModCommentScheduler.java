@@ -11,6 +11,7 @@ import xin.vanilla.banira.config.entity.extended.ModWatchInfo;
 import xin.vanilla.banira.event.DatabaseInitializedEvent;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.mcmod.McModCommentRow;
 
 import java.util.List;
 import java.util.Map;
@@ -190,7 +191,7 @@ public class McModCommentScheduler {
 
                     try {
                         // 获取评论列表
-                        List<CommentInfo> comments = commentService.fetchComments(modId);
+                        List<McModCommentRow> comments = commentService.fetchComments(modId);
                         if (comments == null || comments.isEmpty()) {
                             continue;
                         }
@@ -201,7 +202,7 @@ public class McModCommentScheduler {
                         // 如果有新评论且不是首次加载，发送到对应的群
                         // 首次加载时（缓存文件不存在）不发送通知
                         if (!result.newComments().isEmpty() && !result.isFirstLoad()) {
-                            for (CommentInfo comment : result.newComments()) {
+                            for (McModCommentRow comment : result.newComments()) {
                                 for (ModWatchInfo watchInfo : watchInfos) {
                                     BaniraBot bot = BaniraUtils.getBot(watchInfo.botId());
                                     if (bot != null) {
