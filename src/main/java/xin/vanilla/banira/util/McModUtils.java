@@ -161,15 +161,6 @@ public final class McModUtils {
 
     private static final Pattern USER_CENTER_URL_PATTERN = Pattern.compile("//center\\.mcmod\\.cn/(?<userId>\\d+)/");
 
-    public static String getLoginUserId(String cookie) {
-        String redirectedUrl = HttpUtils.getRedirectedUrl("https://www.mcmod.cn/login/", new KeyValue<>("Referer", "https://www.mcmod.cn"), new KeyValue<>("Cookie", cookie));
-        Matcher matcher = USER_CENTER_URL_PATTERN.matcher(redirectedUrl);
-        if (matcher.find()) {
-            return matcher.group("userId");
-        }
-        return null;
-    }
-
     /**
      * 解析搜索HTML结果
      *
@@ -289,6 +280,15 @@ public final class McModUtils {
         return String.format("https://center.mcmod.cn/%s/", uid);
     }
 
+
+    public static String getLoginUserId(String cookie) {
+        String redirectedUrl = HttpUtils.getRedirectedUrl("https://www.mcmod.cn/login/", new KeyValue<>("Referer", "https://www.mcmod.cn"), new KeyValue<>("Cookie", cookie));
+        Matcher matcher = USER_CENTER_URL_PATTERN.matcher(redirectedUrl);
+        if (matcher.find()) {
+            return matcher.group("userId");
+        }
+        return null;
+    }
 
     /**
      * 搜索
