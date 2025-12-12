@@ -17,9 +17,13 @@ import java.util.List;
 @Accessors(chain = true)
 public class McModCommentPage {
     /**
-     * 页码列表
+     * 第一页
      */
-    private List<Integer> list;
+    private Integer home;
+    /**
+     * 上一页
+     */
+    private Integer prev;
     /**
      * 下一页
      */
@@ -29,14 +33,13 @@ public class McModCommentPage {
      */
     private Integer end;
     /**
+     * 页码列表
+     */
+    private List<Integer> list;
+    /**
      * 名称
      */
     private String name;
-    /**
-     * 计数语言模板
-     */
-    @JsonProperty("count_lang")
-    private String countLang;
     /**
      * 当前页
      */
@@ -47,6 +50,11 @@ public class McModCommentPage {
      */
     @JsonProperty("total_page")
     private Integer totalPage;
+    /**
+     * 计数语言模板
+     */
+    @JsonProperty("count_lang")
+    private String countLang;
     /**
      * 总行数（字符串）
      */

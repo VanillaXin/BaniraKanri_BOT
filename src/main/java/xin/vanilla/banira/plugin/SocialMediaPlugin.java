@@ -67,7 +67,7 @@ public class SocialMediaPlugin extends BasePlugin {
     public boolean config(BaniraBot bot, AnyMessageEvent event) {
         BaniraCodeContext context = new BaniraCodeContext(bot, event);
         if (super.isCommand(context)
-                && insConfig.get().socialMedia().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins))
+                && insConfig.get().socialMedia().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins + " "))
         ) {
             String argString = super.deleteCommandPrefix(context);
             String[] split = argString.split("\\s+");

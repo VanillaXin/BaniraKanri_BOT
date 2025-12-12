@@ -74,7 +74,7 @@ public class AIChatPlugin extends BasePlugin {
 
         BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
         if (super.isCommand(context)
-                && insConfig.get().aiChat().stream().anyMatch(s -> super.deleteCommandPrefix(context).startsWith(s))
+                && insConfig.get().aiChat().stream().anyMatch(s -> super.deleteCommandPrefix(context).startsWith(s + " "))
         ) {
             String argString = super.deleteCommandPrefix(context);
             String[] split = argString.split("\\s+");

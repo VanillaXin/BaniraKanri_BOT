@@ -338,7 +338,7 @@ public class KeywordPlugin extends BasePlugin {
             if (BaniraUtils.hasReply(event.getArrayMsg())) {
                 if (super.isCommand(context)
                         && keyIns.locator() != null
-                        && keyIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey()))
+                        && keyIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey() + " "))
                 ) {
                     String[] split = super.deleteCommandPrefix(context).split("\\s+");
                     String operate = split[1];
@@ -392,7 +392,7 @@ public class KeywordPlugin extends BasePlugin {
             //
             else if (super.isCommand(context)
                     && keyIns.locator() != null
-                    && keyIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey()))
+                    && keyIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey() + " "))
             ) {
                 String[] split = super.deleteCommandPrefix(context).split("\\s+");
                 if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());

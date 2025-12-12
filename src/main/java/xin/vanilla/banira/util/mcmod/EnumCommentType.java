@@ -17,4 +17,13 @@ public enum EnumCommentType {
     EnumCommentType(String value) {
         this.value = value;
     }
+
+    public static EnumCommentType valueOfEx(String value) {
+        for (EnumCommentType type : values()) {
+            if (type.value.equalsIgnoreCase(value) || type.name().equalsIgnoreCase(value)) {
+                return type;
+            }
+        }
+        return null;
+    }
 }

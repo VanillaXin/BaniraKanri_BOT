@@ -69,7 +69,6 @@ public class TimerTaskScheduler {
     private void schedule(TimerRecord timer) {
         try {
             JobKey jobKey = JobKey.jobKey("task-" + timer.getId(), "timer-tasks");
-
             if (scheduler.checkExists(jobKey)) {
                 scheduler.deleteJob(jobKey);
             }

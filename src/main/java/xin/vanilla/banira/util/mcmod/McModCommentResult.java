@@ -1,5 +1,6 @@
 package xin.vanilla.banira.util.mcmod;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,6 +17,11 @@ import java.util.List;
 @Accessors(chain = true)
 public class McModCommentResult {
     /**
+     * 是否登录
+     */
+    @JsonProperty("is_login")
+    private boolean isLogin;
+    /**
      * 分页信息
      */
     private McModCommentPage page;
@@ -23,4 +29,11 @@ public class McModCommentResult {
      * 评论列表
      */
     private List<McModCommentRow> row;
+
+    public McModCommentResult setReplyId(String replyId) {
+        for (McModCommentRow row : this.row) {
+            row.setParentId(replyId);
+        }
+        return this;
+    }
 }

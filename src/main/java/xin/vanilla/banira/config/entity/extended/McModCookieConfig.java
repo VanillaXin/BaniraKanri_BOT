@@ -35,14 +35,17 @@ public class McModCookieConfig {
     private Long expireTime;
 
     /**
+     * 当前登录用户ID
+     */
+    private String userId;
+
+    /**
      * 默认过期时间：25天
      */
     private static final long DEFAULT_EXPIRE_DURATION = 25L * 24 * 60 * 60 * 1000;
 
     /**
      * 检查 Cookie 是否过期
-     *
-     * @return true 如果过期或不存在
      */
     public boolean isExpired() {
         if (expireTime == null) {

@@ -6,19 +6,20 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
- * MCMod 评论回复用户信息（简化版，只包含ID和名称）
+ * MCMod 首页分类模组列表结果
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
-public class McModCommentReplyUser {
+public class McModIndexCategoryResult {
     /**
-     * 用户ID
+     * 左侧模组列表
      */
-    private String id;
+    private McModIndexCategoryLeft left;
+    
     /**
-     * 用户名
+     * 右侧排行榜
      */
-    private String name;
+    private McModIndexCategoryRight right;
 }

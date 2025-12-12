@@ -61,4 +61,8 @@ public class McModCommentAttitude {
      * 握手
      */
     private Integer handshake;
+    /**
+     * 使用（可能为null）
+     */
+    private Object use;
 }

@@ -86,7 +86,7 @@ public class InstructionsConfig {
     /**
      * mcmod百科检测
      */
-    private List<String> mcModComment;
+    private List<String> mcMod;
 
 
     {
@@ -103,7 +103,7 @@ public class InstructionsConfig {
         this.plant = BaniraUtils.mutableListOf("plant", "tea", "花言草语", "胡言乱语", "喝茶", "品茶");
         this.aiChat = BaniraUtils.mutableListOf("aichat", "chat");
         this.socialMedia = BaniraUtils.mutableListOf("social", "socialmedia", "社交媒体解析", "媒体解析");
-        this.mcModComment = BaniraUtils.mutableListOf("mcmod", "mcmodcomment", "mcmod百科检测", "mc百科检测", "mcmod检测");
+        this.mcMod = BaniraUtils.mutableListOf("mcmod", "mcmod百科检测", "mc百科检测", "mcmod检测");
     }
 
 }

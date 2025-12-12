@@ -174,7 +174,7 @@ public class TimerPlugin extends BasePlugin {
             if (BaniraUtils.hasReply(event.getArrayMsg())) {
                 if (super.isCommand(context)
                         && timerIns.locator() != null
-                        && timerIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey()))
+                        && timerIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey() + " "))
                 ) {
                     String[] split = super.deleteCommandPrefix(context).split("\\s+");
                     if (split.length != 2 && !BaniraUtils.getBaseIns().del().contains(split[1])) {
@@ -220,7 +220,7 @@ public class TimerPlugin extends BasePlugin {
             //
             else if (super.isCommand(context)
                     && timerIns.locator() != null
-                    && timerIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey()))
+                    && timerIns.locator().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins.getKey() + " "))
             ) {
                 String[] split = super.deleteCommandPrefix(context).split("\\s+");
                 if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());

@@ -41,7 +41,7 @@ public class PluginConfig {
         this.capability.put(PlantPlugin.class.getName(), 99);
         this.capability.put(AIChatPlugin.class.getName(), 100);
         this.capability.put(SocialMediaPlugin.class.getName(), 99);
-        this.capability.put(McModCommentPlugin.class.getName(), 99);
+        this.capability.put(McModPlugin.class.getName(), 99);
 
     }
 

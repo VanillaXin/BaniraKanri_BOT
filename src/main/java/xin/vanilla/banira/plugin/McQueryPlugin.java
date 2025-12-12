@@ -155,7 +155,7 @@ public class McQueryPlugin extends BasePlugin {
     public boolean config(BaniraBot bot, AnyMessageEvent event) {
         BaniraCodeContext context = new BaniraCodeContext(bot, event);
         if (super.isCommand(context)
-                && insConfig.get().mcQuery().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins))
+                && insConfig.get().mcQuery().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins + " "))
         ) {
             String[] split = super.deleteCommandPrefix(context).split("\\s+");
             if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());

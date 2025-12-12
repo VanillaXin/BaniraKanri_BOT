@@ -5,6 +5,10 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
+import xin.vanilla.banira.util.StringUtils;
+
+import java.util.List;
+import java.util.Objects;
 
 /**
  * MCMod 评论行
@@ -15,17 +19,26 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class McModCommentRow {
     /**
-     * 用户信息
+     * 评论类型
      */
-    private McModCommentUser user;
+    private EnumCommentType commentType;
+
+    /**
+     * 容器ID
+     */
+    private String containerId;
+    /**
+     * 评论ID
+     */
+    private String id;
     /**
      * 楼层
      */
     private String floor;
     /**
-     * 评论ID
+     * 用户信息
      */
-    private String id;
+    private McModCommentUser user;
     /**
      * 时间信息
      */
@@ -43,4 +56,41 @@ public class McModCommentRow {
      * 评论内容（HTML格式）
      */
     private String content;
+
+    /**
+     * 被回复的用户信息
+     */
+    @JsonProperty("reply_user")
+    private McModCommentUser replyUser;
+
+    /**
+     * 父评论ID
+     */
+    private String parentId;
+
+    /**
+     * 回复列表
+     */
+    transient private List<McModCommentRow> replies;
+    /**
+     * 父评论信息
+     */
+    transient private McModCommentRow parentComment;
+
+    public boolean isReply() {
+        return StringUtils.isNotNullOrEmpty(this.parentId);
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof McModCommentRow that)) return false;
+        if (!super.equals(o)) return false;
+        return getCommentType() == that.getCommentType() && Objects.equals(getContainerId(), that.getContainerId()) && Objects.equals(getId(), that.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), getCommentType(), getContainerId(), getId());
+    }
+
 }

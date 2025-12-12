@@ -52,7 +52,7 @@ public class TapPlugin extends BasePlugin {
     public boolean tap(BaniraBot bot, AnyMessageEvent event) {
         BaniraCodeContext context = new BaniraCodeContext(bot, event);
         if (super.isCommand(context)
-                && insConfig.get().tap().stream().anyMatch(s -> super.deleteCommandPrefix(context).startsWith(s))
+                && insConfig.get().tap().stream().anyMatch(s -> super.deleteCommandPrefix(context).startsWith(s + " "))
         ) {
             val split = super.deleteCommandPrefix(context).split("\\s+");
             val args = Arrays.copyOfRange(split, 1, split.length);
