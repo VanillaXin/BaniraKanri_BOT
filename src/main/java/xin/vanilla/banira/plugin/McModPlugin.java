@@ -628,40 +628,62 @@ public class McModPlugin extends BasePlugin {
             String cacheKey = McModCommentService.getCacheKey(commentType, containerId);
             if (!McModCommentService.COMMENT_CACHE.containsKey(cacheKey)) {
                 // 拉取全量评论
-                Set<McModCommentRow> cachedComment = new HashSet<>();
-                McModCommentService.COMMENT_CACHE.put(cacheKey, cachedComment);
+                Map<String, McModCommentRow> commentMap = new HashMap<>();
 
                 McModCommentResult comments = McModUtils.getComments(commentType, containerId, 1);
                 if (comments != null) {
-                    cachedComment.addAll(comments.getRow());
+                    for (McModCommentRow comment : comments.getRow()) {
+                        comment.setCommentType(commentType);
+                        comment.setContainerId(containerId);
+                        String key = McModCommentService.getCommentKey(commentType, containerId, comment.getId());
+                        commentMap.put(key, comment);
+                    }
                     McModCommentResult curent = comments;
                     while (curent != null && curent.getPage() != null && curent.getPage().getNext() != null) {
                         // 休眠5秒
                         Thread.sleep(5000);
                         curent = McModUtils.getComments(commentType, containerId, curent.getPage().getNext());
                         if (curent != null) {
-                            cachedComment.addAll(curent.getRow());
-                        }
-                    }
-                }
-                // 拉取全量回复
-                Set<McModCommentRow> cachedCommentReply = new HashSet<>();
-                for (McModCommentRow commentRow : cachedComment) {
-                    McModCommentResult replies = McModUtils.getCommentReplies(commentRow.getId(), 1);
-                    if (replies != null) {
-                        cachedCommentReply.addAll(replies.getRow());
-                        McModCommentResult curent = replies;
-                        while (curent != null && curent.getPage() != null && curent.getPage().getNext() != null) {
-                            // 休眠5秒
-                            Thread.sleep(5000);
-                            curent = McModUtils.getComments(commentType, containerId, curent.getPage().getNext());
-                            if (curent != null) {
-                                cachedCommentReply.addAll(curent.getRow());
+                            for (McModCommentRow comment : curent.getRow()) {
+                                comment.setCommentType(commentType);
+                                comment.setContainerId(containerId);
+                                String key = McModCommentService.getCommentKey(commentType, containerId, comment.getId());
+                                commentMap.put(key, comment); // 新内容覆盖旧内容
                             }
                         }
                     }
                 }
-                cachedComment.addAll(cachedCommentReply);
+                // 拉取全量回复
+                List<McModCommentRow> commentList = new ArrayList<>(commentMap.values());
+                for (McModCommentRow commentRow : commentList) {
+                    McModCommentResult replies = McModUtils.getCommentReplies(commentRow.getId(), 1);
+                    if (replies != null) {
+                        for (McModCommentRow reply : replies.getRow()) {
+                            reply.setCommentType(commentType);
+                            reply.setContainerId(containerId);
+                            reply.setParentId(commentRow.getId());
+                            String key = McModCommentService.getCommentKey(commentType, containerId, reply.getId());
+                            commentMap.put(key, reply);
+                        }
+                        McModCommentResult curent = replies;
+                        while (curent != null && curent.getPage() != null && curent.getPage().getNext() != null) {
+                            // 休眠5秒
+                            Thread.sleep(5000);
+                            curent = McModUtils.getCommentReplies(commentRow.getId(), curent.getPage().getNext());
+                            if (curent != null) {
+                                for (McModCommentRow reply : curent.getRow()) {
+                                    reply.setCommentType(commentType);
+                                    reply.setContainerId(containerId);
+                                    reply.setParentId(commentRow.getId());
+                                    String key = McModCommentService.getCommentKey(commentType, containerId, reply.getId());
+                                    commentMap.put(key, reply);
+                                }
+                            }
+                        }
+                    }
+                }
+                Set<McModCommentRow> cachedComment = new HashSet<>(commentMap.values());
+                McModCommentService.COMMENT_CACHE.put(cacheKey, cachedComment);
                 McModCommentService.saveCacheToFile(cacheKey, cachedComment);
             }
 

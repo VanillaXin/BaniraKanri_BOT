@@ -83,14 +83,16 @@ public class McModCommentRow {
 
     @Override
     public boolean equals(Object o) {
+        if (this == o) return true;
         if (!(o instanceof McModCommentRow that)) return false;
-        if (!super.equals(o)) return false;
-        return getCommentType() == that.getCommentType() && Objects.equals(getContainerId(), that.getContainerId()) && Objects.equals(getId(), that.getId());
+        return getCommentType() == that.getCommentType()
+                && Objects.equals(getContainerId(), that.getContainerId())
+                && Objects.equals(getId(), that.getId());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(super.hashCode(), getCommentType(), getContainerId(), getId());
+        return Objects.hash(getCommentType(), getContainerId(), getId());
     }
 
 }

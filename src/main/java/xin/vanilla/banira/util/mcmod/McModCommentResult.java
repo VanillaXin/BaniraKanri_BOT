@@ -36,4 +36,27 @@ public class McModCommentResult {
         }
         return this;
     }
+
+    public McModCommentResult setCommentType(EnumCommentType commentType) {
+        for (McModCommentRow row : this.row) {
+            row.setCommentType(commentType);
+        }
+        return this;
+    }
+
+    public McModCommentResult setContainerId(String containerId) {
+        for (McModCommentRow row : this.row) {
+            row.setContainerId(containerId);
+        }
+        return this;
+    }
+
+    public McModCommentResult set(EnumCommentType commentType, String containerId, String replyId) {
+        for (McModCommentRow row : this.row) {
+            row.setCommentType(commentType)
+                    .setContainerId(containerId)
+                    .setParentId(replyId);
+        }
+        return this;
+    }
 }

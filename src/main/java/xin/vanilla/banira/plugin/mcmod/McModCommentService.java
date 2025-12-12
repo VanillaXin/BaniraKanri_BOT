@@ -150,8 +150,21 @@ public class McModCommentService {
             return replyTime != null && replyTime.isAfter(oneHourAgo);
         }).collect(Collectors.toSet());
 
-        // 更新缓存
-        commentCache.addAll(comments);
+        // 使用 Map 确保新内容覆盖旧内容
+        Map<String, McModCommentRow> cacheMap = new HashMap<>();
+        // 先将现有缓存放入 Map
+        for (McModCommentRow cached : commentCache) {
+            String key = getCommentKey(cached.getCommentType(), cached.getContainerId(), cached.getId());
+            cacheMap.put(key, cached);
+        }
+        // 用新内容覆盖旧内容
+        for (McModCommentRow comment : comments) {
+            String key = getCommentKey(comment.getCommentType(), comment.getContainerId(), comment.getId());
+            cacheMap.put(key, comment);
+        }
+        // 更新缓存 Set
+        commentCache.clear();
+        commentCache.addAll(cacheMap.values());
         saveCacheToFile(cacheKey, commentCache);
 
         return newComments;
@@ -257,6 +270,7 @@ public class McModCommentService {
 
     /**
      * 保存缓存到文件
+     * 按时间倒序排序后保存
      *
      * @param cacheKey       缓存key (type:containerId)
      * @param cachedComments 缓存的评论
@@ -269,9 +283,20 @@ public class McModCommentService {
                 cacheDir.mkdirs();
             }
 
+            // 按时间倒序排序
+            List<McModCommentRow> sortedComments = new ArrayList<>(cachedComments);
+            sortedComments.sort((a, b) -> {
+                Instant timeA = parseReplyTime(a.getTime());
+                Instant timeB = parseReplyTime(b.getTime());
+                if (timeA == null && timeB == null) return 0;
+                if (timeA == null) return 1;
+                if (timeB == null) return -1;
+                return timeB.compareTo(timeA);
+            });
+
             JsonArray jsonArray = new JsonArray();
-            for (McModCommentRow commentId : cachedComments) {
-                jsonArray.add(JsonUtils.parseJson(commentId));
+            for (McModCommentRow comment : sortedComments) {
+                jsonArray.add(JsonUtils.parseJson(comment));
             }
 
             String content = JsonUtils.PRETTY_GSON.toJson(jsonArray);
@@ -280,6 +305,19 @@ public class McModCommentService {
         } catch (Exception e) {
             LOGGER.error("Error saving cache to file for mod {}", cacheKey, e);
         }
+    }
+
+    /**
+     * 生成评论的唯一键
+     *
+     * @param commentType 评论类型
+     * @param containerId 容器ID
+     * @param id          评论ID
+     */
+    public static String getCommentKey(EnumCommentType commentType, String containerId, String id) {
+        return (commentType != null ? commentType.value() : "") + ":" +
+                (containerId != null ? containerId : "") + ":" +
+                (id != null ? id : "");
     }
 
     /**

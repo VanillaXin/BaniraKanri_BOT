@@ -808,8 +808,9 @@ public final class McModUtils {
             }
 
             JsonObject data = json.getAsJsonObject("data");
-            return com.mikuac.shiro.common.utils.JsonUtils.readValue(xin.vanilla.banira.util.JsonUtils.toJsonString(data), new TypeReference<>() {
+            McModCommentResult result = com.mikuac.shiro.common.utils.JsonUtils.readValue(JsonUtils.toJsonString(data), new TypeReference<>() {
             });
+            return result != null ? result.set(type, doid, null) : null;
         } catch (Exception e) {
             LOGGER.error("获取评论异常", e);
             return null;
