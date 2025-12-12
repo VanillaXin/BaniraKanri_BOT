@@ -70,20 +70,27 @@ public class McModCommentService {
                 // 获取所有评论的回复
                 for (McModCommentRow comment : comments.getRow()) {
                     if (comment.isReply()) continue;
+                    // 休眠5秒
+                    Thread.sleep(5000);
                     McModCommentResult replies = McModUtils.getCommentReplies(comment.getId(), 1);
                     if (replies != null) {
                         result.addAll(replies.getRow());
                     }
                 }
             }
-            // 获取缓存中的所有评论的回复
+            // 获取缓存中的最近俩天的评论的回复
+            Instant minus = Instant.now().minus(Duration.ofDays(2));
             for (McModCommentRow comment : COMMENT_CACHE.getOrDefault(cacheKey, Set.of())) {
                 if (comment.isReply()) continue;
+                Instant replyTime = parseReplyTime(comment.getTime());
+                if (replyTime == null || replyTime.isBefore(minus)) continue;
                 McModCommentResult replies = McModUtils.getCommentReplies(comment.getId(), 1);
                 if (replies != null) {
                     result.addAll(replies.getRow());
                     McModCommentResult curent = replies;
                     while (curent != null && curent.getPage() != null && curent.getPage().getNext() != null) {
+                        // 休眠5秒
+                        Thread.sleep(5000);
                         curent = McModUtils.getComments(commentType, containerId, curent.getPage().getNext());
                         if (curent != null) {
                             result.addAll(curent.getRow());

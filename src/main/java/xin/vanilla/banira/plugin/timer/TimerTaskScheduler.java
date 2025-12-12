@@ -34,11 +34,11 @@ public class TimerTaskScheduler {
     public void loadTimers() {
         try {
             LOGGER.info("Refreshing all Quartz timer tasks...");
-            scheduler.clear();
+            // scheduler.clear();
             List<TimerRecord> enabled = timerRecordManager.getTimerRecordList(new TimerRecordQueryParam().setEnable(true));
             enabled.forEach(this::scheduleIfValid);
             LOGGER.info("Refreshed {} enabled timer tasks.", enabled.size());
-        } catch (SchedulerException e) {
+        } catch (Exception e) {
             LOGGER.error("Error refreshing timer tasks", e);
         }
     }

@@ -313,27 +313,33 @@ public class McModPlugin extends BasePlugin {
             return false;
         }
 
+        bot.setMsgEmojiLikeOk(event.getMessageId());
+
         // 获取被回复的消息内容
         Long replyId = BaniraUtils.getReplyId(event.getArrayMsg());
         if (replyId == null) {
+            LOGGER.error("Failed to get reply id");
             return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
         }
 
         // 获取被回复的消息内容
         String repliedMessage = getRepliedMessage(bot, event.getGroupId(), replyId);
         if (StringUtils.isNullOrEmptyEx(repliedMessage)) {
+            LOGGER.error("Failed to get replied message");
             return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
         }
 
         // 从消息内容中解析评论类型、容器ID和评论ID
         CommentInfo parsedInfo = parseCommentInfoFromMessage(repliedMessage);
         if (parsedInfo == null) {
+            LOGGER.error("Failed to parse comment info from message");
             return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
         }
 
         // 获取回复内容（从split[2]开始的所有内容）
         String replyContent = split.length >= 3 ? String.join(" ", Arrays.copyOfRange(split, 2, split.length)) : "";
         if (StringUtils.isNullOrEmptyEx(replyContent)) {
+            LOGGER.error("Failed to get reply content");
             return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
         }
 
@@ -343,6 +349,7 @@ public class McModPlugin extends BasePlugin {
         if (response != null && response.isSuccess()) {
             return bot.setMsgEmojiLikeHeart(event.getMessageId());
         } else {
+            LOGGER.error("Failed to reply comment");
             return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
         }
     }
@@ -462,6 +469,8 @@ public class McModPlugin extends BasePlugin {
             return false;
         }
 
+        bot.setMsgEmojiLikeOk(event.getMessageId());
+
         // 获取评论ID
         String commentId = split[2];
         if (StringUtils.isNullOrEmptyEx(commentId) || !commentId.matches("\\d+")) {
@@ -513,6 +522,7 @@ public class McModPlugin extends BasePlugin {
         if (!bot.isAdmin(event.getGroupId(), event.getSender().getUserId())) {
             return bot.setMsgEmojiLikeNo(msgId);
         }
+        bot.setMsgEmojiLikeOk(msgId);
 
         BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
         String operate = split[1];
@@ -525,7 +535,8 @@ public class McModPlugin extends BasePlugin {
             }
             String typeStr = split[2];
             String containerId = split[3];
-            return handleAdd(bot, groupId, msgId, typeStr, containerId);
+            new Thread(() -> handleAdd(bot, groupId, msgId, typeStr, containerId)).start();
+            return true;
         }
         // 删除
         else if (baseIns.del().contains(operate)) {
@@ -625,6 +636,8 @@ public class McModPlugin extends BasePlugin {
                     cachedComment.addAll(comments.getRow());
                     McModCommentResult curent = comments;
                     while (curent != null && curent.getPage() != null && curent.getPage().getNext() != null) {
+                        // 休眠5秒
+                        Thread.sleep(5000);
                         curent = McModUtils.getComments(commentType, containerId, curent.getPage().getNext());
                         if (curent != null) {
                             cachedComment.addAll(curent.getRow());
@@ -639,6 +652,8 @@ public class McModPlugin extends BasePlugin {
                         cachedCommentReply.addAll(replies.getRow());
                         McModCommentResult curent = replies;
                         while (curent != null && curent.getPage() != null && curent.getPage().getNext() != null) {
+                            // 休眠5秒
+                            Thread.sleep(5000);
                             curent = McModUtils.getComments(commentType, containerId, curent.getPage().getNext());
                             if (curent != null) {
                                 cachedCommentReply.addAll(curent.getRow());
