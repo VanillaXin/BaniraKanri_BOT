@@ -151,6 +151,8 @@ public class McModPlugin extends BasePlugin {
         Long groupId = event.getGroupId();
         int msgId = event.getMessageId();
 
+        bot.setMsgEmojiLikeOk(msgId);
+
         // 搜索模组
         if (MOD_INS.contains(ins)) {
             if (split.length < 3) {
