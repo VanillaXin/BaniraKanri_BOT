@@ -37,7 +37,7 @@ public class McModCommentResult {
         return this;
     }
 
-    public McModCommentResult setCommentType(EnumCommentType commentType) {
+    public McModCommentResult setCommentType(EnumContentType commentType) {
         for (McModCommentRow row : this.row) {
             row.setCommentType(commentType);
         }
@@ -51,7 +51,7 @@ public class McModCommentResult {
         return this;
     }
 
-    public McModCommentResult set(EnumCommentType commentType, String containerId, String replyId) {
+    public McModCommentResult set(EnumContentType commentType, String containerId, String replyId) {
         for (McModCommentRow row : this.row) {
             row.setCommentType(commentType)
                     .setContainerId(containerId)

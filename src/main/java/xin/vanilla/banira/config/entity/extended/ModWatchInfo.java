@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import xin.vanilla.banira.util.mcmod.EnumCommentType;
+import xin.vanilla.banira.util.mcmod.EnumContentType;
 
 /**
  * Mod监控信息
@@ -28,7 +28,7 @@ public class ModWatchInfo {
     /**
      * 评论类型
      */
-    private EnumCommentType commentType;
+    private EnumContentType commentType;
 
     /**
      * 容器ID（mod编号、作者ID、用户ID等）

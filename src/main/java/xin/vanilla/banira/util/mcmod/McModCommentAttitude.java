@@ -62,7 +62,7 @@ public class McModCommentAttitude {
      */
     private Integer handshake;
     /**
-     * 使用（可能为null）
+     * 使用
      */
     private Object use;
 }

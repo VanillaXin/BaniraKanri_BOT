@@ -9,14 +9,28 @@ import lombok.experimental.Accessors;
 @Getter
 @Accessors(fluent = true)
 public enum EnumSearchType {
-    MOD("post_relation_mod"),
-    MODPACK("post_relation_modpack"),
-    AUTHOR("author"),
+    MOD("post_relation_mod", 1),
+    MODPACK("post_relation_modpack", 2),
+    ITEM(3),
+    TUTORIAL(4),
+    AUTHOR("author", 5),
+    USER(6),
     ;
 
     private final String value;
+    private final int filter;
 
-    EnumSearchType(String value) {
+    EnumSearchType(int filter) {
+        this.filter = filter;
+        this.value = null;
+    }
+
+    EnumSearchType(String value, int filter) {
         this.value = value;
+        this.filter = filter;
+    }
+
+    public EnumContentType toContentType() {
+        return EnumContentType.valueOfEx(this.name());
     }
 }

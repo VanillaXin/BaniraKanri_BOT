@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
+import xin.vanilla.banira.util.McModUtils;
 
 import java.util.List;
 
@@ -34,4 +35,8 @@ public class McModIndexCategoryLeft {
      * 模组卡片列表
      */
     private List<McModIndexCategoryModFrame> modFrames;
+
+    public String getCategoryUrl() {
+        return McModUtils.fixUrl(this.categoryUrl);
+    }
 }

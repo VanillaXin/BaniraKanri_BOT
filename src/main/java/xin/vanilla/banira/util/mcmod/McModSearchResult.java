@@ -4,10 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
-import xin.vanilla.banira.util.StringUtils;
+
+import java.util.Date;
 
 /**
- * MCMod 搜索结果
+ * MCMod 搜索结果项
  */
 @Data
 @NoArgsConstructor
@@ -15,33 +16,23 @@ import xin.vanilla.banira.util.StringUtils;
 @Accessors(chain = true)
 public class McModSearchResult {
     /**
-     * mod ID
+     * 副标题
      */
-    private long modId;
+    private String subtitle;
     /**
-     * mod 简称
+     * 标题
      */
-    private String shortName;
+    private String title;
     /**
-     * mod 主要名称
+     * 链接
      */
-    private String mainName;
+    private String link;
     /**
-     * mod 次要名称
+     * 摘要
      */
-    private String secondaryName;
-
-    public String toFormatString() {
-        String format = "";
-        if (StringUtils.isNotNullOrEmpty(this.shortName)) {
-            format += "[" + this.shortName + "] ";
-        }
-        if (StringUtils.isNotNullOrEmpty(this.mainName)) {
-            format += this.mainName + " ";
-        }
-        if (StringUtils.isNotNullOrEmpty(this.secondaryName)) {
-            format += "(" + this.secondaryName + ")";
-        }
-        return format.trim();
-    }
+    private String summary;
+    /**
+     * 快照时间
+     */
+    private Date snapshotTime;
 }

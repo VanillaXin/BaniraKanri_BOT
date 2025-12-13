@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import xin.vanilla.banira.util.mcmod.EnumCommentType;
+import xin.vanilla.banira.util.mcmod.EnumContentType;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -44,7 +44,7 @@ public class McModCommentConfig {
      * @param groupId     群号
      * @param botId       Bot ID
      */
-    public void addModWatch(EnumCommentType commentType, String containerId, Long groupId, Long botId) {
+    public void addModWatch(EnumContentType commentType, String containerId, Long groupId, Long botId) {
         modWatchMap.computeIfAbsent(containerId, k -> new ArrayList<>())
                 .add(new ModWatchInfo().groupId(groupId).botId(botId).commentType(commentType).containerId(containerId));
     }
@@ -56,7 +56,7 @@ public class McModCommentConfig {
      * @param containerId 容器ID
      * @param groupId     群号
      */
-    public void removeModWatch(EnumCommentType commentType, String containerId, Long groupId) {
+    public void removeModWatch(EnumContentType commentType, String containerId, Long groupId) {
         List<ModWatchInfo> watchList = modWatchMap.get(containerId);
         if (watchList != null) {
             watchList.removeIf(info -> info.groupId().equals(groupId)
@@ -75,7 +75,7 @@ public class McModCommentConfig {
      * @param groupId     群号
      * @return 是否监控
      */
-    public boolean isWatching(EnumCommentType commentType, String containerId, Long groupId) {
+    public boolean isWatching(EnumContentType commentType, String containerId, Long groupId) {
         List<ModWatchInfo> watchList = modWatchMap.get(containerId);
         if (watchList == null) {
             return false;
@@ -85,4 +85,3 @@ public class McModCommentConfig {
     }
 
 }
-

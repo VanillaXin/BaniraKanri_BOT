@@ -55,4 +55,13 @@ public enum EnumModCategory {
         this.value = value;
         this.group = group;
     }
+
+    public static EnumModCategory valueOfEx(String name) {
+        for (EnumModCategory value : values()) {
+            if (value.name().equals(name) || ("c_" + value.value()).equalsIgnoreCase(name)) {
+                return value;
+            }
+        }
+        return null;
+    }
 }

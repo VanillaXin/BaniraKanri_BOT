@@ -5,6 +5,11 @@ import com.google.gson.JsonObject;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.nodes.TextNode;
+import org.jsoup.select.Elements;
 import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.McModCookieConfig;
 import xin.vanilla.banira.domain.KeyValue;
@@ -14,12 +19,10 @@ import xin.vanilla.banira.util.mcmod.*;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.IOException;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -63,7 +66,7 @@ public final class McModUtils {
         try {
             OtherConfig otherConfig = BaniraUtils.getOthersConfig(groupId);
             if (otherConfig == null) {
-                LOGGER.error("无法获取配置，groupId: {}", groupId);
+                LOGGER.error("Failed to get config, groupId: {}", groupId);
                 return null;
             }
 
@@ -75,7 +78,7 @@ public final class McModUtils {
 
             // 若配置中有 Cookie 且未过期，直接使用
             if (StringUtils.isNotNullOrEmpty(cookieConfig.cookie()) && !cookieConfig.isExpired()) {
-                LOGGER.debug("使用配置中的 Cookie，groupId: {}", groupId);
+                LOGGER.debug("Using cookie from config, groupId: {}", groupId);
                 // 如果用户ID未缓存，尝试获取
                 if (StringUtils.isNullOrEmpty(cookieConfig.userId())) {
                     String userId = getLoginUserId(cookieConfig.cookie());
@@ -92,26 +95,26 @@ public final class McModUtils {
             String password = cookieConfig.password();
 
             if (StringUtils.isNullOrEmpty(username) || StringUtils.isNullOrEmpty(password)) {
-                LOGGER.error("配置中未设置用户名或密码，无法登录，groupId: {}", groupId);
+                LOGGER.error("Username or password not set in config, cannot login, groupId: {}", groupId);
                 return null;
             }
 
-            LOGGER.info("Cookie 已过期或不存在，使用用户名密码登录，groupId: {}", groupId);
-            String cookie = login(username, password);
+            LOGGER.info("Cookie expired or not found, logging in with username and password, groupId: {}", groupId);
+            KeyValue<String, String> cookie = login(username, password);
 
-            if (cookie != null) {
+            if (cookie != null && cookie.getKey() != null) {
                 // 登录成功，写回配置（默认25天过期）
-                cookieConfig.setCookieWithExpire(cookie);
+                cookieConfig.setCookieWithExpire(cookie.getKey());
                 // 获取并缓存当前登录用户ID
-                String userId = getLoginUserId(cookie);
+                String userId = getLoginUserId(cookie.getKey());
                 if (userId != null) {
                     cookieConfig.userId(userId);
                 }
                 BaniraUtils.saveGroupConfig();
-                LOGGER.info("登录成功，Cookie 已保存到配置，groupId: {}", groupId);
-                return cookie;
+                LOGGER.info("Login successful, cookie saved to config, groupId: {}", groupId);
+                return cookie.getKey();
             } else {
-                LOGGER.error("登录失败，无法获取 Cookie，groupId: {}", groupId);
+                LOGGER.error("Login failed, cannot get cookie, groupId: {}", groupId);
                 return null;
             }
         } finally {
@@ -124,8 +127,9 @@ public final class McModUtils {
      *
      * @param username 用户名
      * @param password 密码
+     * @return KeyValue<cookies, state>
      */
-    private static @Nullable String login(String username, String password) {
+    private static @Nullable KeyValue<String, String> login(String username, String password) {
         try {
             JsonObject loginData = new JsonObject();
             loginData.addProperty("username", username);
@@ -141,33 +145,90 @@ public final class McModUtils {
                     .header("Referer", "https://www.mcmod.cn")
                     .execute();
 
-            if (response != null && response.statusCode() == 200) {
-                // 从响应头中获取 Set-Cookie
-                List<String> setCookies = response.getHeaders("Set-Cookie");
-                if (setCookies != null && !setCookies.isEmpty()) {
-                    // 合并所有 Cookie
-                    StringBuilder cookieBuilder = new StringBuilder();
-                    for (String setCookie : setCookies) {
-                        if (setCookie != null && !setCookie.isEmpty()) {
-                            String[] parts = setCookie.split(";");
-                            if (parts.length > 0) {
-                                String[] kv = parts[0].split("=", 2);
-                                if (kv.length == 2) {
-                                    if (!cookieBuilder.isEmpty()) {
-                                        cookieBuilder.append("; ");
-                                    }
-                                    cookieBuilder.append(kv[0].trim()).append("=").append(kv[1].trim());
-                                }
-                            }
-                        }
-                    }
-                    return !cookieBuilder.isEmpty() ? cookieBuilder.toString() : null;
+            if (response == null) {
+                LOGGER.warn("Login failed, response is null");
+                return null;
+            } else if (response.statusCode() != 200) {
+                LOGGER.warn("Login failed, status code: {}", response.statusCode());
+                return new KeyValue<>(null, String.valueOf(response.statusCode()));
+            }
+
+            String responseBody = response.getBodyAsString();
+            if (responseBody == null) {
+                LOGGER.warn("Login failed, response body is null");
+                return null;
+            }
+
+            // 检查登录响应
+            JsonObject json = JsonUtils.parseJsonObject(responseBody);
+            if (json == null) {
+                LOGGER.warn("Login failed, cannot parse response: {}", responseBody);
+                return null;
+            }
+
+            // 检查 state 字段
+            if (!json.has("state")) {
+                LOGGER.warn("Login failed, response missing state field: {}", responseBody);
+                return null;
+            }
+
+            // 提取 state 值（可能是数字 0 或字符串）
+            String state = null;
+            if (json.get("state").isJsonPrimitive()) {
+                var stateValue = json.get("state").getAsJsonPrimitive();
+                if (stateValue.isNumber()) {
+                    state = "ok";
+                } else if (stateValue.isString()) {
+                    state = stateValue.getAsString();
                 }
             }
-            LOGGER.warn("登录失败，状态码: {}", response != null ? response.statusCode() : "null");
-            return null;
+
+            if (state == null) {
+                LOGGER.warn("Login failed, cannot extract state from response: {}", responseBody);
+                return null;
+            }
+
+            // 检查是否登录成功（state == "0"）
+            boolean loginSuccess = "0".equals(state);
+            if (!loginSuccess) {
+                LOGGER.warn("Login failed, state: {}", state);
+                // 即使失败也返回 state，但 cookie 为 null
+                return new KeyValue<>(null, state);
+            }
+
+            // 登录成功，从响应头中获取 Set-Cookie
+            List<String> setCookies = response.getHeaders("Set-Cookie");
+            if (setCookies == null || setCookies.isEmpty()) {
+                LOGGER.warn("Login successful but no Set-Cookie header found");
+                return new KeyValue<>(null, state);
+            }
+
+            // 合并所有 Cookie
+            StringBuilder cookieBuilder = new StringBuilder();
+            for (String setCookie : setCookies) {
+                if (setCookie != null && !setCookie.isEmpty()) {
+                    String[] parts = setCookie.split(";");
+                    if (parts.length > 0) {
+                        String[] kv = parts[0].split("=", 2);
+                        if (kv.length == 2) {
+                            if (!cookieBuilder.isEmpty()) {
+                                cookieBuilder.append("; ");
+                            }
+                            cookieBuilder.append(kv[0].trim()).append("=").append(kv[1].trim());
+                        }
+                    }
+                }
+            }
+
+            String cookie = !cookieBuilder.isEmpty() ? cookieBuilder.toString() : null;
+            if (cookie == null) {
+                LOGGER.warn("Login successful but cookie is empty");
+                return new KeyValue<>(null, state);
+            }
+
+            return new KeyValue<>(cookie, state);
         } catch (Exception e) {
-            LOGGER.error("登录异常", e);
+            LOGGER.error("Login exception", e);
             return null;
         }
     }
@@ -181,11 +242,11 @@ public final class McModUtils {
      * @param type 搜索类型
      * @return 搜索结果列表
      */
-    private static List<McModSearchResult> parseSearchHtml(String html, EnumSearchType type) {
+    private static List<McModContent> parseSearchHtml(String html, EnumSearchType type) {
         if (StringUtils.isNullOrEmpty(html)) {
             return List.of();
         }
-        List<McModSearchResult> results = new ArrayList<>();
+        List<McModContent> results = new ArrayList<>();
 
         if (type == EnumSearchType.AUTHOR) {
             // 作者：<tr data-id=\"33928\"><td><b>TsukiMaaii</b> - <i class=\"text-muted\">TinyTsuki / 辉小月 / 辉月马以 / 银月马以</i></td></tr>
@@ -213,7 +274,7 @@ public final class McModUtils {
                 }
 
                 if (mainName != null) {
-                    results.add(new McModSearchResult(authorId, null, mainName, secondaryName));
+                    results.add(new McModContent(type.toContentType(), authorId, null, mainName, secondaryName));
                 }
             }
         } else {
@@ -244,7 +305,7 @@ public final class McModUtils {
                     mainName = afterId.substring(0, parenStart).trim();
                 }
 
-                results.add(new McModSearchResult(modId, shortName, mainName, secondaryName));
+                results.add(new McModContent(type.toContentType(), modId, shortName, mainName, secondaryName));
             }
         }
         return results;
@@ -283,29 +344,27 @@ public final class McModUtils {
         }
 
         try {
-            // 分离左右两部分
-            Pattern leftRightPattern = Pattern.compile("<div class=\"left\">(.*?)</div>\\s*</div>\\s*<div class=\"right\">(.*?)</div>\\s*</div>",
-                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-            Matcher leftRightMatcher = leftRightPattern.matcher(html);
-            if (!leftRightMatcher.find()) {
-                leftRightPattern = Pattern.compile("<div class=\"left\">(.*?)<div class=\"right\">(.*?)</div>\\s*</div>",
-                        Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-                leftRightMatcher = leftRightPattern.matcher(html);
-                if (!leftRightMatcher.find()) {
-                    LOGGER.warn("无法分离左右两部分 HTML");
-                    return null;
-                }
+            Document doc = Jsoup.parse(html);
+            Element classBlock = doc.selectFirst(".class_block");
+            if (classBlock == null) {
+                LOGGER.warn("Failed to find .class_block element");
+                return null;
             }
 
-            String leftHtml = leftRightMatcher.group(1);
-            String rightHtml = leftRightMatcher.group(2);
+            Element leftElement = classBlock.selectFirst(".left");
+            Element rightElement = classBlock.selectFirst(".right");
 
-            McModIndexCategoryLeft left = parseIndexCategoryLeftHtml(leftHtml);
-            McModIndexCategoryRight right = parseIndexCategoryRightHtml(rightHtml);
+            if (leftElement == null || rightElement == null) {
+                LOGGER.warn("Failed to separate left and right parts of HTML");
+                return null;
+            }
+
+            McModIndexCategoryLeft left = parseIndexCategoryLeftHtml(leftElement);
+            McModIndexCategoryRight right = parseIndexCategoryRightHtml(rightElement);
 
             return new McModIndexCategoryResult(left, right);
         } catch (Exception e) {
-            LOGGER.error("解析首页分类 HTML 异常", e);
+            LOGGER.error("Exception parsing index category HTML", e);
             return null;
         }
     }
@@ -313,41 +372,28 @@ public final class McModUtils {
     /**
      * 解析左侧 HTML
      */
-    private static McModIndexCategoryLeft parseIndexCategoryLeftHtml(String html) {
+    private static McModIndexCategoryLeft parseIndexCategoryLeftHtml(Element leftElement) {
         // 提取标题和链接
-        Pattern titlePattern = Pattern.compile("<div class=\"title\">.*?<a[^>]*href=\"([^\"]+)\"[^>]*>([^<]+)</a>",
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-        Matcher titleMatcher = titlePattern.matcher(html);
         String categoryUrl = null;
         String title = null;
-        if (titleMatcher.find()) {
-            categoryUrl = titleMatcher.group(1);
-            title = titleMatcher.group(2).trim();
+        Element titleElement = leftElement.selectFirst(".title a");
+        if (titleElement != null) {
+            categoryUrl = titleElement.attr("href");
+            title = titleElement.text().trim();
         }
 
         // 提取描述
-        Pattern descPattern = Pattern.compile("<span class=\"[it]\">([^<]+)</span>");
-        Matcher descMatcher = descPattern.matcher(html);
         String description = null;
-        if (descMatcher.find()) {
-            description = descMatcher.group(1).trim();
+        Element descElement = leftElement.selectFirst(".text span.i, .text span.t");
+        if (descElement != null) {
+            description = descElement.text().trim();
         }
 
         // 提取模组卡片列表
         List<McModIndexCategoryModFrame> modFrames = new ArrayList<>();
-
-        // <div class="frame">...<div class="block">...</div><div class="items">...</div></div>
-        Pattern framePattern = Pattern.compile("<div class=\"frame\"[^>]*>(.*?)(?=<div class=\"frame\"|<div class=\"list\"|$)",
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-        Matcher frameMatcher = framePattern.matcher(html);
-        while (frameMatcher.find()) {
-            String frameHtml = frameMatcher.group(1);
-            // 确保包含 items 块
-            if (!frameHtml.contains("class=\"items\"")) {
-                LOGGER.debug("Frame HTML 不包含 items 块，跳过");
-                continue;
-            }
-            McModIndexCategoryModFrame frame = parseIndexCategoryModFrameHtml(frameHtml);
+        Elements frameElements = leftElement.select(".list .frame");
+        for (Element frameElement : frameElements) {
+            McModIndexCategoryModFrame frame = parseIndexCategoryModFrameHtml(frameElement);
             if (frame != null) {
                 modFrames.add(frame);
             }
@@ -359,65 +405,76 @@ public final class McModUtils {
     /**
      * 解析模组卡片 HTML
      */
-    private static McModIndexCategoryModFrame parseIndexCategoryModFrameHtml(String html) {
+    private static McModIndexCategoryModFrame parseIndexCategoryModFrameHtml(Element frameElement) {
         try {
+            Element blockElement = frameElement.selectFirst(".block");
+            if (blockElement == null) {
+                return null;
+            }
+
             // 提取模组ID和链接
-            Pattern modLinkPattern = Pattern.compile("<a[^>]*href=\"/class/(\\d+)\\.html\"[^>]*>",
-                    Pattern.CASE_INSENSITIVE);
-            Matcher modLinkMatcher = modLinkPattern.matcher(html);
             long modId = 0;
-            if (modLinkMatcher.find()) {
-                modId = Long.parseLong(modLinkMatcher.group(1));
+            Element modLink = blockElement.selectFirst("a[href^=/class/]");
+            if (modLink != null) {
+                String href = modLink.attr("href");
+                Pattern idPattern = Pattern.compile("/class/(\\d+)\\.html");
+                Matcher idMatcher = idPattern.matcher(href);
+                if (idMatcher.find()) {
+                    modId = Long.parseLong(idMatcher.group(1));
+                }
             }
 
             // 提取模组名称
-            Pattern namePattern = Pattern.compile("<div class=\"name[^\"]*\">.*?<a[^>]*title=\"([^\"]+)\"[^>]*>(?<name>([^<]+)(?:<br/>)?([^>]+))</a>",
-                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-            Matcher nameMatcher = namePattern.matcher(html);
             String shortName = null;
             String mainName = null;
             String secondaryName = null;
-            if (nameMatcher.find()) {
-                String afterId = nameMatcher.group("name").trim();
-                afterId = afterId.replace("<br/>", " ");
-                if (afterId.startsWith("[")) {
-                    int end = afterId.indexOf(']');
+            Element nameElement = blockElement.selectFirst(".name a");
+            if (nameElement != null) {
+                String titleAttr = nameElement.attr("title");
+                String nameText = nameElement.text().trim();
+                // 处理 <br/> 标签
+                nameText = nameText.replace("\n", " ").replaceAll("\\s+", " ").trim();
+
+                // 优先使用 title 属性
+                String nameToParse = StringUtils.isNotNullOrEmpty(titleAttr) ? titleAttr : nameText;
+
+                if (nameToParse.startsWith("[")) {
+                    int end = nameToParse.indexOf(']');
                     if (end > 1) {
-                        shortName = afterId.substring(1, end).trim();
-                        afterId = afterId.substring(end + 1).trim();
+                        shortName = nameToParse.substring(1, end).trim();
+                        nameToParse = nameToParse.substring(end + 1).trim();
                     }
                 }
 
-                mainName = afterId;
-                int parenStart = afterId.lastIndexOf('(');
-                if (parenStart >= 0 && afterId.endsWith(")")) {
-                    secondaryName = afterId.substring(parenStart + 1, afterId.length() - 1).trim();
-                    mainName = afterId.substring(0, parenStart).trim();
+                mainName = nameToParse;
+                int parenStart = nameToParse.lastIndexOf('(');
+                if (parenStart >= 0 && nameToParse.endsWith(")")) {
+                    secondaryName = nameToParse.substring(parenStart + 1, nameToParse.length() - 1).trim();
+                    mainName = nameToParse.substring(0, parenStart).trim();
                 }
             }
 
             // 提取封面图片
-            Pattern coverPattern = Pattern.compile("<img[^>]*src=\"([^\"]+)\"[^>]*type-original",
-                    Pattern.CASE_INSENSITIVE);
-            Matcher coverMatcher = coverPattern.matcher(html);
             String coverImageUrl = null;
-            if (coverMatcher.find()) {
-                coverImageUrl = coverMatcher.group(1);
-                if (coverImageUrl.startsWith("//")) {
-                    coverImageUrl = "https:" + coverImageUrl;
+            Element coverImg = blockElement.selectFirst("img[type-original]");
+            if (coverImg != null) {
+                coverImageUrl = coverImg.attr("data-original");
+                if (StringUtils.isNullOrEmpty(coverImageUrl)) {
+                    coverImageUrl = coverImg.attr("src");
+                }
+                if (StringUtils.isNotNullOrEmpty(coverImageUrl)) {
+                    coverImageUrl = fixUrl(coverImageUrl);
                 }
             }
 
             // 提取浏览数、推荐数、收藏数
-            Pattern numPattern = Pattern.compile("<div[^>]*title=\"([^\"]+)\"[^>]*>.*?<i></i>([^<]+)</div>",
-                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-            Matcher numMatcher = numPattern.matcher(html);
             String viewCount = null;
             String recommendCount = null;
             String favoriteCount = null;
-            while (numMatcher.find()) {
-                String title = numMatcher.group(1);
-                String value = numMatcher.group(2).trim();
+            Elements infoElements = blockElement.select(".info .info > div");
+            for (Element infoElement : infoElements) {
+                String title = infoElement.attr("title");
+                String value = infoElement.text().trim();
                 if (title.contains("浏览")) {
                     viewCount = value;
                 } else if (title.contains("推荐")) {
@@ -429,38 +486,32 @@ public final class McModUtils {
 
             // 提取物品列表
             List<McModIndexCategoryItem> items = new ArrayList<>();
-            Pattern itemsPattern = Pattern.compile("<div class=\"items\">((?:<li[^>]*>.*?</li>)*)</div>",
-                    Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-            Matcher itemsMatcher = itemsPattern.matcher(html);
-            if (itemsMatcher.find()) {
-                String itemsHtml = itemsMatcher.group(1);
-                // 匹配 <li iid="xxx"> 格式的物品
-                Pattern itemPattern = Pattern.compile("<li[^>]*iid=\"(\\d+)\"[^>]*>.*?<a[^>]*href=\"([^\"]+)\"[^>]*>.*?<img[^>]*alt=\"([^\"]+)\"[^>]*src=\"([^\"]+)\"",
-                        Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-                Matcher itemMatcher = itemPattern.matcher(itemsHtml);
-                while (itemMatcher.find()) {
+            Element itemsElement = frameElement.selectFirst(".items");
+            if (itemsElement != null) {
+                Elements itemElements = itemsElement.select("li[iid]");
+                for (Element itemElement : itemElements) {
                     try {
-                        long itemId = Long.parseLong(itemMatcher.group(1));
-                        String itemUrl = itemMatcher.group(2);
-                        String itemName = itemMatcher.group(3);
-                        String iconUrl = itemMatcher.group(4);
-
-                        // 处理相对 URL
-                        if (iconUrl.startsWith("//")) {
-                            iconUrl = "https:" + iconUrl;
-                        } else if (iconUrl.startsWith("/")) {
-                            iconUrl = "https://www.mcmod.cn" + iconUrl;
+                        String iidStr = itemElement.attr("iid");
+                        if (StringUtils.isNullOrEmpty(iidStr)) {
+                            continue;
                         }
+                        long itemId = Long.parseLong(iidStr);
 
-                        if (itemUrl.startsWith("//")) {
-                            itemUrl = "https:" + itemUrl;
-                        } else if (itemUrl.startsWith("/")) {
-                            itemUrl = "https://www.mcmod.cn" + itemUrl;
+                        Element itemLink = itemElement.selectFirst("a");
+                        if (itemLink == null) {
+                            continue;
                         }
+                        String itemUrl = fixUrl(itemLink.attr("href"));
 
-                        items.add(new McModIndexCategoryItem(itemId, itemName, iconUrl, itemUrl));
+                        Element itemImg = itemElement.selectFirst("img");
+                        String itemName = itemImg != null ? itemImg.attr("alt") : null;
+                        String iconUrl = itemImg != null ? fixUrl(itemImg.attr("src")) : null;
+
+                        if (itemId > 0 && StringUtils.isNotNullOrEmpty(itemName) && StringUtils.isNotNullOrEmpty(itemUrl)) {
+                            items.add(new McModIndexCategoryItem(itemId, itemName, iconUrl, itemUrl));
+                        }
                     } catch (Exception e) {
-                        LOGGER.warn("解析物品项异常: {}", e.getMessage());
+                        LOGGER.warn("Exception parsing item: {}", e.getMessage());
                     }
                 }
             }
@@ -468,7 +519,7 @@ public final class McModUtils {
             return new McModIndexCategoryModFrame(modId, shortName, mainName, secondaryName, coverImageUrl,
                     viewCount, recommendCount, favoriteCount, items);
         } catch (Exception e) {
-            LOGGER.error("解析模组卡片 HTML 异常", e);
+            LOGGER.error("Exception parsing mod card HTML", e);
             return null;
         }
     }
@@ -476,10 +527,10 @@ public final class McModUtils {
     /**
      * 解析右侧排行榜 HTML
      */
-    private static McModIndexCategoryRight parseIndexCategoryRightHtml(String html) {
-        List<McModIndexCategoryRankItem> dayRank = parseIndexCategoryRankList(html, "day");
-        List<McModIndexCategoryRankItem> weekRank = parseIndexCategoryRankList(html, "week");
-        List<McModIndexCategoryRankItem> monthRank = parseIndexCategoryRankList(html, "moon");
+    private static McModIndexCategoryRight parseIndexCategoryRightHtml(Element rightElement) {
+        List<McModIndexCategoryRankItem> dayRank = parseIndexCategoryRankList(rightElement, "day");
+        List<McModIndexCategoryRankItem> weekRank = parseIndexCategoryRankList(rightElement, "week");
+        List<McModIndexCategoryRankItem> monthRank = parseIndexCategoryRankList(rightElement, "moon");
 
         return new McModIndexCategoryRight(dayRank, weekRank, monthRank);
     }
@@ -487,101 +538,239 @@ public final class McModUtils {
     /**
      * 解析排行榜列表
      */
-    private static List<McModIndexCategoryRankItem> parseIndexCategoryRankList(String html, String rankType) {
+    private static List<McModIndexCategoryRankItem> parseIndexCategoryRankList(Element rightElement, String rankType) {
         List<McModIndexCategoryRankItem> rankList = new ArrayList<>();
-        Pattern rankListPattern = Pattern.compile("<ul id=\"" + rankType + "\"[^>]*>(.*?)</ul>",
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-        Matcher rankListMatcher = rankListPattern.matcher(html);
-        if (!rankListMatcher.find()) {
+        Element rankListElement = rightElement.selectFirst("ul#" + rankType);
+        if (rankListElement == null) {
             return rankList;
         }
 
-        String rankListHtml = rankListMatcher.group(1);
-
-        // 先匹配所有带图片的排行榜项（class="no1"）
-        Pattern rankItemPattern = Pattern.compile("<li[^>]*class=\"no1\"[^>]*>(.*?)</li>",
-                Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-        Matcher rankItemMatcher = rankItemPattern.matcher(rankListHtml);
-
-        while (rankItemMatcher.find()) {
+        // 匹配所有带图片的排行榜项（class="no1"）
+        Elements rankItems = rankListElement.select("li.no1");
+        for (Element rankItem : rankItems) {
             try {
-                String itemHtml = rankItemMatcher.group(1);
-
                 // 提取排名
-                Pattern rankPattern = Pattern.compile("<i class=\"n\\d+\">(\\d+)</i>");
-                Matcher rankMatcher = rankPattern.matcher(itemHtml);
                 int rank = 0;
-                if (rankMatcher.find()) {
-                    rank = Integer.parseInt(rankMatcher.group(1));
+                Element rankIcon = rankItem.selectFirst("i.n1, i.n2, i.n3, i.n4, i.n5, i.n6, i.n7, i.n8, i.n9, i.n10, i.n11, i.n12");
+                if (rankIcon != null) {
+                    String rankText = rankIcon.text().trim();
+                    if (StringUtils.isNotNullOrEmpty(rankText)) {
+                        try {
+                            rank = Integer.parseInt(rankText);
+                        } catch (NumberFormatException e) {
+                            // 尝试从 class 中提取
+                            String className = rankIcon.className();
+                            Pattern rankPattern = Pattern.compile("n(\\d+)");
+                            Matcher rankMatcher = rankPattern.matcher(className);
+                            if (rankMatcher.find()) {
+                                rank = Integer.parseInt(rankMatcher.group(1));
+                            }
+                        }
+                    }
                 }
 
                 // 提取模组ID
-                Pattern modIdPattern = Pattern.compile("<a[^>]*href=\"/class/(\\d+)\\.html\"");
-                Matcher modIdMatcher = modIdPattern.matcher(itemHtml);
                 long modId = 0;
-                if (modIdMatcher.find()) {
-                    modId = Long.parseLong(modIdMatcher.group(1));
+                Element modLink = rankItem.selectFirst("a[href^=/class/]");
+                if (modLink != null) {
+                    String href = modLink.attr("href");
+                    Pattern idPattern = Pattern.compile("/class/(\\d+)\\.html");
+                    Matcher idMatcher = idPattern.matcher(href);
+                    if (idMatcher.find()) {
+                        modId = Long.parseLong(idMatcher.group(1));
+                    }
                 }
 
                 // 提取封面图片
-                Pattern coverPattern = Pattern.compile("<img[^>]*src=\"([^\"]+)\"");
-                Matcher coverMatcher = coverPattern.matcher(itemHtml);
                 String coverImageUrl = null;
-                if (coverMatcher.find()) {
-                    coverImageUrl = coverMatcher.group(1);
-                    if (coverImageUrl.startsWith("//")) {
-                        coverImageUrl = "https:" + coverImageUrl;
+                Element coverImg = rankItem.selectFirst("img");
+                if (coverImg != null) {
+                    coverImageUrl = coverImg.attr("data-original");
+                    if (StringUtils.isNullOrEmpty(coverImageUrl)) {
+                        coverImageUrl = coverImg.attr("src");
+                    }
+                    if (StringUtils.isNotNullOrEmpty(coverImageUrl)) {
+                        coverImageUrl = fixUrl(coverImageUrl);
                     }
                 }
 
-                // 提取模组名称（主名称和英文名）
-                Pattern namePattern = Pattern.compile("<a[^>]*title=\"([^\"]+)\"[^>]*>(?<name>([^<]+)(?:<br/>)?([^>]+))</a>");
-                Matcher nameMatcher = namePattern.matcher(itemHtml);
+                // 提取模组名称
                 String shortName = null;
                 String mainName = null;
                 String secondaryName = null;
-                if (nameMatcher.find()) {
-                    String afterId = nameMatcher.group("name").trim();
-                    afterId = afterId.replace("<br/>", " ");
-                    if (afterId.startsWith("[")) {
-                        int end = afterId.indexOf(']');
+                if (modLink != null) {
+                    String titleAttr = modLink.attr("title");
+                    String nameText = modLink.text().trim();
+                    // 处理 <br/> 标签
+                    nameText = nameText.replace("\n", " ").replaceAll("\\s+", " ").trim();
+
+                    // 优先使用 title 属性
+                    String nameToParse = StringUtils.isNotNullOrEmpty(titleAttr) ? titleAttr : nameText;
+
+                    if (nameToParse.startsWith("[")) {
+                        int end = nameToParse.indexOf(']');
                         if (end > 1) {
-                            shortName = afterId.substring(1, end).trim();
-                            afterId = afterId.substring(end + 1).trim();
+                            shortName = nameToParse.substring(1, end).trim();
+                            nameToParse = nameToParse.substring(end + 1).trim();
                         }
                     }
 
-                    mainName = afterId;
-                    int parenStart = afterId.lastIndexOf('(');
-                    if (parenStart >= 0 && afterId.endsWith(")")) {
-                        secondaryName = afterId.substring(parenStart + 1, afterId.length() - 1).trim();
-                        mainName = afterId.substring(0, parenStart).trim();
+                    mainName = nameToParse;
+                    int parenStart = nameToParse.lastIndexOf('(');
+                    if (parenStart >= 0 && nameToParse.endsWith(")")) {
+                        secondaryName = nameToParse.substring(parenStart + 1, nameToParse.length() - 1).trim();
+                        mainName = nameToParse.substring(0, parenStart).trim();
                     }
                 }
 
                 // 提取指数值
-                Pattern indexPattern = Pattern.compile("<span[^>]*title=\"([^\"]+)\"[^>]*>.*?<i></i>([^<]+)</span>",
-                        Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-                Matcher indexMatcher = indexPattern.matcher(itemHtml);
                 String indexValue = null;
-                if (indexMatcher.find()) {
-                    indexValue = indexMatcher.group(2).trim();
+                Element rankSpan = rankItem.selectFirst("span.rank");
+                if (rankSpan != null) {
+                    indexValue = rankSpan.text().trim();
+                    // 移除"今日指数："等前缀
+                    if (indexValue.contains("指数：")) {
+                        indexValue = indexValue.substring(indexValue.indexOf("指数：") + 3).trim();
+                    }
                 }
 
                 if (modId > 0 && mainName != null) {
                     rankList.add(new McModIndexCategoryRankItem(rank, modId, shortName, mainName, secondaryName, coverImageUrl, indexValue));
                 }
             } catch (Exception e) {
-                LOGGER.warn("解析排行榜项异常: {}", e.getMessage());
+                LOGGER.warn("Exception parsing rank item: {}", e.getMessage());
             }
         }
 
         return rankList;
     }
 
+    /**
+     * 解析随机模组HTML
+     */
+    private static List<McModContent> parseRandomModsHtml(String html) {
+        List<McModContent> items = new ArrayList<>();
+        if (StringUtils.isNullOrEmpty(html)) {
+            return items;
+        }
+
+        try {
+            Document doc = Jsoup.parse(html);
+            Elements blockElements = doc.select(".block");
+            for (Element blockElement : blockElements) {
+                try {
+                    McModContent item = parseRandomModBlock(blockElement);
+                    if (item != null) {
+                        items.add(item);
+                    }
+                } catch (Exception e) {
+                    LOGGER.warn("Exception parsing random mod block: {}", e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Exception parsing random mods HTML: {}", e.getMessage());
+        }
+
+        return items;
+    }
+
+    /**
+     * 解析单个随机模组块
+     */
+    private static @Nullable McModContent parseRandomModBlock(Element blockElement) {
+        try {
+            // 提取链接和ID
+            Element linkElement = blockElement.selectFirst("a[href]");
+            if (linkElement == null) {
+                return null;
+            }
+
+            String href = linkElement.attr("href");
+            EnumContentType type;
+            long id = 0;
+
+            // 判断类型并提取ID
+            if (href.startsWith("/modpack/")) {
+                type = EnumContentType.MODPACK;
+                Pattern idPattern = Pattern.compile("/modpack/(\\d+)\\.html");
+                Matcher idMatcher = idPattern.matcher(href);
+                if (idMatcher.find()) {
+                    id = Long.parseLong(idMatcher.group(1));
+                }
+            } else if (href.startsWith("/class/")) {
+                type = EnumContentType.MOD;
+                Pattern idPattern = Pattern.compile("/class/(\\d+)\\.html");
+                Matcher idMatcher = idPattern.matcher(href);
+                if (idMatcher.find()) {
+                    id = Long.parseLong(idMatcher.group(1));
+                }
+            } else {
+                return null;
+            }
+
+            if (id == 0) {
+                return null;
+            }
+
+            // 提取封面图片
+            String coverImageUrl = null;
+            Element imgElement = blockElement.selectFirst("img");
+            if (imgElement != null) {
+                coverImageUrl = imgElement.attr("data-original");
+                if (StringUtils.isNullOrEmpty(coverImageUrl)) {
+                    coverImageUrl = imgElement.attr("src");
+                }
+                if (StringUtils.isNotNullOrEmpty(coverImageUrl)) {
+                    coverImageUrl = fixUrl(coverImageUrl);
+                }
+            }
+
+            // 提取主名称（第一个 <div class="name"> 中的 <a> 标签）
+            String mainName = null;
+            Elements nameElements = blockElement.select(".info .name");
+            if (!nameElements.isEmpty()) {
+                Element firstNameElement = nameElements.getFirst();
+                Element nameLink = firstNameElement.selectFirst("a");
+                if (nameLink != null) {
+                    String titleAttr = nameLink.attr("title");
+                    String content = nameLink.text().trim();
+                    mainName = StringUtils.isNotNullOrEmpty(titleAttr) ? titleAttr : content;
+                }
+            }
+
+            // 提取次要名称（第二个 <div class="name"> 中的 <div class="enname"> 内的 <a> 标签文本）
+            String secondaryName = null;
+            if (nameElements.size() > 1) {
+                Element secondNameElement = nameElements.get(1);
+                Element ennameElement = secondNameElement.selectFirst(".enname a");
+                if (ennameElement != null) {
+                    String enname = ennameElement.text().trim();
+                    // 移除括号
+                    if (enname.startsWith("(") && enname.endsWith(")")) {
+                        enname = enname.substring(1, enname.length() - 1).trim();
+                    }
+                    if (StringUtils.isNotNullOrEmpty(enname)) {
+                        secondaryName = enname;
+                    }
+                }
+            }
+
+            // 构建详情页URL
+            String detailUrl = fixUrl(href);
+            if (detailUrl == null) {
+                detailUrl = href.startsWith("/") ? "https://www.mcmod.cn" + href : href;
+            }
+
+            return new McModContent(type, id, null, mainName, secondaryName, coverImageUrl, detailUrl);
+        } catch (Exception e) {
+            LOGGER.warn("Exception parsing random mod block: {}", e.getMessage());
+            return null;
+        }
+    }
+
     // endregion private
 
-    public static @Nonnull String getUrl(EnumCommentType type, String containerId) {
+    public static @Nonnull String getUrl(EnumContentType type, String containerId) {
         if (type == null || containerId == null) {
             return "";
         }
@@ -664,7 +853,7 @@ public final class McModUtils {
      * @param key  搜索关键词
      * @return 搜索结果列表
      */
-    public static @Nonnull List<McModSearchResult> search(EnumSearchType type, String key) {
+    public static @Nonnull List<McModContent> search(EnumSearchType type, String key) {
         try {
             JsonObject requestData = new JsonObject();
             requestData.addProperty("key", key);
@@ -689,7 +878,7 @@ public final class McModUtils {
             String html = json.get("html").getAsString();
             return parseSearchHtml(html, type);
         } catch (Exception e) {
-            LOGGER.error("搜索异常，类型: {}, 关键词: {}", type, key, e);
+            LOGGER.error("Search exception, type: {}, keyword: {}", type, key, e);
             return List.of();
         }
     }
@@ -700,7 +889,7 @@ public final class McModUtils {
      * @param key 关键词
      * @return 搜索结果列表
      */
-    public static @Nonnull List<McModSearchResult> searchMod(String key) {
+    public static @Nonnull List<McModContent> searchMod(String key) {
         return search(EnumSearchType.MOD, key);
     }
 
@@ -710,7 +899,7 @@ public final class McModUtils {
      * @param key 关键词
      * @return 搜索结果列表
      */
-    public static @Nonnull List<McModSearchResult> searchModpack(String key) {
+    public static @Nonnull List<McModContent> searchModpack(String key) {
         return search(EnumSearchType.MODPACK, key);
     }
 
@@ -720,13 +909,23 @@ public final class McModUtils {
      * @param key 关键词
      * @return 搜索结果列表
      */
-    public static @Nonnull List<McModSearchResult> searchAuthor(String key) {
+    public static @Nonnull List<McModContent> searchAuthor(String key) {
         return search(EnumSearchType.AUTHOR, key);
     }
 
-    public static McModSearchResult getModName(String modId) {
-        List<McModSearchResult> result = searchMod(modId);
-        return result.size() == 1 && String.valueOf(result.getFirst().getModId()).equals(modId) ? result.getFirst() : null;
+    public static McModContent getModName(String modId) {
+        List<McModContent> result = searchMod(modId);
+        return result.size() == 1 && String.valueOf(result.getFirst().getId()).equals(modId) ? result.getFirst() : null;
+    }
+
+    public static McModContent getAuthorName(String authorId) {
+        List<McModContent> result = searchAuthor(authorId);
+        return result.size() == 1 && String.valueOf(result.getFirst().getId()).equals(authorId) ? result.getFirst() : null;
+    }
+
+    public static McModContent getModpackName(String modpackId) {
+        List<McModContent> result = searchModpack(modpackId);
+        return result.size() == 1 && String.valueOf(result.getFirst().getId()).equals(modpackId) ? result.getFirst() : null;
     }
 
     /**
@@ -756,8 +955,30 @@ public final class McModUtils {
             String html = json.get("html").getAsString();
             return parseIndexCategoryHtml(html);
         } catch (Exception e) {
-            LOGGER.error("获取首页模组列表异常，分类: {}", category, e);
+            LOGGER.error("Exception getting index mod list, category: {}", category, e);
             return null;
+        }
+    }
+
+    /**
+     * 随便看看
+     *
+     */
+    public static @Nonnull List<McModContent> getRandomMods() {
+        try {
+            HttpResponse response = HttpUtils.post("https://www.mcmod.cn/ajax/index/ajax___index_random.php")
+                    .header("Referer", "https://www.mcmod.cn")
+                    .execute();
+
+            if (response == null || response.getBodyAsString() == null) {
+                return new ArrayList<>();
+            }
+
+            String html = response.getBodyAsString();
+            return parseRandomModsHtml(html);
+        } catch (Exception e) {
+            LOGGER.error("Exception getting random mod list", e);
+            return new ArrayList<>();
         }
     }
 
@@ -768,7 +989,7 @@ public final class McModUtils {
      * @param doid 对象ID
      * @param page 页码, 从1开始
      */
-    public static McModCommentResult getComments(EnumCommentType type, String doid, Integer page) {
+    public static McModCommentResult getComments(EnumContentType type, String doid, Integer page) {
         return getComments(type, null, doid, page, false);
     }
 
@@ -781,7 +1002,7 @@ public final class McModUtils {
      * @param page    页码, 从1开始
      * @param self    是否只看自己
      */
-    public static McModCommentResult getComments(EnumCommentType type, String channel, String doid, Integer page, boolean self) {
+    public static McModCommentResult getComments(EnumContentType type, String channel, String doid, Integer page, boolean self) {
         try {
             JsonObject requestData = new JsonObject();
             requestData.addProperty("type", type.value());
@@ -812,7 +1033,7 @@ public final class McModUtils {
             });
             return result != null ? result.set(type, doid, null) : null;
         } catch (Exception e) {
-            LOGGER.error("获取评论异常", e);
+            LOGGER.error("Exception getting comments", e);
             return null;
         }
     }
@@ -851,7 +1072,7 @@ public final class McModUtils {
             });
             return result != null ? result.setReplyId(replyId) : null;
         } catch (Exception e) {
-            LOGGER.error("获取评论回复异常", e);
+            LOGGER.error("Exception getting comment replies", e);
             return null;
         }
     }
@@ -864,7 +1085,7 @@ public final class McModUtils {
      * @param container 容器ID
      * @param text      评论内容（HTML格式，如 "&lt;p&gt;测试&lt;/p&gt;"）
      */
-    public static McModCommentResponse comment(Long groupId, EnumCommentType type, String container, String text) {
+    public static McModCommentResponse comment(Long groupId, EnumContentType type, String container, String text) {
         return comment(groupId, type, null, container, text, 0);
     }
 
@@ -878,11 +1099,11 @@ public final class McModUtils {
      * @param text      评论内容（HTML格式，如 "&lt;p&gt;测试&lt;/p&gt;"）
      * @param quote     引用ID, 默认0
      */
-    public static McModCommentResponse comment(Long groupId, EnumCommentType type, String channel, String container, String text, Integer quote) {
+    public static McModCommentResponse comment(Long groupId, EnumContentType type, String channel, String container, String text, Integer quote) {
         try {
             String cookie = getCookie(groupId);
             if (cookie == null) {
-                LOGGER.error("无法获取 Cookie，评论失败，groupId: {}", groupId);
+                LOGGER.error("Cannot get cookie, comment failed, groupId: {}", groupId);
                 return null;
             }
 
@@ -915,7 +1136,7 @@ public final class McModUtils {
             return com.mikuac.shiro.common.utils.JsonUtils.readValue(xin.vanilla.banira.util.JsonUtils.toJsonString(json), new TypeReference<>() {
             });
         } catch (Exception e) {
-            LOGGER.error("评论异常", e);
+            LOGGER.error("Comment exception", e);
             return null;
         }
     }
@@ -929,7 +1150,7 @@ public final class McModUtils {
      * @param commentId 回复的评论ID
      * @param text      回复内容
      */
-    public static McModCommentResponse replyComment(Long groupId, EnumCommentType type, String container, String commentId, String text) {
+    public static McModCommentResponse replyComment(Long groupId, EnumContentType type, String container, String commentId, String text) {
         return replyComment(groupId, type, "1", container, commentId, text);
     }
 
@@ -943,11 +1164,11 @@ public final class McModUtils {
      * @param commentId 回复的评论ID
      * @param text      回复内容
      */
-    public static McModCommentResponse replyComment(Long groupId, EnumCommentType type, String channel, String container, String commentId, String text) {
+    public static McModCommentResponse replyComment(Long groupId, EnumContentType type, String channel, String container, String commentId, String text) {
         try {
             String cookie = getCookie(groupId);
             if (cookie == null) {
-                LOGGER.error("无法获取 Cookie，回复评论失败，groupId: {}", groupId);
+                LOGGER.error("Cannot get cookie, reply comment failed, groupId: {}", groupId);
                 return null;
             }
 
@@ -980,7 +1201,7 @@ public final class McModUtils {
             return com.mikuac.shiro.common.utils.JsonUtils.readValue(xin.vanilla.banira.util.JsonUtils.toJsonString(json), new TypeReference<>() {
             });
         } catch (Exception e) {
-            LOGGER.error("回复评论异常", e);
+            LOGGER.error("Reply comment exception", e);
             return null;
         }
     }
@@ -995,7 +1216,7 @@ public final class McModUtils {
         try {
             String cookie = getCookie(groupId);
             if (cookie == null) {
-                LOGGER.error("无法获取 Cookie，删除评论失败，groupId: {}", groupId);
+                LOGGER.error("Cannot get cookie, delete comment failed, groupId: {}", groupId);
                 return null;
             }
 
@@ -1024,7 +1245,7 @@ public final class McModUtils {
             return com.mikuac.shiro.common.utils.JsonUtils.readValue(xin.vanilla.banira.util.JsonUtils.toJsonString(json), new TypeReference<>() {
             });
         } catch (Exception e) {
-            LOGGER.error("删除评论异常", e);
+            LOGGER.error("Delete comment exception", e);
             return null;
         }
     }
@@ -1046,13 +1267,13 @@ public final class McModUtils {
         try {
             String cookie = getCookie(groupId);
             if (cookie == null) {
-                LOGGER.error("无法获取 Cookie，上传文件失败，groupId: {}", groupId);
+                LOGGER.error("Cannot get cookie, upload file failed, groupId: {}", groupId);
                 return null;
             }
 
             File file = new File(filePath);
             if (!file.exists() || !file.isFile()) {
-                LOGGER.error("文件不存在: {}", filePath);
+                LOGGER.error("File does not exist: {}", filePath);
                 return null;
             }
 
@@ -1118,7 +1339,7 @@ public final class McModUtils {
             return com.mikuac.shiro.common.utils.JsonUtils.readValue(xin.vanilla.banira.util.JsonUtils.toJsonString(json), new TypeReference<>() {
             });
         } catch (Exception e) {
-            LOGGER.error("上传文件异常", e);
+            LOGGER.error("Upload file exception", e);
             return null;
         }
     }
@@ -1134,7 +1355,7 @@ public final class McModUtils {
         try {
             String cookie = getCookie(groupId);
             if (cookie == null) {
-                LOGGER.error("无法获取 Cookie，删除文件失败，groupId: {}", groupId);
+                LOGGER.error("Cannot get cookie, delete file failed, groupId: {}", groupId);
                 return null;
             }
 
@@ -1169,7 +1390,7 @@ public final class McModUtils {
             return com.mikuac.shiro.common.utils.JsonUtils.readValue(xin.vanilla.banira.util.JsonUtils.toJsonString(json), new TypeReference<>() {
             });
         } catch (Exception e) {
-            LOGGER.error("删除文件异常", e);
+            LOGGER.error("Delete file exception", e);
             return null;
         }
     }
@@ -1199,10 +1420,11 @@ public final class McModUtils {
             }
 
             JsonObject data = json.getAsJsonObject("data");
-            return com.mikuac.shiro.common.utils.JsonUtils.readValue(xin.vanilla.banira.util.JsonUtils.toJsonString(data), new TypeReference<>() {
+            McModUserCardResult result = com.mikuac.shiro.common.utils.JsonUtils.readValue(JsonUtils.toJsonString(data), new TypeReference<>() {
             });
+            return result == null ? null : result.setAvatar(fixUrl(result.getAvatar()));
         } catch (Exception e) {
-            LOGGER.error("获取用户卡片异常", e);
+            LOGGER.error("Exception getting user card", e);
             return null;
         }
     }
@@ -1220,11 +1442,235 @@ public final class McModUtils {
             if (otherConfig != null && otherConfig.mcModCookieConfig() != null) {
                 otherConfig.mcModCookieConfig().cookie(null).expireTime(null).userId(null);
                 BaniraUtils.saveGroupConfig();
-                LOGGER.info("Cookie 缓存已清除，groupId: {}", groupId);
+                LOGGER.info("Cookie cache cleared, groupId: {}", groupId);
             }
         } finally {
             lock.unlock();
         }
     }
 
+
+    /**
+     * 搜索
+     */
+    public static @Nonnull List<McModSearchResult> searchBySearchPage(EnumSearchType type, String query) {
+        try {
+            String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
+            String searchUrl = String.format("https://search.mcmod.cn/s?key=%s&filter=%d&mold=1", encodedQuery, type.filter());
+
+            HttpResponse response = HttpUtils.get(searchUrl)
+                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .header("Referer", "https://search.mcmod.cn/")
+                    .header("Accept-Language", "zh-CN,zh;q=0.9")
+                    .header("X-Requested-With", "XMLHttpRequest")
+                    .execute();
+
+            if (response == null || response.getBodyAsString() == null) {
+                return List.of();
+            }
+
+            String html = response.getBodyAsString();
+            return parseSearchPageHtml(html);
+        } catch (Exception e) {
+            LOGGER.error("Search by search page exception, filter: {}, query: {}", type, query, e);
+            return List.of();
+        }
+    }
+
+    /**
+     * 搜索模组
+     */
+    public static @Nonnull List<McModSearchResult> searchModBySearchPage(String query) {
+        return searchBySearchPage(EnumSearchType.MOD, query);
+    }
+
+    /**
+     * 搜索整合包
+     */
+    public static @Nonnull List<McModSearchResult> searchModpackBySearchPage(String query) {
+        return searchBySearchPage(EnumSearchType.MODPACK, query);
+    }
+
+    /**
+     * 搜索资料
+     */
+    public static @Nonnull List<McModSearchResult> searchDataBySearchPage(String query) {
+        return searchBySearchPage(EnumSearchType.ITEM, query);
+    }
+
+    /**
+     * 搜索教程
+     */
+    public static @Nonnull List<McModSearchResult> searchTutorialBySearchPage(String query) {
+        return searchBySearchPage(EnumSearchType.TUTORIAL, query);
+    }
+
+    /**
+     * 搜索作者
+     */
+    public static @Nonnull List<McModSearchResult> searchAuthorBySearchPage(String query) {
+        return searchBySearchPage(EnumSearchType.AUTHOR, query);
+    }
+
+    /**
+     * 搜索用户
+     */
+    public static @Nonnull List<McModSearchResult> searchUserBySearchPage(String query) {
+        return searchBySearchPage(EnumSearchType.USER, query);
+    }
+
+    /**
+     * 解析搜索页面返回的HTML
+     */
+    private static List<McModSearchResult> parseSearchPageHtml(String html) {
+        List<McModSearchResult> results = new ArrayList<>();
+        if (StringUtils.isNullOrEmpty(html)) {
+            return results;
+        }
+
+        try {
+            Document doc = Jsoup.parse(html);
+
+            // 匹配搜索结果项：.result-item, .media, .search-list .item, .user-list .row, .list .row
+            Elements items = doc.select(".result-item, .media, .search-list .item, .user-list .row, .list .row");
+
+            for (Element item : items) {
+                McModSearchResult result = parseSearchPageItem(item);
+                if (result != null && result.getTitle() != null && result.getLink() != null) {
+                    results.add(result);
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Exception parsing search page HTML: {}", e.getMessage());
+        }
+
+        return results;
+    }
+
+    /**
+     * 解析单个搜索结果项
+     */
+    private static @Nullable McModSearchResult parseSearchPageItem(Element item) {
+        try {
+            // 提取副标题
+            String subtitle = null;
+            Element subtitleItem = item.selectFirst(".head .class-category a");
+            if (subtitleItem != null) {
+                String categoryClass = subtitleItem.attr("class");
+                if (StringUtils.isNotNullOrEmpty(categoryClass) && categoryClass.startsWith("c_")) {
+                    EnumModCategory category = EnumModCategory.valueOfEx(categoryClass);
+                    subtitle = category == null ? null : category.name();
+                }
+            } else {
+                Element headItem = item.selectFirst(".head");
+                if (headItem != null && headItem.childNodeSize() > 1 && headItem.childNode(0) instanceof TextNode node) {
+                    subtitle = cleanText(node.text());
+                }
+            }
+
+            String title = null;
+            String link = null;
+            // 尝试多种选择器：.head > a, .media-heading a, 或第一个有文本的 a 标签
+            Element titleLink = item.selectFirst(".head > a");
+            if (titleLink == null) {
+                titleLink = item.selectFirst(".media-heading a");
+            }
+            if (titleLink == null) {
+                // 查找第一个有文本的 a 标签
+                Elements links = item.select("a");
+                for (Element a : links) {
+                    String text = a.text().trim();
+                    if (!text.isEmpty()) {
+                        titleLink = a;
+                        break;
+                    }
+                }
+            }
+
+            if (titleLink != null) {
+                link = titleLink.attr("href");
+                title = cleanText(titleLink.text());
+            }
+
+            if (title == null || title.isEmpty() || link == null || link.isEmpty()) {
+                return null;
+            }
+
+            // 修复链接URL
+            link = fixUrl(link);
+            if (link == null || link.contains("target=") || Pattern.matches("^\\d+$", title)) {
+                return null;
+            }
+
+            // 提取模组名称
+            String modName = null;
+            Element modNameEl = item.selectFirst(".meta span, .source, .media-body .text-muted");
+            if (modNameEl != null) {
+                modName = cleanText(modNameEl.text());
+            }
+
+            // 提取摘要
+            String summary = null;
+            Element bodyEl = item.selectFirst(".body, .media-body");
+            if (bodyEl != null) {
+                String bodyText = cleanText(bodyEl.text());
+                if (!bodyText.isEmpty()) {
+                    // 移除标题和模组名称
+                    summary = bodyText.replace(title, "").replace(modName != null ? modName : "", "").trim();
+                }
+            }
+
+            // 提取时间
+            Date snapshotTime = null;
+            Elements footNodes = item.select(".foot .info .value");
+            for (Element footNode : footNodes) {
+                snapshotTime = DateUtils.format(footNode.text());
+                if (snapshotTime != null) break;
+            }
+
+            return new McModSearchResult()
+                    .setSubtitle(subtitle)
+                    .setTitle(title)
+                    .setSummary(summary != null ? summary : "")
+                    .setLink(link)
+                    .setSnapshotTime(snapshotTime);
+        } catch (Exception e) {
+            LOGGER.warn("Exception parsing search page item: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 清理文本
+     */
+    private static String cleanText(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replaceAll("[\\r\\n\\t]+", "").trim();
+    }
+
+    /**
+     * 修复URL
+     */
+    public static @Nullable String fixUrl(String url) {
+        if (StringUtils.isNullOrEmptyEx(url)) {
+            return null;
+        }
+        if (url.startsWith("//")) {
+            return "https:" + url;
+        }
+        if (url.startsWith("/")) {
+            return "https://mcmod.cn" + url;
+        }
+        if (!url.startsWith("http")) {
+            return "https://mcmod.cn/" + url;
+        }
+        return url;
+    }
+
+
+    public static void main(String[] args) {
+        System.out.println(getRandomMods());
+    }
 }

@@ -5,7 +5,7 @@ import lombok.experimental.Accessors;
 
 @Getter
 @Accessors(fluent = true)
-public enum EnumCommentType {
+public enum EnumContentType {
     MOD("class"),
     MODPACK("modpack"),
     AUTHOR("author"),
@@ -14,12 +14,12 @@ public enum EnumCommentType {
 
     private final String value;
 
-    EnumCommentType(String value) {
+    EnumContentType(String value) {
         this.value = value;
     }
 
-    public static EnumCommentType valueOfEx(String value) {
-        for (EnumCommentType type : values()) {
+    public static EnumContentType valueOfEx(String value) {
+        for (EnumContentType type : values()) {
             if (type.value.equalsIgnoreCase(value) || type.name().equalsIgnoreCase(value)) {
                 return type;
             }

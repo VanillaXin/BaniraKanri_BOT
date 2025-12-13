@@ -12,7 +12,7 @@ import xin.vanilla.banira.event.DatabaseInitializedEvent;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.mcmod.EnumCommentType;
+import xin.vanilla.banira.util.mcmod.EnumContentType;
 import xin.vanilla.banira.util.mcmod.McModCommentRow;
 
 import java.util.List;
@@ -152,7 +152,7 @@ public class McModCommentScheduler {
 
                     // 同一cacheKey的类型和容器ID应该相同
                     ModWatchInfo firstWatchInfo = watchInfos.getFirst();
-                    EnumCommentType commentType = firstWatchInfo.commentType();
+                    EnumContentType commentType = firstWatchInfo.commentType();
                     String containerId = firstWatchInfo.containerId();
 
                     try {

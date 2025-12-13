@@ -50,7 +50,7 @@ public class McModCommentService {
      * @param containerId 容器ID
      * @return 缓存key
      */
-    public static String getCacheKey(EnumCommentType commentType, String containerId) {
+    public static String getCacheKey(EnumContentType commentType, String containerId) {
         return commentType.value() + ":" + containerId;
     }
 
@@ -60,7 +60,7 @@ public class McModCommentService {
      * @param commentType 评论类型
      * @param containerId 容器ID
      */
-    public static Set<McModCommentRow> fetchComments(EnumCommentType commentType, String containerId) {
+    public static Set<McModCommentRow> fetchComments(EnumContentType commentType, String containerId) {
         String cacheKey = getCacheKey(commentType, containerId);
         Set<McModCommentRow> result = new HashSet<>();
         try {
@@ -70,8 +70,8 @@ public class McModCommentService {
                 // 获取所有评论的回复
                 for (McModCommentRow comment : comments.getRow()) {
                     if (comment.isReply()) continue;
-                    // 休眠5秒
-                    Thread.sleep(5000);
+                    // 休眠2秒
+                    Thread.sleep(2000);
                     McModCommentResult replies = McModUtils.getCommentReplies(comment.getId(), 1);
                     if (replies != null) {
                         result.addAll(replies.getRow());
@@ -89,8 +89,8 @@ public class McModCommentService {
                     result.addAll(replies.getRow());
                     McModCommentResult curent = replies;
                     while (curent != null && curent.getPage() != null && curent.getPage().getNext() != null) {
-                        // 休眠5秒
-                        Thread.sleep(5000);
+                        // 休眠2秒
+                        Thread.sleep(2000);
                         curent = McModUtils.getComments(commentType, containerId, curent.getPage().getNext());
                         if (curent != null) {
                             result.addAll(curent.getRow());
@@ -111,7 +111,7 @@ public class McModCommentService {
      * @param containerId 容器ID
      * @param comments    最新拉取的评论列表
      */
-    public static @Nonnull Set<McModCommentRow> getNewComments(EnumCommentType commentType, String containerId, Set<McModCommentRow> comments) {
+    public static @Nonnull Set<McModCommentRow> getNewComments(EnumContentType commentType, String containerId, Set<McModCommentRow> comments) {
         String cacheKey = getCacheKey(commentType, containerId);
         Set<McModCommentRow> commentCache = COMMENT_CACHE.computeIfAbsent(cacheKey, k -> new HashSet<>());
 
@@ -314,7 +314,7 @@ public class McModCommentService {
      * @param containerId 容器ID
      * @param id          评论ID
      */
-    public static String getCommentKey(EnumCommentType commentType, String containerId, String id) {
+    public static String getCommentKey(EnumContentType commentType, String containerId, String id) {
         return (commentType != null ? commentType.value() : "") + ":" +
                 (containerId != null ? containerId : "") + ":" +
                 (id != null ? id : "");
@@ -339,51 +339,50 @@ public class McModCommentService {
      * @param comment     评论信息
      * @return 格式化后的消息
      */
-    public static String formatCommentMessage(EnumCommentType commentType, String containerId, McModCommentRow comment) {
-        String result = "【MC百科新评论提醒】\n" +
-                "评论类型: " + getCommentTypeName(commentType) + "\n" +
-                "容器ID: " + containerId + "\n";
+    public static String formatCommentMessage(EnumContentType commentType, String containerId, McModCommentRow comment) {
+        String result = "类型: " + commentType.name() + "\n" +
+                "容器: " + containerId + "\n" +
+                "编号: " + comment.getId() + "\n";
 
         // 根据类型添加链接和名称
-        if (commentType == EnumCommentType.MOD) {
-            result += "链接: " + McModUtils.getModUrl(containerId) + "\n";
-            McModSearchResult modName = McModUtils.getModName(containerId);
+        if (commentType == EnumContentType.MOD) {
+            result += "链接: " + McModUtils.getUrl(commentType, containerId) + "\n";
+            McModContent modName = McModUtils.getModName(containerId);
             if (modName != null) {
-                result += "模组名称: " + modName.toFormatString() + "\n";
+                result += "名称: " + modName.getFormattedName() + "\n";
             }
-        } else if (commentType == EnumCommentType.MODPACK) {
-            result += "链接: " + McModUtils.getModpackUrl(containerId) + "\n";
-        } else if (commentType == EnumCommentType.AUTHOR) {
-            result += "链接: https://www.mcmod.cn/author/" + containerId + ".html\n";
-        } else if (commentType == EnumCommentType.USER_CENTER) {
-            result += "链接: https://www.mcmod.cn/center/" + containerId + ".html\n";
+        } else if (commentType == EnumContentType.MODPACK) {
+            result += "链接: " + McModUtils.getUrl(commentType, containerId) + "\n";
+            McModContent modpackName = McModUtils.getModpackName(containerId);
+            if (modpackName != null) {
+                result += "名称: " + modpackName.getFormattedName() + "\n";
+            }
+        } else if (commentType == EnumContentType.AUTHOR) {
+            result += "链接: " + McModUtils.getUrl(commentType, containerId) + "\n";
+            McModContent authorName = McModUtils.getAuthorName(containerId);
+            if (authorName != null) {
+                result += "名称: " + authorName.getFormattedName() + "\n";
+            }
+        } else if (commentType == EnumContentType.USER_CENTER) {
+            result += "链接: " + McModUtils.getUrl(commentType, containerId) + "\n";
         }
 
         // 如果是回复，显示原评论摘要
         if (comment.getParentComment() != null) {
-            result += "类型: 评论回复\n" +
-                    "原评论编号: " + comment.getParentId() + "\n" +
-                    "原评论用户: " + comment.getParentComment().getUser().getName() + "\n" +
-                    "原评论摘要: " + getCommentSummary(comment.getParentComment().getContent()) + "\n" +
-                    "回复编号: " + comment.getId() + "\n" +
-                    "回复用户: " + comment.getUser().getName() + " (" + comment.getUser().getId() + ")\n" +
-                    "回复时间: " + comment.getTime().getSource() + "\n" +
-                    "回复内容: " + comment.getContent() + "\n" +
-                    "---\n" +
-                    "评论类型: " + commentType.value() + "\n" +
-                    "容器ID: " + containerId + "\n" +
-                    "评论ID: " + comment.getId();
-        } else {
-            // 普通评论
-            result += "类型: 新评论\n" +
-                    "楼层: " + comment.getFloor() + "\n" +
+            result = "【MC百科新回复提醒】\n" + result;
+            result += "原文编号: " + comment.getParentId() + "\n" +
+                    "原文用户: " + comment.getParentComment().getUser().getName() + "\n" +
+                    "原文摘要: " + getCommentSummary(comment.getParentComment().getFormattedContent()) + "\n" +
                     "用户: " + comment.getUser().getName() + " (" + comment.getUser().getId() + ")\n" +
-                    "时间: " + comment.getTime() + "\n" +
-                    "内容: " + comment.getContent() + "\n" +
-                    "---\n" +
-                    "评论类型: " + commentType.value() + "\n" +
-                    "容器ID: " + containerId + "\n" +
-                    "评论ID: " + comment.getId();
+                    "时间: " + comment.getTime().getSource() + "\n" +
+                    "内容: " + comment.getFormattedContent();
+        } else {
+            result = "【MC百科新评论提醒】\n" + result;
+            // 普通评论
+            result += "楼层: " + comment.getFloor() + "\n" +
+                    "用户: " + comment.getUser().getName() + " (" + comment.getUser().getId() + ")\n" +
+                    "时间: " + comment.getTime().getSource() + "\n" +
+                    "内容: " + comment.getFormattedContent();
         }
         return result;
     }
@@ -391,7 +390,7 @@ public class McModCommentService {
     /**
      * 获取评论类型名称
      */
-    private static String getCommentTypeName(EnumCommentType commentType) {
+    private static String getCommentTypeName(EnumContentType commentType) {
         return switch (commentType) {
             case MOD -> "模组";
             case MODPACK -> "整合包";
@@ -425,7 +424,7 @@ public class McModCommentService {
      * @param containerId 容器ID
      * @param comment     评论信息
      */
-    public static void sendCommentToGroup(BaniraBot bot, Long groupId, EnumCommentType commentType, String containerId, McModCommentRow comment) {
+    public static void sendCommentToGroup(BaniraBot bot, Long groupId, EnumContentType commentType, String containerId, McModCommentRow comment) {
         try {
             OtherConfig othersConfig = BaniraUtils.getOthersConfig(groupId);
             if (othersConfig == null || othersConfig.mcModCommentConfig() == null || !othersConfig.mcModCommentConfig().enable()) {
