@@ -393,7 +393,7 @@ public class McModPlugin extends BasePlugin {
             msg.text("\n时间: ").text(DateUtils.toString(result.getSnapshotTime()));
         }
 
-        return msg.toString();
+        return msg.build();
     }
 
     /**
