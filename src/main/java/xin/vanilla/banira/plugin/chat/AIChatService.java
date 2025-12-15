@@ -58,10 +58,14 @@ public class AIChatService {
         for (String sysPrompt : cfg.systemPrompt()) {
             prompt.add(SystemMessage.from(sysPrompt));
         }
+        // 让模型保持更“有人味”的口吻与语境
+        prompt.add(SystemMessage.systemMessage("你是一位轻松友善的聊天伙伴，语气自然、口语化，允许适度表情符号和感叹（不要过度），使用第一人称，尽量简短且避免机械感。"));
+        prompt.add(SystemMessage.systemMessage("如果问题简单，可随性用一句话回应；遇到不确定可反问或给出简单思考，而不是生硬的模板化回答。"));
+        prompt.add(SystemMessage.systemMessage("请参考最近对话上下文，避免重复用户原话；能给出直接答案就不要堆砌前后缀；如果上下文模糊，可先澄清再回答。"));
         prompt.add(SystemMessage.systemMessage("当前时间是：" + DateUtils.toDateTimeString(now)));
         prompt.add(SystemMessage.systemMessage("你的昵称为：" + loginInfoEx.getNickname()));
         prompt.add(SystemMessage.systemMessage("回复应尽量简短"));
-        List<MessageRecord> records = getHistoryRecords(bot, ctx);
+        List<MessageRecord> records = normalizeHistoryRecords(getHistoryRecords(bot, ctx));
         for (MessageRecord record : records) {
             ChatMessage message = convertMessage(record.getMsgRecode(), bot, record.getGroupId(), record.getSenderId());
             if (message != null) prompt.add(message);
@@ -93,8 +97,7 @@ public class AIChatService {
         } else {
             for (String msg : splitter.split(reply)) {
                 try {
-                    // 延时
-                    Thread.sleep(this.random.nextInt(cfg.minTypingSpeed(), cfg.maxTypingSpeed()));
+                    Thread.sleep(calcTypingDelayMillis(msg));
                 } catch (Exception ignored) {
                 }
                 if (ctx.msgType() == EnumMessageType.GROUP) {
@@ -146,6 +149,41 @@ public class AIChatService {
 
     private IMessageRecordManager getMessageRecordManager() {
         return SpringContextHolder.getBean(IMessageRecordManager.class);
+    }
+
+    /**
+     * 清洗并按时间顺序整理历史记录
+     */
+    private List<MessageRecord> normalizeHistoryRecords(List<MessageRecord> records) {
+        if (records == null || records.isEmpty()) return Collections.emptyList();
+        List<MessageRecord> cleaned = new ArrayList<>();
+        for (MessageRecord record : records) {
+            if (record == null) continue;
+            if (StringUtils.isNullOrEmptyEx(record.getMsgRecode())) continue;
+            cleaned.add(record);
+        }
+        cleaned.sort(Comparator.comparing(MessageRecord::getTime, Comparator.nullsLast(Long::compareTo)));
+        if (cleaned.size() > cfg.historyLimit()) {
+            return cleaned.subList(cleaned.size() - cfg.historyLimit(), cleaned.size());
+        }
+        return cleaned;
+    }
+
+    /**
+     * 根据消息长度与配置计算较自然的打字延迟
+     * 避免机械的固定间隔
+     */
+    private long calcTypingDelayMillis(String msg) {
+        if (StringUtils.isNullOrEmptyEx(msg)) return random.nextLong(80, 120);
+        int len = msg.length();
+        int minPerChar = Math.max(30, cfg.minTypingSpeed());
+        int maxPerChar = Math.max(minPerChar + 1, cfg.maxTypingSpeed());
+        // 基于字符数的期望延迟，再加入 0.5~1.2 的抖动
+        double jitter = 0.5 + random.nextDouble(0.7);
+        long estimate = (long) (len * random.nextInt(minPerChar, maxPerChar) * jitter);
+        // 进一步加一小段起始思考时间
+        long thinking = random.nextLong(120, 420);
+        return Math.min(5000L, Math.max(120L, estimate + thinking));
     }
 
 }

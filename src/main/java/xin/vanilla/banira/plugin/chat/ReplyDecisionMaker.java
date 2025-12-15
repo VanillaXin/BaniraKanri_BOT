@@ -3,6 +3,7 @@ package xin.vanilla.banira.plugin.chat;
 import lombok.extern.slf4j.Slf4j;
 import xin.vanilla.banira.config.entity.extended.ChatConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.time.Clock;
 import java.time.Duration;
@@ -37,6 +38,9 @@ public class ReplyDecisionMaker {
     }
 
     public boolean shouldReply(BaniraCodeContext ctx, boolean isMentioned) {
+        if (ctx == null || StringUtils.isNullOrEmptyEx(ctx.msg())) {
+            return false;
+        }
         if (!cfg.enabled()) {
             LOGGER.debug("reply disabled in config");
             return false;
@@ -111,9 +115,15 @@ public class ReplyDecisionMaker {
         // 基础概率
         double p = cfg.baseReplyProbability();
 
-        if (isMentioned) p = Math.min(1.0, p + cfg.mentionBoost());
         String msg = ctx == null || ctx.msg() == null ? "" : ctx.msg();
         int len = msg.length();
+        boolean question = isQuestion(msg);
+
+        // 直接被点名/回复时应明显提升
+        if (isMentioned) p = Math.min(1.0, p + cfg.mentionBoost() + 0.35);
+        if (question) p = Math.min(1.0, p + 0.20);
+
+        // 简短问候类消息略加权，极长内容降低触发
         if (len < 12) p = Math.min(1.0, p + 0.15);
         if (len > 400) p = Math.max(0.02, p - 0.25);
 
@@ -139,12 +149,11 @@ public class ReplyDecisionMaker {
         }
 
         // 最终结合
-        double finalP = p * scale;
+        double floor = 0.0;
+        if (isMentioned) floor = 0.70;
+        else if (question) floor = 0.45;
 
-        // TODO 对“明确请求/疑问”作提升
-        if (msg.endsWith("?") || msg.endsWith("？")) {
-            finalP = Math.min(1.0, finalP + 0.10); // 问题更可能得到回复
-        }
+        double finalP = Math.max(p, floor) * scale;
 
         // clamp
         if (finalP < 0.0) finalP = 0.0;
@@ -157,5 +166,11 @@ public class ReplyDecisionMaker {
         synchronized (recentTimestamps) {
             return recentTimestamps.size();
         }
+    }
+
+    private boolean isQuestion(String msg) {
+        if (msg == null) return false;
+        String trimmed = msg.trim();
+        return trimmed.endsWith("?") || trimmed.endsWith("？") || trimmed.contains("吗") || trimmed.toLowerCase().contains("what") || trimmed.toLowerCase().contains("how");
     }
 }
