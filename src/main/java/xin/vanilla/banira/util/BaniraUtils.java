@@ -1146,6 +1146,14 @@ public final class BaniraUtils {
 
     // region 文件缓存
 
+    public static String saveFileToCachePath(byte[] bytes, EnumCacheFileType type) {
+        File file = new File(String.format("cache/%s/%s", type, StringUtils.md5(bytes)));
+        file = FileUtil.writeBytes(bytes, file);
+        if (file != null) {
+            return getCacheAbsolutePath(file.getName(), type);
+        }
+        return null;
+    }
 
     /**
      * 下载文件到缓存目录

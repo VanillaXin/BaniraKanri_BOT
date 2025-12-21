@@ -28,6 +28,7 @@ import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.WifeConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.WifeRecord;
+import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.mapper.param.WifeRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
@@ -430,7 +431,7 @@ public class WifePlugin extends BasePlugin {
                             , loginInfoEx.getNickname()
                             , MsgUtils.builder()
                                     .text("阁下的年度词云")
-                                    .img(outputStream.toByteArray())
+                                    .img(BaniraUtils.saveFileToCachePath(outputStream.toByteArray(), EnumCacheFileType.image))
                                     .build()
                     ));
                 }
@@ -469,7 +470,7 @@ public class WifePlugin extends BasePlugin {
                             , loginInfoEx.getNickname()
                             , MsgUtils.builder()
                                     .text("阁下的年度老婆云")
-                                    .img(outputStream.toByteArray())
+                                    .img(BaniraUtils.saveFileToCachePath(outputStream.toByteArray(), EnumCacheFileType.image))
                                     .build()
                     ));
                 }
@@ -578,7 +579,7 @@ public class WifePlugin extends BasePlugin {
                             , loginInfoEx.getNickname()
                             , MsgUtils.builder()
                                     .text("群内年度词云")
-                                    .img(outputStream.toByteArray())
+                                    .img(BaniraUtils.saveFileToCachePath(outputStream.toByteArray(), EnumCacheFileType.image))
                                     .build()
                     ));
                 }
@@ -685,7 +686,7 @@ public class WifePlugin extends BasePlugin {
                             , loginInfoEx.getNickname()
                             , MsgUtils.builder()
                                     .text("年度词云")
-                                    .img(outputStream.toByteArray())
+                                    .img(BaniraUtils.saveFileToCachePath(outputStream.toByteArray(), EnumCacheFileType.image))
                                     .build()
                     ));
                 }
