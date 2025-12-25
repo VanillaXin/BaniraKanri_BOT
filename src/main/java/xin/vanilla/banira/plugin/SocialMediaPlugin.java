@@ -104,33 +104,37 @@ public class SocialMediaPlugin extends BasePlugin {
 
     @AnyMessageHandler
     public boolean parse(BaniraBot bot, AnyMessageEvent event) {
-        if (isEnable(event.getGroupId())) {
-            List<SocialMediaContent> contents = new ArrayList<>();
-            for (SocialMediaParser parser : parsers) {
-                if (parser.hasSocialMedia(event.getMessage())) {
-                    contents.addAll(parser.parse(event.getMessage()));
-                }
+        if (!isEnable(event.getGroupId())) return false;
+
+        List<SocialMediaContent> contents = new ArrayList<>();
+        for (SocialMediaParser parser : parsers) {
+            if (parser.hasSocialMedia(event.getMessage())) {
+                contents.addAll(parser.parse(event.getMessage()));
             }
-            if (CollectionUtils.isNotNullOrEmpty(contents)) {
-                // 普通消息
-                if (contents.size() == 1) {
-                    SocialMediaContent content = contents.getFirst();
-                    ActionData<MsgId> msgId = bot.sendMsg(event, content.msg(), false);
+        }
+        if (CollectionUtils.isNotNullOrEmpty(contents)) {
+            bot.setMsgEmojiLike(event.getMessageId(), 162);
+            // 普通消息
+            if (contents.size() == 1) {
+                SocialMediaContent content = contents.getFirst();
+                ActionData<MsgId> msgId = bot.sendMsg(event, content.msg(), false);
 
-                    if (!StringUtils.isNullOrEmptyEx(content.video())) {
-                        bot.sendMsg(event, new MsgUtils().video(content.video(), content.cover()).build(), false);
-                        // bot.uploadGroupFile(event.getGroupId(), content.video(), content.title() + ".mp4");
-                    }
-                    if (!StringUtils.isNullOrEmptyEx(content.audio()) && BaniraUtils.isGroupIdValid(event.getGroupId())) {
-                        bot.uploadGroupFile(event.getGroupId(), content.audio(), content.title() + ".mp3");
-                    }
+                if (!StringUtils.isNullOrEmptyEx(content.video())) {
+                    bot.sendMsg(event, new MsgUtils().video(content.video(), content.cover()).build(), false);
+                    // bot.uploadGroupFile(event.getGroupId(), content.video(), content.title() + ".mp4");
+                }
+                if (!StringUtils.isNullOrEmptyEx(content.audio()) && BaniraUtils.isGroupIdValid(event.getGroupId())) {
+                    bot.uploadGroupFile(event.getGroupId(), content.audio(), content.title() + ".mp3");
+                }
 
-                    return bot.isActionDataMsgIdNotEmpty(msgId);
-                }
-                // 合并转发
-                else {
-                    // 一次解析这么多干嘛
-                }
+                return bot.isActionDataMsgIdNotEmpty(msgId)
+                        ? bot.setMsgEmojiLikeHeart(event.getMessageId())
+                        : bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+            }
+            // 合并转发
+            else {
+                // 一次解析这么多干嘛
+                return bot.setMsgEmojiLikeNo(event.getMessageId());
             }
         }
         return false;

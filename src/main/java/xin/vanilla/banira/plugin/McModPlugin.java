@@ -951,7 +951,9 @@ public class McModPlugin extends BasePlugin {
             }
 
             ActionData<MsgId> msgDataId = bot.sendGroupMsg(groupId, sb.toString(), false);
-            return bot.isActionDataMsgIdNotEmpty(msgDataId);
+            return bot.isActionDataMsgIdNotEmpty(msgDataId)
+                    ? bot.setMsgEmojiLikeHeart(msgId)
+                    : bot.setMsgEmojiLikeBrokenHeart(msgId);
         } catch (Exception e) {
             LOGGER.error("Error listing containers", e);
             return bot.setMsgEmojiLikeBrokenHeart(msgId);
