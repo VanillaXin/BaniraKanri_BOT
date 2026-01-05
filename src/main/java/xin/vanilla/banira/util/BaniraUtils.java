@@ -345,10 +345,12 @@ public final class BaniraUtils {
     // region 回复
 
     public static boolean hasReply(List<ArrayMsg> arrayMsg) {
+        if (CollectionUtils.isNullOrEmpty(arrayMsg)) return false;
         return arrayMsg.stream().anyMatch(e -> e.getType() == MsgTypeEnum.reply);
     }
 
     public static Long getReplyId(List<ArrayMsg> arrayMsg) {
+        if (CollectionUtils.isNullOrEmpty(arrayMsg)) return null;
         return arrayMsg.stream()
                 .filter(e -> e.getType() == MsgTypeEnum.reply)
                 .findFirst()
@@ -376,6 +378,7 @@ public final class BaniraUtils {
     }
 
     public static long getReplyUserId(BaniraBot bot, Long groupId, List<ArrayMsg> arrayMsg) {
+        if (CollectionUtils.isNullOrEmpty(arrayMsg)) return 0;
         long qq = arrayMsg.stream()
                 .filter(e -> e.getType() == MsgTypeEnum.reply)
                 .findFirst()
@@ -465,10 +468,12 @@ public final class BaniraUtils {
     // region 艾特
 
     public static boolean hasAt(List<ArrayMsg> arrayMsg) {
+        if (CollectionUtils.isNullOrEmpty(arrayMsg)) return false;
         return arrayMsg.stream().anyMatch(e -> e.getType() == MsgTypeEnum.at);
     }
 
     public static long getAtUserId(List<ArrayMsg> arrayMsg) {
+        if (CollectionUtils.isNullOrEmpty(arrayMsg)) return 0;
         return arrayMsg.stream()
                 .filter(e -> e.getType() == MsgTypeEnum.at)
                 .findFirst()
@@ -491,6 +496,7 @@ public final class BaniraUtils {
     }
 
     public static boolean hasAtAll(List<ArrayMsg> arrayMsg) {
+        if (CollectionUtils.isNullOrEmpty(arrayMsg)) return false;
         return ShiroUtils.isAtAll(arrayMsg) || hasAtAll(MessageConverser.arraysToString(arrayMsg));
     }
 
@@ -549,11 +555,13 @@ public final class BaniraUtils {
     }
 
     public static boolean hasForward(List<ArrayMsg> arrayMsg) {
+        if (CollectionUtils.isNullOrEmpty(arrayMsg)) return false;
         return arrayMsg.stream()
                 .anyMatch(e -> e.getType() == MsgTypeEnum.forward || hasForward(e.getData()));
     }
 
     public static Long getForwardId(List<ArrayMsg> arrayMsg) {
+        if (CollectionUtils.isNullOrEmpty(arrayMsg)) return null;
         return arrayMsg.stream()
                 .filter(e -> e.getType() == MsgTypeEnum.forward)
                 .findFirst()
