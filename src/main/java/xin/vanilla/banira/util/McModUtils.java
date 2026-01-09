@@ -172,32 +172,27 @@ public final class McModUtils {
                 return null;
             }
 
-            // 提取 state 值（可能是数字 0 或字符串）
+            // 提取 state 值
             String state = null;
             if (json.get("state").isJsonPrimitive()) {
-                var stateValue = json.get("state").getAsJsonPrimitive();
-                if (stateValue.isNumber()) {
-                    state = "ok";
-                } else if (stateValue.isString()) {
-                    state = stateValue.getAsString();
-                }
+                state = json.get("state").getAsJsonPrimitive().getAsString();
             }
 
             if (state == null) {
                 LOGGER.warn("Login failed, cannot extract state from response: {}", responseBody);
                 return null;
             }
+            // 从响应头中获取 Set-Cookie
+            List<String> setCookies = response.getHeaders("Set-Cookie");
 
             // 检查是否登录成功（state == "0"）
             boolean loginSuccess = "0".equals(state);
             if (!loginSuccess) {
-                LOGGER.warn("Login failed, state: {}", state);
+                LOGGER.warn("Login failed, state: {}, cookies: {}", state, setCookies);
                 // 即使失败也返回 state，但 cookie 为 null
                 return new KeyValue<>(null, state);
             }
 
-            // 登录成功，从响应头中获取 Set-Cookie
-            List<String> setCookies = response.getHeaders("Set-Cookie");
             if (setCookies == null || setCookies.isEmpty()) {
                 LOGGER.warn("Login successful but no Set-Cookie header found");
                 return new KeyValue<>(null, state);
@@ -962,7 +957,6 @@ public final class McModUtils {
 
     /**
      * 随便看看
-     *
      */
     public static @Nonnull List<McModContent> getRandomMods() {
         try {
