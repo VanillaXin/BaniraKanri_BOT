@@ -74,7 +74,7 @@ public class RecallCode implements MessageCoder {
                 , ""
         ).coder(true);
 
-        String[] args = {String.valueOf(1)};
+        String[] args = {String.valueOf(0)};
 
         if (recallCommand.execute(kanriContext, args) != KanriHandler.FAIL) {
             context.msg(context.msg().replace(placeholder, ""));
