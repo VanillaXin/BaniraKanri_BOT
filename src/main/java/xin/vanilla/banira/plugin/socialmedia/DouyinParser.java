@@ -27,7 +27,7 @@ public class DouyinParser implements SocialMediaParser {
                     // 分享链接: https://www.iesdouyin.com/share/video/123456789012345678
                     "(?:https?:\\\\?/\\\\?/)?(?:www\\.)?iesdouyin\\.com\\\\?/share\\\\?/video\\\\?/(?<shareVideoId>\\d{18,})",
                     // 短链接: https://v.douyin.com/xxxxxx (支持6-20个字符，更宽松)
-                    "(?:https?:\\\\?/\\\\?/)?v\\.douyin\\.com\\\\?/(?<shortId>[0-9A-Za-z]{6,20})(?:/|\\s|\\?|$)",
+                    "(?:https?:\\\\?/\\\\?/)?v\\.douyin\\.com\\\\?/(?<shortId>[\\w-]{6,20})(?:/|\\s|\\?|$)",
                     // 纯数字ID: 123456789012345678
                     "(?<!\\d)(?<pureId>\\d{18,})(?!\\d)"
             )
