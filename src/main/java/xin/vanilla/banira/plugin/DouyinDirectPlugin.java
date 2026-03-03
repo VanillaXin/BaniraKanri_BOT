@@ -59,6 +59,8 @@ public class DouyinDirectPlugin extends BasePlugin {
             return false;
         }
 
+        bot.setMsgEmojiLike(event.getMessageId(), 162);
+
         boolean sent = false;
         for (String awemeId : awemeIds) {
             JsonObject detail = requestAwemeDetail(awemeId);
@@ -71,7 +73,10 @@ public class DouyinDirectPlugin extends BasePlugin {
             sent = true;
         }
 
-        return sent;
+        if (sent) {
+            return bot.setMsgEmojiLikeHeart(event.getMessageId());
+        }
+        return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
     }
 
     private Set<String> extractAwemeIds(String message) {
