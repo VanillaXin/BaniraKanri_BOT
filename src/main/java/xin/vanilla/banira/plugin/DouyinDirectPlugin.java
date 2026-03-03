@@ -9,8 +9,10 @@ import jakarta.annotation.Nonnull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.domain.KeyValue;
+import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.HttpUtils;
 import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.StringUtils;
@@ -60,12 +62,12 @@ public class DouyinDirectPlugin extends BasePlugin {
         boolean sent = false;
         for (String awemeId : awemeIds) {
             JsonObject detail = requestAwemeDetail(awemeId);
-            String videoUrl = getPlayableVideoUrl(detail);
-            if (StringUtils.isNullOrEmptyEx(videoUrl)) {
+            String videoPath = downloadVideoToLocal(detail);
+            if (StringUtils.isNullOrEmptyEx(videoPath)) {
                 continue;
             }
             String cover = getCoverUrl(detail);
-            bot.sendMsg(event, MsgUtils.builder().video(videoUrl, cover).build(), false);
+            bot.sendMsg(event, MsgUtils.builder().video(videoPath, cover).build(), false);
             sent = true;
         }
 
@@ -152,6 +154,25 @@ public class DouyinDirectPlugin extends BasePlugin {
                 new KeyValue<>("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
         );
         return JsonUtils.parseJsonObject(response);
+    }
+
+    private String downloadVideoToLocal(JsonObject detail) {
+        String videoUrl = getPlayableVideoUrl(detail);
+        if (StringUtils.isNullOrEmptyEx(videoUrl)) {
+            return null;
+        }
+
+        String fileName = BaniraUtils.downloadFileToCachePath(
+                videoUrl,
+                EnumCacheFileType.video,
+                new KeyValue<>("referer", "https://www.douyin.com/"),
+                new KeyValue<>("origin", "https://www.douyin.com"),
+                new KeyValue<>("user-agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        );
+        if (StringUtils.isNullOrEmptyEx(fileName)) {
+            return null;
+        }
+        return BaniraUtils.getCacheAbsolutePath(fileName, EnumCacheFileType.video);
     }
 
     private String normalizeMessage(String message) {
