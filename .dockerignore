@@ -1,0 +1,21 @@
+# 构建产物与缓存
+.gradle
+build
+**/build
+
+# IDE 与本地工具
+.idea
+.vscode
+.cursor
+*.iml
+
+# 日志与运行时数据
+logs
+cache
+data
+config
+
+# Git 与杂项（保留 .git 供 generateGitProperties / bootJar 使用）
+.gitignore
+*.md
+docker-compose*.yml

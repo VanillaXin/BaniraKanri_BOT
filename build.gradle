@@ -127,29 +127,40 @@ tasks.named('bootJar') {
 
 // 清除现有的libs目录
 tasks.register('clearJar', Delete) {
-    delete "$buildDir\\libs\\libs"
+    delete file("${buildDir}/libs/libs")
 }
 
 // 将依赖包复制到libs目录
 tasks.register('copyJar', Copy) {
     dependsOn 'clearJar'
     from configurations.compileClasspath
-    into "$buildDir\\libs\\libs"
+    into file("${buildDir}/libs/libs")
+}
+
+def safeGitOutput = { String... args ->
+    try {
+        def cmd = new ArrayList<String>()
+        cmd.add('git')
+        cmd.addAll(args)
+        def pb = new ProcessBuilder(cmd)
+        pb.redirectErrorStream(true)
+        def p = pb.start()
+        def out = p.inputStream.getText('UTF-8').trim()
+        return p.waitFor() == 0 && out ? out : null
+    } catch (Throwable ignored) {
+        return null
+    }
 }
 
 gitProperties {
     keys = ['git.branch', 'git.commit.id.abbrev', 'git.commit.time']
 
     customProperty('git.commit.count') {
-        def process = "git rev-list --count HEAD".execute()
-        process.waitFor()
-        return process.text.trim()
+        safeGitOutput('rev-list', '--count', 'HEAD') ?: '0'
     }
 
     customProperty('git.last.commit.short') {
-        def process = "git rev-parse --short=7 HEAD".execute()
-        process.waitFor()
-        return process.text.trim()
+        safeGitOutput('rev-parse', '--short=7', 'HEAD') ?: 'unknown'
     }
 
     dateFormat = "yyyy-MM-dd HH:mm:ss"

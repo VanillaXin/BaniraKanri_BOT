@@ -1,0 +1,15 @@
+services:
+  banira-kanri:
+    build: .
+    image: banira-kanri:latest
+    container_name: banira-kanri
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+      - ./config:/app/config
+      - ./logs:/app/logs
+      - ./cache:/app/cache
+    environment:
+      TZ: Asia/Shanghai
