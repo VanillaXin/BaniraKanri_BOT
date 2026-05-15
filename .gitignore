@@ -42,6 +42,7 @@ logs
 data
 config
 cache
+dist/
 
 # 构建镜像用字体（本地拷贝，不提交仓库）
 docker/fonts/*.ttf
