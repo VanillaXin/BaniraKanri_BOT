@@ -7,9 +7,11 @@ import java.util.List;
  */
 public interface SocialMediaParser {
 
+    String type();
+
     boolean hasSocialMedia(String msg);
 
-    List<SocialMediaContent> parse(String msg);
+    List<String> extractTargets(String msg);
 
     void build(SocialMediaContent content);
 

@@ -1,11 +1,8 @@
 package xin.vanilla.banira.plugin.socialmedia;
 
-import cn.hutool.http.HttpUtil;
-import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.util.HttpUtils;
-import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.RegexpHelper;
 import xin.vanilla.banira.util.StringUtils;
 
@@ -18,8 +15,6 @@ import java.util.regex.Pattern;
 
 @Component
 public class BilibiliParser implements SocialMediaParser {
-
-    private static final String BILIBILI_API = "https://api.mir6.com/api/bzjiexi?type=json&url=%s";
 
     private static final Pattern BILIBILI_PATTERN = new RegexpHelper()
             .groupNonIg(
@@ -85,38 +80,27 @@ public class BilibiliParser implements SocialMediaParser {
     }
 
     @Override
-    public List<SocialMediaContent> parse(String msg) {
-        List<SocialMediaContent> contents = new ArrayList<>();
+    public String type() {
+        return "bilibili";
+    }
+
+    @Override
+    public List<String> extractTargets(String msg) {
+        List<String> targets = new ArrayList<>();
         List<String> videoIds = extractVideoIds(msg);
-
         for (String videoId : videoIds) {
-            String url;
             if (videoId.startsWith("http")) {
-                url = videoId;
+                targets.add(videoId);
             } else if (videoId.startsWith("BV") || videoId.startsWith("av")) {
-                url = "https://www.bilibili.com/video/" + videoId;
+                targets.add("https://www.bilibili.com/video/" + videoId);
             } else {
-                url = HttpUtils.getRedirectedUrl("https://b23.tv/" + videoId);
-            }
-
-            String response = HttpUtil.get(BILIBILI_API.formatted(url));
-            JsonObject jsonObject = JsonUtils.parseJsonObject(response);
-            if (jsonObject != null && JsonUtils.getInt(jsonObject, "code", 201) == 200) {
-                SocialMediaContent content = new SocialMediaContent();
-                content.title(JsonUtils.getString(jsonObject, "title"));
-                content.cover(JsonUtils.getString(jsonObject, "imgurl"));
-                content.desc(JsonUtils.getString(jsonObject, "desc"));
-                content.authorName(JsonUtils.getString(jsonObject, "user.name"));
-                content.authorAvatar(JsonUtils.getString(jsonObject, "user.user_img"));
-                content.video(JsonUtils.getString(jsonObject, "data.[0].video_url"));
-                content.url(url);
-
-                build(content);
-                contents.add(content);
+                String redirectedUrl = HttpUtils.getRedirectedUrl("https://b23.tv/" + videoId);
+                if (StringUtils.isNotNullOrEmpty(redirectedUrl)) {
+                    targets.add(redirectedUrl);
+                }
             }
         }
-
-        return contents;
+        return targets;
     }
 
     @Override

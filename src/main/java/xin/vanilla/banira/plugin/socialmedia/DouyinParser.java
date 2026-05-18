@@ -1,10 +1,7 @@
 package xin.vanilla.banira.plugin.socialmedia;
 
-import cn.hutool.http.HttpUtil;
-import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.RegexpHelper;
 
 import java.util.ArrayList;
@@ -16,8 +13,6 @@ import java.util.regex.Pattern;
 
 @Component
 public class DouyinParser implements SocialMediaParser {
-
-    private static final String DOUYIN_API = "https://apis.jxcxin.cn/api/douyin?url=%s";
 
     // 使用命名捕获组统一提取视频ID和短链接ID（包含模式，匹配文本中任何位置的链接）
     private static final Pattern DOUYIN_PATTERN = new RegexpHelper()
@@ -80,40 +75,25 @@ public class DouyinParser implements SocialMediaParser {
     }
 
     @Override
-    public List<SocialMediaContent> parse(String msg) {
-        List<SocialMediaContent> contents = new ArrayList<>();
+    public String type() {
+        return "douyin";
+    }
+
+    @Override
+    public List<String> extractTargets(String msg) {
+        List<String> targets = new ArrayList<>();
         List<String> videoIds = extractVideoIds(msg);
 
         for (String videoId : videoIds) {
-            String url;
             if (videoId.startsWith("http")) {
-                url = videoId;
+                targets.add(videoId);
             } else if (videoId.matches("\\d{18,}")) {
-                // 纯数字ID转换为标准链接
-                url = "https://www.douyin.com/video/" + videoId;
+                targets.add("https://www.douyin.com/video/" + videoId);
             } else {
-                // 短链接ID
-                url = "https://v.douyin.com/" + videoId;
-            }
-
-            String response = HttpUtil.get(DOUYIN_API.formatted(url));
-            JsonObject jsonObject = JsonUtils.parseJsonObject(response);
-            if (jsonObject != null && JsonUtils.getInt(jsonObject, "code", 201) == 200) {
-                SocialMediaContent content = new SocialMediaContent();
-                content.title(JsonUtils.getString(jsonObject, "data.title"));
-                content.cover(JsonUtils.getString(jsonObject, "data.cover"));
-                content.authorName(JsonUtils.getString(jsonObject, "data.author"));
-                content.authorAvatar(JsonUtils.getString(jsonObject, "data.avatar"));
-                content.video(JsonUtils.getString(jsonObject, "data.url"));
-                content.like(JsonUtils.getInt(jsonObject, "data.like"));
-                content.url(url);
-
-                build(content);
-                contents.add(content);
+                targets.add("https://v.douyin.com/" + videoId);
             }
         }
-
-        return contents;
+        return targets;
     }
 
     @Override

@@ -3,6 +3,7 @@ package xin.vanilla.banira.plugin;
 import com.mikuac.shiro.annotation.AnyMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.MsgUtils;
+import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.MsgId;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
@@ -15,6 +16,7 @@ import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.plugin.socialmedia.SocialMediaApiService;
 import xin.vanilla.banira.plugin.socialmedia.SocialMediaContent;
 import xin.vanilla.banira.plugin.socialmedia.SocialMediaParser;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -23,6 +25,7 @@ import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 社交媒体解析
@@ -34,6 +37,8 @@ public class SocialMediaPlugin extends BasePlugin {
 
     @Autowired(required = false)
     private List<SocialMediaParser> parsers = new ArrayList<>();
+    @Autowired
+    private SocialMediaApiService socialMediaApiService;
 
     /**
      * 获取帮助信息
@@ -108,36 +113,44 @@ public class SocialMediaPlugin extends BasePlugin {
 
         List<SocialMediaContent> contents = new ArrayList<>();
         for (SocialMediaParser parser : parsers) {
-            if (parser.hasSocialMedia(event.getMessage())) {
-                contents.addAll(parser.parse(event.getMessage()));
-            }
+            contents.addAll(socialMediaApiService.parse(parser, event.getMessage()));
         }
         if (CollectionUtils.isNotNullOrEmpty(contents)) {
             bot.setMsgEmojiLike(event.getMessageId(), 162);
-            // 普通消息
-            if (contents.size() == 1) {
-                SocialMediaContent content = contents.getFirst();
-                ActionData<MsgId> msgId = bot.sendMsg(event, content.msg(), false);
-
-                if (!StringUtils.isNullOrEmptyEx(content.video())) {
-                    bot.sendMsg(event, new MsgUtils().video(content.video(), content.cover()).build(), false);
-                    // bot.uploadGroupFile(event.getGroupId(), content.video(), content.title() + ".mp4");
-                }
-                if (!StringUtils.isNullOrEmptyEx(content.audio()) && BaniraUtils.isGroupIdValid(event.getGroupId())) {
-                    bot.uploadGroupFile(event.getGroupId(), content.audio(), content.title() + ".mp3");
-                }
-
-                return bot.isActionDataMsgIdNotEmpty(msgId)
-                        ? bot.setMsgEmojiLikeHeart(event.getMessageId())
-                        : bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+            List<Map<String, Object>> forwardMsg = buildForwardMsg(bot, contents);
+            if (CollectionUtils.isNullOrEmpty(forwardMsg)) {
+                return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             }
-            // 合并转发
-            else {
-                // 一次解析这么多干嘛
-                return bot.setMsgEmojiLikeNo(event.getMessageId());
-            }
+            ActionData<MsgId> msgId = bot.sendForwardMsg(event, forwardMsg);
+            return bot.isActionDataMsgIdNotEmpty(msgId)
+                    ? bot.setMsgEmojiLikeHeart(event.getMessageId())
+                    : bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
         }
         return false;
+    }
+
+    private List<Map<String, Object>> buildForwardMsg(BaniraBot bot, List<SocialMediaContent> contents) {
+        List<Map<String, Object>> forwardMsg = new ArrayList<>();
+        Long botId = bot.getSelfId();
+        String botName = bot.getLoginInfoEx().getNickname();
+
+        for (SocialMediaContent content : contents) {
+            StringBuilder sb = new StringBuilder();
+            if (StringUtils.isNotNullOrEmpty(content.msg())) {
+                sb.append(content.msg());
+            }
+            if (StringUtils.isNotNullOrEmpty(content.video())) {
+                if (!sb.isEmpty()) {
+                    sb.append("\n");
+                }
+                sb.append(MsgUtils.builder().video(content.video(), content.cover()).build());
+            }
+            if (StringUtils.isNullOrEmptyEx(sb.toString())) {
+                continue;
+            }
+            forwardMsg.add(ShiroUtils.generateSingleMsg(botId, botName, sb.toString()));
+        }
+        return forwardMsg;
     }
 
     private boolean isEnable(Long groupId) {
