@@ -12,7 +12,6 @@ import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.basic.PluginConfig;
 import xin.vanilla.banira.event.GlobalConfigReloadedEvent;
 import xin.vanilla.banira.plugin.RecorderPlugin;
-import xin.vanilla.banira.start.SpringContextHolder;
 import xin.vanilla.banira.util.ReflectionUtils;
 
 import java.lang.annotation.Annotation;
@@ -28,9 +27,11 @@ import java.util.stream.Collectors;
 public class BotFactoryHandlerSorter implements ApplicationListener<ContextRefreshedEvent> {
 
     private final Supplier<GlobalConfig> globalConfig;
+    private final BotFactory botFactory;
 
-    public BotFactoryHandlerSorter(Supplier<GlobalConfig> globalConfig, org.springframework.context.ApplicationContext ctx) {
+    public BotFactoryHandlerSorter(Supplier<GlobalConfig> globalConfig, BotFactory botFactory) {
         this.globalConfig = globalConfig;
+        this.botFactory = botFactory;
     }
 
     @Override
@@ -46,7 +47,7 @@ public class BotFactoryHandlerSorter implements ApplicationListener<ContextRefre
     private void sortHandlers(String reason) {
         try {
             // 获取 annotationMethodContainer 字段
-            BotFactory.AnnotationMethodContainer container = ReflectionUtils.getFieldValue(SpringContextHolder.getBean(BotFactory.class)
+            BotFactory.AnnotationMethodContainer container = ReflectionUtils.getFieldValue(botFactory
                     , "annotationMethodContainer"
                     , BotFactory.AnnotationMethodContainer.class
             );

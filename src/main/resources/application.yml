@@ -9,12 +9,13 @@ spring:
     username:
     password:
     hikari:
-      minimum-idle: 10
-      maximum-pool-size: 30
+      minimum-idle: 1
+      maximum-pool-size: 4
       idle-timeout: 30000
       pool-name: BaniraHikari
       max-lifetime: 1800000
       connection-timeout: 30000
+      connection-init-sql: PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000;
   sql:
     init:
       mode: never

@@ -4,7 +4,6 @@ import com.mikuac.shiro.model.ArrayMsg;
 import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
-import dev.langchain4j.data.message.VideoContent;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.HttpUtils;

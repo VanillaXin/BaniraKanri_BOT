@@ -7,6 +7,9 @@ import lombok.experimental.Accessors;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.util.BaniraUtils;
 
+import java.util.HashSet;
+import java.util.Set;
+
 @Setter
 @Getter
 @Accessors(chain = true, fluent = true)
@@ -42,6 +45,7 @@ public class KanriContext {
     private final String content;
 
     private boolean coder = false;
+    private final Set<Long> noPermissionTargets = new HashSet<>();
 
     public KanriContext(MessageEvent event, BaniraBot bot, Long group, Long sender, Integer msgId, String guildMsgId, String content) {
         this.event = event;

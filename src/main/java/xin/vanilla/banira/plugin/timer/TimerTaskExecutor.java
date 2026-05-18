@@ -10,7 +10,7 @@ import xin.vanilla.banira.domain.TimerRecord;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.DateUtils;
-import xin.vanilla.banira.util.JsonUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 @Slf4j
 @Component
@@ -21,8 +21,7 @@ public class TimerTaskExecutor implements ITimerTaskExecutor {
 
     @Override
     public void execute(TimerRecord task) {
-        String taskJsonStrong = JsonUtils.toJsonString(task);
-        LOGGER.info("Executing timer task: {}", taskJsonStrong);
+        LOGGER.info("Executing timer task: {}", buildSafeTaskSummary(task));
 
         BaniraBot bot = BaniraUtils.getBot(task.getBotId());
         if (bot == null) return;
@@ -45,7 +44,16 @@ public class TimerTaskExecutor implements ITimerTaskExecutor {
             bot.sendPrivateMsg(decode.sender(), decode.msg(), false);
         }
 
-        LOGGER.info("Executed timer task: {}", taskJsonStrong);
+        LOGGER.info("Executed timer task: {}", buildSafeTaskSummary(task));
+    }
+
+    private String buildSafeTaskSummary(TimerRecord task) {
+        if (task == null) {
+            return "task=null";
+        }
+        int msgLength = StringUtils.isNullOrEmptyEx(task.getReplyMsg()) ? 0 : task.getReplyMsg().length();
+        return String.format("id=%s, botId=%s, groupId=%s, creatorId=%s, cron=%s, replyMsgLength=%d",
+                task.getId(), task.getBotId(), task.getGroupId(), task.getCreatorId(), task.getCron(), msgLength);
     }
 
 }

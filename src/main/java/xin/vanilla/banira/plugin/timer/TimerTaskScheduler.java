@@ -1,9 +1,9 @@
 package xin.vanilla.banira.plugin.timer;
 
-import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
+import org.quartz.impl.matchers.GroupMatcher;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.domain.TimerRecord;
@@ -14,6 +14,7 @@ import xin.vanilla.banira.service.ITimerRecordManager;
 import xin.vanilla.banira.util.CronUtils;
 
 import java.util.List;
+import java.util.Set;
 
 @Slf4j
 @Component
@@ -34,22 +35,12 @@ public class TimerTaskScheduler {
     public void loadTimers() {
         try {
             LOGGER.info("Refreshing all Quartz timer tasks...");
-            // scheduler.clear();
+            clearTimerJobs();
             List<TimerRecord> enabled = timerRecordManager.getTimerRecordList(new TimerRecordQueryParam().setEnable(true));
             enabled.forEach(this::scheduleIfValid);
             LOGGER.info("Refreshed {} enabled timer tasks.", enabled.size());
         } catch (Exception e) {
             LOGGER.error("Error refreshing timer tasks", e);
-        }
-    }
-
-    @PreDestroy
-    public void shutdown() {
-        try {
-            LOGGER.info("Shutting down Quartz Scheduler...");
-            scheduler.shutdown(true);
-        } catch (SchedulerException e) {
-            LOGGER.error("Error shutting down Quartz", e);
         }
     }
 
@@ -96,6 +87,15 @@ public class TimerTaskScheduler {
         } catch (Exception e) {
             LOGGER.error("Failed to schedule task id={}", timer.getId(), e);
         }
+    }
+
+    private void clearTimerJobs() throws SchedulerException {
+        Set<JobKey> jobKeys = scheduler.getJobKeys(GroupMatcher.groupEquals("timer-tasks"));
+        if (jobKeys.isEmpty()) {
+            return;
+        }
+        scheduler.deleteJobs(List.copyOf(jobKeys));
+        LOGGER.info("Cleared {} timer jobs before reload", jobKeys.size());
     }
 
     /**

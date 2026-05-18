@@ -137,7 +137,7 @@ public class PermissionCommand implements KanriHandler {
                     if (context.bot().isUpper(context.group(), context.sender(), targetId)) {
                         permissions.remove(op);
                     } else {
-                        nop.add(targetId);
+                        context.noPermissionTargets().add(targetId);
                     }
                 }
             }

@@ -8,6 +8,7 @@ import xin.vanilla.banira.plugin.keyword.MatchStrategy;
 import xin.vanilla.banira.plugin.keyword.MatchStrategyFactory;
 import xin.vanilla.banira.service.IKeywordCacheManager;
 import xin.vanilla.banira.service.IKeywordManager;
+import xin.vanilla.banira.service.model.CachedKeyword;
 import xin.vanilla.banira.util.AhoCorasick;
 import xin.vanilla.banira.util.BaniraUtils;
 
@@ -26,7 +27,7 @@ public class KeywordManager implements IKeywordManager {
 
     @Override
     public KeywordRecord findMatchReply(String input, Long botId, Long groupId) {
-        List<KeywordCacheManager.CachedKeyword> matches = new ArrayList<>();
+        List<CachedKeyword> matches = new ArrayList<>();
 
         // 处理每种匹配类型
         for (EnumKeywordType type : EnumKeywordType.values()) {
@@ -40,10 +41,10 @@ public class KeywordManager implements IKeywordManager {
                 break;
                 // 包含匹配
                 case CONTAIN: {
-                    AhoCorasick<KeywordCacheManager.CachedKeyword> ahoCorasick = keywordCacheService.getAhoCorasick(EnumKeywordType.CONTAIN);
+                    AhoCorasick<CachedKeyword> ahoCorasick = keywordCacheService.getAhoCorasick(EnumKeywordType.CONTAIN);
                     if (ahoCorasick != null) {
-                        Collection<KeywordCacheManager.CachedKeyword> results = ahoCorasick.search(input);
-                        for (KeywordCacheManager.CachedKeyword result : results) {
+                        Collection<CachedKeyword> results = ahoCorasick.search(input);
+                        for (CachedKeyword result : results) {
                             if (result != null) {
                                 matches.add(result);
                             }
@@ -54,9 +55,9 @@ public class KeywordManager implements IKeywordManager {
                 // 拼音匹配、正则匹配
                 case PINYIN:
                 case REGEX: {
-                    List<KeywordCacheManager.CachedKeyword> keywords = keywordCacheService.getKeywordsByType(type);
+                    List<CachedKeyword> keywords = keywordCacheService.getKeywordsByType(type);
                     MatchStrategy strategy = strategyFactory.getStrategy(type);
-                    for (KeywordCacheManager.CachedKeyword keyword : keywords) {
+                    for (CachedKeyword keyword : keywords) {
                         if (strategy.match(input, keyword.getKeyword())) {
                             matches.add(keyword);
                         }
@@ -78,12 +79,12 @@ public class KeywordManager implements IKeywordManager {
         return weightedRandom(matches).toKeywordRecord();
     }
 
-    private List<KeywordCacheManager.CachedKeyword> findExactMatches(String input) {
-        List<KeywordCacheManager.CachedKeyword> result = new ArrayList<>();
-        List<KeywordCacheManager.CachedKeyword> exactKeywords =
+    private List<CachedKeyword> findExactMatches(String input) {
+        List<CachedKeyword> result = new ArrayList<>();
+        List<CachedKeyword> exactKeywords =
                 keywordCacheService.getKeywordsByType(EnumKeywordType.EXACT);
 
-        for (KeywordCacheManager.CachedKeyword keyword : exactKeywords) {
+        for (CachedKeyword keyword : exactKeywords) {
             if (input.equals(keyword.getKeyword())) {
                 result.add(keyword);
             }
@@ -92,16 +93,16 @@ public class KeywordManager implements IKeywordManager {
         return result;
     }
 
-    private static KeywordCacheManager.CachedKeyword weightedRandom(List<KeywordCacheManager.CachedKeyword> items) {
+    private static CachedKeyword weightedRandom(List<CachedKeyword> items) {
         long totalWeight = 0;
-        for (KeywordCacheManager.CachedKeyword item : items) {
+        for (CachedKeyword item : items) {
             totalWeight += item.getPriority();
         }
 
         long randomValue = ThreadLocalRandom.current().nextLong(totalWeight);
         int currentWeight = 0;
 
-        for (KeywordCacheManager.CachedKeyword item : items) {
+        for (CachedKeyword item : items) {
             currentWeight += item.getPriority();
             if (randomValue < currentWeight) {
                 return item;

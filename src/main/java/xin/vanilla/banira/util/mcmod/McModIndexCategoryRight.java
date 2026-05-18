@@ -19,12 +19,12 @@ public class McModIndexCategoryRight {
      * 今日排行榜
      */
     private List<McModIndexCategoryRankItem> dayRank;
-    
+
     /**
      * 本周排行榜
      */
     private List<McModIndexCategoryRankItem> weekRank;
-    
+
     /**
      * 本月排行榜
      */

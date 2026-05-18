@@ -110,7 +110,7 @@ public class MaidCommand implements KanriHandler {
                     groupConfig.get().maid().computeIfAbsent(context.group(), k -> new ArrayList<>())
                             .removeIf(maid -> targetId.equals(maid.id()));
                 } else {
-                    nop.add(targetId);
+                    context.noPermissionTargets().add(targetId);
                 }
             }
         }

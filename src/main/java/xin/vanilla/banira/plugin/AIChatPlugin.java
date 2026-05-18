@@ -6,6 +6,7 @@ import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
@@ -13,12 +14,13 @@ import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.ChatConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumMessageType;
+import xin.vanilla.banira.plugin.chat.AIChatService;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
-import xin.vanilla.banira.plugin.chat.AIChatService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +36,8 @@ import java.util.concurrent.ConcurrentHashMap;
 public class AIChatPlugin extends BasePlugin {
 
     private final Map<Long, AIChatService> chatServiceMap = new ConcurrentHashMap<>();
+    @Resource
+    private IMessageRecordManager messageRecordManager;
 
     /**
      * 获取帮助信息
@@ -131,10 +135,13 @@ public class AIChatPlugin extends BasePlugin {
         if (context.msgType() == EnumMessageType.GROUP) {
             OtherConfig otherConfig = groupConfig.get().otherConfig().get(event.getGroupId());
             if (otherConfig != null && otherConfig.chatConfig() != null) {
-                chatService = chatServiceMap.computeIfAbsent(event.getGroupId(), k -> new AIChatService(otherConfig.chatConfig()));
+                chatService = chatServiceMap.computeIfAbsent(event.getGroupId(), k -> new AIChatService(otherConfig.chatConfig(), messageRecordManager));
             }
         } else {
-            chatService = chatServiceMap.computeIfAbsent(0L, k -> new AIChatService(groupConfig.get().otherConfig().get(0L).chatConfig()));
+            OtherConfig globalOtherConfig = groupConfig.get().otherConfig().computeIfAbsent(0L, k -> new OtherConfig());
+            if (globalOtherConfig.chatConfig() != null) {
+                chatService = chatServiceMap.computeIfAbsent(0L, k -> new AIChatService(globalOtherConfig.chatConfig(), messageRecordManager));
+            }
         }
 
         if (chatService == null) return false;

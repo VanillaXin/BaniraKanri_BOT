@@ -102,7 +102,7 @@ public class AdminCommand implements KanriHandler {
                 if (context.bot().isUpper(context.group(), context.sender(), targetId)) {
                     context.bot().setGroupAdmin(context.group(), targetId, false);
                 } else {
-                    nop.add(targetId);
+                    context.noPermissionTargets().add(targetId);
                 }
             }
         }

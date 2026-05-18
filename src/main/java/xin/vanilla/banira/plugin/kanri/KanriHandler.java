@@ -16,11 +16,6 @@ public interface KanriHandler {
     int NO_OP = -2;
     int BOT_NO_OP = -3;
 
-    /**
-     * 没有权限操作的QQ
-     */
-    Set<Long> nop = BaniraUtils.mutableSetOf();
-
     @Nonnull
     List<String> getHelpInfo(String... types);
 
@@ -57,15 +52,15 @@ public interface KanriHandler {
         return BaniraUtils.getInsPrefixWithSpace() + String.join("|", getAction());
     }
 
-    default void clearFail() {
-        nop.clear();
+    default void clearFail(@Nonnull KanriContext context) {
+        context.noPermissionTargets().clear();
     }
 
     /**
      * 提示没有权限
      */
     default void executeFail(@Nonnull KanriContext context) {
-        if (!nop.isEmpty() && !context.coder()) {
+        if (!context.noPermissionTargets().isEmpty() && !context.coder()) {
             MsgUtils builder = MsgUtils.builder();
             if (context.msgId() > 0) {
                 builder.reply(context.msgId());
@@ -73,10 +68,10 @@ public interface KanriHandler {
                 builder.reply(context.guildMsgId());
             }
             context.bot().sendGroupMsg(context.group()
-                    , builder.text(String.format("你没有权限对%s执行该操作", nop)).build()
+                    , builder.text(String.format("你没有权限对%s执行该操作", context.noPermissionTargets())).build()
                     , false
             );
-            clearFail();
+            clearFail(context);
         }
     }
 

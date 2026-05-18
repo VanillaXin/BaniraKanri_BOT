@@ -10,6 +10,7 @@ import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.MapPropertySource;
 
 import java.io.File;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -31,6 +32,12 @@ public class GlobalConfigEnvironmentPostProcessor implements EnvironmentPostProc
             String token = getValue(global, "token", String.class);
             String wsUrl = getValue(global, "wsUrl", String.class);
             String env = getValue(global, "env", String.class);
+            if (token == null || token.isBlank()) {
+                throw new IllegalArgumentException("global-config.yml token is required");
+            }
+            if (wsUrl == null || wsUrl.isBlank()) {
+                throw new IllegalArgumentException("global-config.yml wsUrl is required");
+            }
             if ("dev".equalsIgnoreCase(env)) env = "dev";
             else env = "prod";
 
@@ -46,9 +53,9 @@ public class GlobalConfigEnvironmentPostProcessor implements EnvironmentPostProc
             if (client) {
                 overrideMap.put("shiro.ws.client.url", wsUrl);
             } else {
-                String[] split = wsUrl.split(":", 2);
-                overrideMap.put("shiro.ws.server.url", split[0]);
-                overrideMap.put("server.port", split[1]);
+                Map<String, String> serverEndpoint = parseServerEndpoint(wsUrl);
+                overrideMap.put("shiro.ws.server.url", serverEndpoint.get("host"));
+                overrideMap.put("server.port", serverEndpoint.get("port"));
             }
 
             environment.getPropertySources().addFirst(
@@ -64,5 +71,33 @@ public class GlobalConfigEnvironmentPostProcessor implements EnvironmentPostProc
         Object val = map.get(key);
         if (val == null) return null;
         return type.cast(val);
+    }
+
+    private Map<String, String> parseServerEndpoint(String wsUrl) {
+        try {
+            String host;
+            int port;
+            if (wsUrl.contains("://")) {
+                URI uri = URI.create(wsUrl);
+                host = uri.getHost();
+                port = uri.getPort();
+            } else {
+                int splitIndex = wsUrl.lastIndexOf(':');
+                if (splitIndex <= 0 || splitIndex == wsUrl.length() - 1) {
+                    throw new IllegalArgumentException("Invalid server wsUrl format, expected host:port");
+                }
+                host = wsUrl.substring(0, splitIndex);
+                port = Integer.parseInt(wsUrl.substring(splitIndex + 1));
+            }
+            if (host == null || host.isBlank() || port <= 0 || port > 65535) {
+                throw new IllegalArgumentException("Invalid server wsUrl host or port");
+            }
+            Map<String, String> endpoint = new HashMap<>();
+            endpoint.put("host", host);
+            endpoint.put("port", String.valueOf(port));
+            return endpoint;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Invalid wsUrl in global-config.yml: " + wsUrl, e);
+        }
     }
 }

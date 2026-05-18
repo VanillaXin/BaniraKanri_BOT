@@ -16,7 +16,6 @@ import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.service.IMessageRecordManager;
-import xin.vanilla.banira.start.SpringContextHolder;
 import xin.vanilla.banira.util.DateUtils;
 import xin.vanilla.banira.util.StringUtils;
 
@@ -30,10 +29,11 @@ public class AIChatService {
     private final ChatModel chatModel;
     private final ReplyDecisionMaker decisionMaker;
     private final MessageSplitter splitter;
-    private final Random random = new Random();
+    private final IMessageRecordManager messageRecordManager;
 
-    public AIChatService(ChatConfig cfg) {
+    public AIChatService(ChatConfig cfg, IMessageRecordManager messageRecordManager) {
         this.cfg = Objects.requireNonNull(cfg, "cfg");
+        this.messageRecordManager = Objects.requireNonNull(messageRecordManager, "messageRecordManager");
         this.chatModel = OpenAiChatModel.builder()
                 .apiKey(cfg.apiKey())
                 .modelName(StringUtils.isNullOrEmptyEx(cfg.modelName()) ? "gpt-4o" : cfg.modelName())
@@ -96,10 +96,6 @@ public class AIChatService {
             }
         } else {
             for (String msg : splitter.split(reply)) {
-                try {
-                    Thread.sleep(calcTypingDelayMillis(msg));
-                } catch (Exception ignored) {
-                }
                 if (ctx.msgType() == EnumMessageType.GROUP) {
                     bot.sendGroupMsg(ctx.group(), msg, false);
                 } else {
@@ -144,11 +140,7 @@ public class AIChatService {
             msgRecordParam.setTargetId(ctx.sender());
         }
         msgRecordParam.addOrderBy(MessageRecordQueryParam.ORDER_ID, false);
-        return getMessageRecordManager().getMessageRecordList(msgRecordParam);
-    }
-
-    private IMessageRecordManager getMessageRecordManager() {
-        return SpringContextHolder.getBean(IMessageRecordManager.class);
+        return messageRecordManager.getMessageRecordList(msgRecordParam);
     }
 
     /**
@@ -167,23 +159,6 @@ public class AIChatService {
             return cleaned.subList(cleaned.size() - cfg.historyLimit(), cleaned.size());
         }
         return cleaned;
-    }
-
-    /**
-     * 根据消息长度与配置计算较自然的打字延迟
-     * 避免机械的固定间隔
-     */
-    private long calcTypingDelayMillis(String msg) {
-        if (StringUtils.isNullOrEmptyEx(msg)) return random.nextLong(80, 120);
-        int len = msg.length();
-        int minPerChar = Math.max(30, cfg.minTypingSpeed());
-        int maxPerChar = Math.max(minPerChar + 1, cfg.maxTypingSpeed());
-        // 基于字符数的期望延迟，再加入 0.5~1.2 的抖动
-        double jitter = 0.5 + random.nextDouble(0.7);
-        long estimate = (long) (len * random.nextInt(minPerChar, maxPerChar) * jitter);
-        // 进一步加一小段起始思考时间
-        long thinking = random.nextLong(120, 420);
-        return Math.min(5000L, Math.max(120L, estimate + thinking));
     }
 
 }

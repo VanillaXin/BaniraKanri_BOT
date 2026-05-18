@@ -12,6 +12,7 @@ import xin.vanilla.banira.event.KeywordChangedEvent;
 import xin.vanilla.banira.mapper.param.KeywordRecordQueryParam;
 import xin.vanilla.banira.service.IKeywordCacheManager;
 import xin.vanilla.banira.service.IKeywordRecordManager;
+import xin.vanilla.banira.service.model.CachedKeyword;
 import xin.vanilla.banira.util.AhoCorasick;
 
 import java.util.*;
@@ -78,76 +79,6 @@ public class KeywordCacheManager implements IKeywordCacheManager {
     @Override
     public AhoCorasick<CachedKeyword> getAhoCorasick(EnumKeywordType matchType) {
         return this.ahoCorasickMap.get(matchType);
-    }
-
-    @Getter
-    public static class CachedKeyword {
-        /**
-         * 关键词记录ID
-         */
-        private final Long id;
-        /**
-         * 机器人ID
-         */
-        private final Long botId;
-        /**
-         * 群组ID
-         */
-        private final Long groupId;
-        /**
-         * 添加人
-         */
-        private final Long creatorId;
-        /**
-         * 添加时间
-         */
-        private final Long time;
-        /**
-         * 关键词类型
-         */
-        private final EnumKeywordType keywordType;
-        /**
-         * 关键词
-         */
-        private final String keyword;
-        /**
-         * 回复消息
-         */
-        private final String replyMsg;
-
-        /**
-         * 权重
-         */
-        private final Integer priority;
-
-        public CachedKeyword(KeywordRecord keywordRecord) {
-            this.id = keywordRecord.getId();
-            this.botId = keywordRecord.getBotId();
-            this.groupId = keywordRecord.getGroupId();
-            this.creatorId = keywordRecord.getCreatorId();
-            this.time = keywordRecord.getTime();
-            this.keywordType = keywordRecord.getKeywordType();
-            this.keyword = keywordRecord.getKeyword();
-            this.replyMsg = keywordRecord.getReplyMsg();
-            this.priority = keywordRecord.getPriority();
-        }
-
-        public KeywordRecord toKeywordRecord() {
-            return new KeywordRecord()
-                    .setId(id)
-                    .setBotId(botId)
-                    .setGroupId(groupId)
-                    .setCreatorId(creatorId)
-                    .setTime(time)
-                    .setKeywordType(keywordType)
-                    .setKeyword(keyword)
-                    .setReplyMsg(replyMsg)
-                    .setPriority(priority);
-        }
-
-        public Long getGroupId() {
-            return this.groupId != null ? this.groupId : 0L;
-        }
     }
 
     private void buildAhoCorasickAutomaton() {

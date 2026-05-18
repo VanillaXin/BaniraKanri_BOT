@@ -71,7 +71,7 @@ public class KickCommand implements KanriHandler {
             ) {
                 context.bot().setGroupKick(context.group(), targetId, StringUtils.stringToBoolean(CollectionUtils.getLast(args)));
             } else {
-                nop.add(targetId);
+                context.noPermissionTargets().add(targetId);
             }
         }
         executeFail(context);

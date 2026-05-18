@@ -2,7 +2,6 @@ package xin.vanilla.banira.mapper;
 
 import org.apache.ibatis.annotations.Mapper;
 import xin.vanilla.banira.domain.WifeRecord;
-import xin.vanilla.banira.domain.WifeRecord;
 import xin.vanilla.banira.mapper.common.IBaniraMapper;
 import xin.vanilla.banira.mapper.param.WifeRecordQueryParam;
 

@@ -89,7 +89,7 @@ public class LoudCommand implements KanriHandler {
                 ) {
                     context.bot().setGroupBan(context.group(), targetId, 0);
                 } else {
-                    nop.add(targetId);
+                    context.noPermissionTargets().add(targetId);
                 }
             }
             executeFail(context);

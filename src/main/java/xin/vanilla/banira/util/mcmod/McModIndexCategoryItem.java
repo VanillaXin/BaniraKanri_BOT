@@ -17,17 +17,17 @@ public class McModIndexCategoryItem {
      * 物品ID
      */
     private long itemId;
-    
+
     /**
      * 物品名称
      */
     private String itemName;
-    
+
     /**
      * 物品图标URL
      */
     private String iconUrl;
-    
+
     /**
      * 物品链接
      */

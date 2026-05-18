@@ -103,7 +103,7 @@ public class ButlerCommand implements KanriHandler {
                 if (context.bot().isUpper(context.group(), context.sender(), targetId)) {
                     BaniraUtils.getButler().removeIf(butler -> targetId.equals(butler.id()));
                 } else {
-                    nop.add(targetId);
+                    context.noPermissionTargets().add(targetId);
                 }
             }
         }

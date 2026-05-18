@@ -70,8 +70,6 @@ public class McModCommentService {
                 // 获取所有评论的回复
                 for (McModCommentRow comment : comments.getRow()) {
                     if (comment.isReply()) continue;
-                    // 休眠2秒
-                    Thread.sleep(2000);
                     McModCommentResult replies = McModUtils.getCommentReplies(comment.getId(), 1);
                     if (replies != null) {
                         result.addAll(replies.getRow());
@@ -89,8 +87,6 @@ public class McModCommentService {
                     result.addAll(replies.getRow());
                     McModCommentResult curent = replies;
                     while (curent != null && curent.getPage() != null && curent.getPage().getNext() != null) {
-                        // 休眠2秒
-                        Thread.sleep(2000);
                         curent = McModUtils.getComments(commentType, containerId, curent.getPage().getNext());
                         if (curent != null) {
                             result.addAll(curent.getRow());
@@ -445,6 +441,65 @@ public class McModCommentService {
         } catch (Exception e) {
             LOGGER.error("Error sending comment to group {} for type {} container {}", groupId, commentType, containerId, e);
         }
+    }
+
+    public void initializeCacheIfAbsent(EnumContentType commentType, String containerId) {
+        String cacheKey = getCacheKey(commentType, containerId);
+        if (COMMENT_CACHE.containsKey(cacheKey)) {
+            return;
+        }
+        Map<String, McModCommentRow> commentMap = new HashMap<>();
+        McModCommentResult comments = McModUtils.getComments(commentType, containerId, 1);
+        if (comments != null) {
+            for (McModCommentRow comment : comments.getRow()) {
+                comment.setCommentType(commentType);
+                comment.setContainerId(containerId);
+                String key = getCommentKey(commentType, containerId, comment.getId());
+                commentMap.put(key, comment);
+            }
+            McModCommentResult current = comments;
+            while (current != null && current.getPage() != null && current.getPage().getNext() != null) {
+                current = McModUtils.getComments(commentType, containerId, current.getPage().getNext());
+                if (current != null) {
+                    for (McModCommentRow comment : current.getRow()) {
+                        comment.setCommentType(commentType);
+                        comment.setContainerId(containerId);
+                        String key = getCommentKey(commentType, containerId, comment.getId());
+                        commentMap.put(key, comment);
+                    }
+                }
+            }
+        }
+        List<McModCommentRow> commentList = new ArrayList<>(commentMap.values());
+        for (McModCommentRow commentRow : commentList) {
+            McModCommentResult replies = McModUtils.getCommentReplies(commentRow.getId(), 1);
+            if (replies == null) {
+                continue;
+            }
+            for (McModCommentRow reply : replies.getRow()) {
+                reply.setCommentType(commentType);
+                reply.setContainerId(containerId);
+                reply.setParentId(commentRow.getId());
+                String key = getCommentKey(commentType, containerId, reply.getId());
+                commentMap.put(key, reply);
+            }
+            McModCommentResult current = replies;
+            while (current != null && current.getPage() != null && current.getPage().getNext() != null) {
+                current = McModUtils.getCommentReplies(commentRow.getId(), current.getPage().getNext());
+                if (current != null) {
+                    for (McModCommentRow reply : current.getRow()) {
+                        reply.setCommentType(commentType);
+                        reply.setContainerId(containerId);
+                        reply.setParentId(commentRow.getId());
+                        String key = getCommentKey(commentType, containerId, reply.getId());
+                        commentMap.put(key, reply);
+                    }
+                }
+            }
+        }
+        Set<McModCommentRow> cachedComment = new HashSet<>(commentMap.values());
+        COMMENT_CACHE.put(cacheKey, cachedComment);
+        saveCacheToFile(cacheKey, cachedComment);
     }
 
     /**

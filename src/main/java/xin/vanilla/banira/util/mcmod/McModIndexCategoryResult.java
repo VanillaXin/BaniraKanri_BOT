@@ -17,7 +17,7 @@ public class McModIndexCategoryResult {
      * 左侧模组列表
      */
     private McModIndexCategoryLeft left;
-    
+
     /**
      * 右侧排行榜
      */

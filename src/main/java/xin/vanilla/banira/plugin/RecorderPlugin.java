@@ -88,7 +88,7 @@ public class RecorderPlugin extends BasePlugin {
             }
         }
 
-        messageRecordManager.addMessageRecord(record);
+        messageRecordManager.addMessageRecordAsync(record);
     }
 
     @GroupMsgDeleteNoticeHandler

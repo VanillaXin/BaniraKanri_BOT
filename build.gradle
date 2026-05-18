@@ -95,10 +95,6 @@ dependencies {
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
-tasks.named('test') {
-    enabled = false
-}
-
 tasks.named('processResources') {
     from('src/main/java') {
         include 'xin/vanilla/banira/mapper/mybatis/mybatis-*.xml'

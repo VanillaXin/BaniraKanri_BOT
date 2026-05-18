@@ -1,6 +1,5 @@
 package xin.vanilla.banira.plugin.mcmod;
 
-import jakarta.annotation.PreDestroy;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.quartz.*;
@@ -115,16 +114,6 @@ public class McModCommentScheduler {
         return interval;
     }
 
-    @PreDestroy
-    public void shutdown() {
-        try {
-            LOGGER.info("Shutting down Quartz Scheduler...");
-            scheduler.shutdown(true);
-        } catch (SchedulerException e) {
-            LOGGER.error("Error shutting down Quartz", e);
-        }
-    }
-
     /**
      * Quartz Job实现
      */
@@ -177,8 +166,6 @@ public class McModCommentScheduler {
                                     BaniraBot bot = BaniraUtils.getBot(watchInfo.botId());
                                     if (bot != null) {
                                         McModCommentService.sendCommentToGroup(bot, watchInfo.groupId(), commentType, containerId, comment);
-                                        // 避免发送过快
-                                        Thread.sleep(500);
                                     }
                                 }
                             }

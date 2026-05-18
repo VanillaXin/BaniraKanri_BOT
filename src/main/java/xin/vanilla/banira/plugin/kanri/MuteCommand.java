@@ -96,7 +96,7 @@ public class MuteCommand implements KanriHandler {
                 ) {
                     context.bot().setGroupBan(context.group(), targetId, duration);
                 } else {
-                    nop.add(targetId);
+                    context.noPermissionTargets().add(targetId);
                 }
             }
             executeFail(context);

@@ -7,6 +7,7 @@ import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import com.mikuac.shiro.dto.event.message.MessageEvent;
 import com.mikuac.shiro.dto.event.message.PrivateMessageEvent;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,12 +36,30 @@ import java.util.*;
 public class KanriPlugin extends BasePlugin {
     @Autowired(required = false)
     private List<KanriHandler> handlers = new ArrayList<>();
+    private final Map<String, KanriHandler> handlerByAction = new HashMap<>();
     @Resource
     private ToGroupCode toGroupCode;
 
     private static final Set<String> helpType = BaniraUtils.mutableSetOf(
             "kanri", "群管"
     );
+
+    @PostConstruct
+    public void initHandlerMap() {
+        handlerByAction.clear();
+        for (KanriHandler handler : handlers) {
+            for (String action : handler.getAction()) {
+                String actionKey = action == null ? "" : action.trim().toLowerCase(Locale.ROOT);
+                if (StringUtils.isNullOrEmptyEx(actionKey)) {
+                    continue;
+                }
+                KanriHandler existed = handlerByAction.putIfAbsent(actionKey, handler);
+                if (existed != null) {
+                    throw new IllegalStateException("Duplicate kanri action detected: " + action);
+                }
+            }
+        }
+    }
 
     /**
      * 获取帮助信息
@@ -118,7 +137,7 @@ public class KanriPlugin extends BasePlugin {
         message = super.replaceKanriCommand(codeContext);
 
         String[] parts = message.split("\\s+");
-        String kanriAction = parts[0].trim();
+        String kanriAction = parts[0].trim().toLowerCase(Locale.ROOT);
 
         KanriContext context = new KanriContext(event
                 , bot
@@ -130,16 +149,14 @@ public class KanriPlugin extends BasePlugin {
         );
 
         int result = KanriHandler.NIL;
-        Optional<KanriHandler> handler = handlers.stream()
-                .filter(h -> h.getAction().contains(kanriAction))
-                .findFirst();
-        if (handler.isPresent()) {
-            if (!handler.get().botHasPermission(context)) {
+        KanriHandler handler = handlerByAction.get(kanriAction);
+        if (handler != null) {
+            if (!handler.botHasPermission(context)) {
                 result = KanriHandler.BOT_NO_OP;
-            } else if (handler.get().hasPermission(context)) {
+            } else if (handler.hasPermission(context)) {
                 String[] args = Arrays.copyOfRange(parts, 1, parts.length);
                 try {
-                    result = handler.get().execute(context, args);
+                    result = handler.execute(context, args);
                 } catch (Exception e) {
                     LOGGER.error("Kanri command parsing failed", e);
                     result = KanriHandler.FAIL;

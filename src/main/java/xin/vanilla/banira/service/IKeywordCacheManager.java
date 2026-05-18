@@ -1,7 +1,7 @@
 package xin.vanilla.banira.service;
 
 import xin.vanilla.banira.enums.EnumKeywordType;
-import xin.vanilla.banira.service.impl.KeywordCacheManager;
+import xin.vanilla.banira.service.model.CachedKeyword;
 import xin.vanilla.banira.util.AhoCorasick;
 
 import java.util.List;
@@ -15,10 +15,10 @@ public interface IKeywordCacheManager {
 
     void loadKeywords();
 
-    List<KeywordCacheManager.CachedKeyword> getKeywordsByType(EnumKeywordType matchType);
+    List<CachedKeyword> getKeywordsByType(EnumKeywordType matchType);
 
     Set<String> getExactMatchKeywords();
 
-    AhoCorasick<KeywordCacheManager.CachedKeyword> getAhoCorasick(EnumKeywordType matchType);
+    AhoCorasick<CachedKeyword> getAhoCorasick(EnumKeywordType matchType);
 
 }

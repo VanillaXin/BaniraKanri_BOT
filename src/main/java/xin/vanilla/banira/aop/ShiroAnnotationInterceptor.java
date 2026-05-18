@@ -73,9 +73,12 @@ public class ShiroAnnotationInterceptor {
                     }
                 }
                 result = pjp.proceed(args);
-            } catch (Throwable e) {
-                LOGGER.error("Plugin {}#{} throws an exception", className, methodName, e);
+            } catch (Exception e) {
+                LOGGER.warn("Plugin {}#{} failed with recoverable exception: {}", className, methodName, e.getMessage(), e);
                 result = defaultReturnValue(actualMethod);
+            } catch (Error e) {
+                LOGGER.error("Plugin {}#{} failed with fatal error", className, methodName, e);
+                throw e;
             }
         }
 

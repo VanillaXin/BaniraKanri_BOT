@@ -12,6 +12,8 @@ public interface IMessageRecordManager {
 
     long addMessageRecord(MessageRecord record);
 
+    void addMessageRecordAsync(MessageRecord record);
+
     MessageRecord getMessageRecord(long id);
 
     @Nonnull

@@ -100,7 +100,7 @@ public class CardCommand implements KanriHandler {
                 );
                 context.bot().setGroupCard(context.group(), targetId, code.msg());
             } else {
-                nop.add(targetId);
+                context.noPermissionTargets().add(targetId);
             }
         }
         executeFail(context);

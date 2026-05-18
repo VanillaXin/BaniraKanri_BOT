@@ -26,7 +26,7 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.mcmod.McModCommentScheduler;
 import xin.vanilla.banira.plugin.mcmod.McModCommentService;
-import xin.vanilla.banira.service.impl.MessageRecordManager;
+import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.*;
 import xin.vanilla.banira.util.mcmod.*;
 
@@ -42,12 +42,14 @@ import java.util.function.Supplier;
 public class McModPlugin extends BasePlugin {
 
     @Resource
-    private MessageRecordManager messageRecordManager;
+    private IMessageRecordManager messageRecordManager;
     @Resource
     private Supplier<GroupConfig> groupConfig;
 
     @Resource
     private McModCommentScheduler mcModCommentScheduler;
+    @Resource
+    private McModCommentService mcModCommentService;
 
     private static final Set<String> MOD_INS = BaniraUtils.mutableSetOf("mod", "模组");
     private static final Set<String> MOD_PACK_INS = BaniraUtils.mutableSetOf("modpack", "pack", "整合包");
@@ -801,67 +803,7 @@ public class McModPlugin extends BasePlugin {
             BaniraUtils.saveGroupConfig();
 
             // 首次添加记录则获取全量评论列表
-            String cacheKey = McModCommentService.getCacheKey(commentType, containerId);
-            if (!McModCommentService.COMMENT_CACHE.containsKey(cacheKey)) {
-                // 拉取全量评论
-                Map<String, McModCommentRow> commentMap = new HashMap<>();
-
-                McModCommentResult comments = McModUtils.getComments(commentType, containerId, 1);
-                if (comments != null) {
-                    for (McModCommentRow comment : comments.getRow()) {
-                        comment.setCommentType(commentType);
-                        comment.setContainerId(containerId);
-                        String key = McModCommentService.getCommentKey(commentType, containerId, comment.getId());
-                        commentMap.put(key, comment);
-                    }
-                    McModCommentResult curent = comments;
-                    while (curent != null && curent.getPage() != null && curent.getPage().getNext() != null) {
-                        // 休眠2秒
-                        Thread.sleep(2000);
-                        curent = McModUtils.getComments(commentType, containerId, curent.getPage().getNext());
-                        if (curent != null) {
-                            for (McModCommentRow comment : curent.getRow()) {
-                                comment.setCommentType(commentType);
-                                comment.setContainerId(containerId);
-                                String key = McModCommentService.getCommentKey(commentType, containerId, comment.getId());
-                                commentMap.put(key, comment); // 新内容覆盖旧内容
-                            }
-                        }
-                    }
-                }
-                // 拉取全量回复
-                List<McModCommentRow> commentList = new ArrayList<>(commentMap.values());
-                for (McModCommentRow commentRow : commentList) {
-                    McModCommentResult replies = McModUtils.getCommentReplies(commentRow.getId(), 1);
-                    if (replies != null) {
-                        for (McModCommentRow reply : replies.getRow()) {
-                            reply.setCommentType(commentType);
-                            reply.setContainerId(containerId);
-                            reply.setParentId(commentRow.getId());
-                            String key = McModCommentService.getCommentKey(commentType, containerId, reply.getId());
-                            commentMap.put(key, reply);
-                        }
-                        McModCommentResult curent = replies;
-                        while (curent != null && curent.getPage() != null && curent.getPage().getNext() != null) {
-                            // 休眠2秒
-                            Thread.sleep(2000);
-                            curent = McModUtils.getCommentReplies(commentRow.getId(), curent.getPage().getNext());
-                            if (curent != null) {
-                                for (McModCommentRow reply : curent.getRow()) {
-                                    reply.setCommentType(commentType);
-                                    reply.setContainerId(containerId);
-                                    reply.setParentId(commentRow.getId());
-                                    String key = McModCommentService.getCommentKey(commentType, containerId, reply.getId());
-                                    commentMap.put(key, reply);
-                                }
-                            }
-                        }
-                    }
-                }
-                Set<McModCommentRow> cachedComment = new HashSet<>(commentMap.values());
-                McModCommentService.COMMENT_CACHE.put(cacheKey, cachedComment);
-                McModCommentService.saveCacheToFile(cacheKey, cachedComment);
-            }
+            mcModCommentService.initializeCacheIfAbsent(commentType, containerId);
 
             // 重新调度任务
             mcModCommentScheduler.scheduleTask();
