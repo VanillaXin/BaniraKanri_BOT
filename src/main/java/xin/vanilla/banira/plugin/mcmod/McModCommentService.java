@@ -1,13 +1,13 @@
 package xin.vanilla.banira.plugin.mcmod;
 
 import cn.hutool.core.io.FileUtil;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.type.TypeReference;
 import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.McModCommentConfig;

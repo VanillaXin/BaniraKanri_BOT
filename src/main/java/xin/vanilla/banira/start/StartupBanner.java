@@ -1,7 +1,7 @@
 package xin.vanilla.banira.start;
 
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.boot.web.context.WebServerApplicationContext;
+import org.springframework.boot.web.server.context.WebServerApplicationContext;
 import org.springframework.context.ApplicationListener;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;

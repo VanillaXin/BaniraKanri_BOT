@@ -1,6 +1,5 @@
 package xin.vanilla.banira.util;
 
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.google.gson.JsonObject;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
@@ -10,6 +9,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
+import tools.jackson.core.type.TypeReference;
 import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.McModCookieConfig;
 import xin.vanilla.banira.domain.KeyValue;

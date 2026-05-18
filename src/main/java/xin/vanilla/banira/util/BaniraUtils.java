@@ -1,11 +1,6 @@
 package xin.vanilla.banira.util;
 
 import cn.hutool.core.io.FileUtil;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.JsonNodeType;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.databind.node.TextNode;
 import com.github.houbb.sensitive.word.core.SensitiveWordHelper;
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.JsonUtils;
@@ -26,6 +21,10 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ResolvableType;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.node.JsonNodeType;
+import tools.jackson.databind.node.ObjectNode;
 import xin.vanilla.banira.coder.message.FileCode;
 import xin.vanilla.banira.coder.message.ImageCode;
 import xin.vanilla.banira.coder.message.VideoCode;
@@ -745,7 +744,7 @@ public final class BaniraUtils {
                     if (node instanceof ObjectNode objectNode) {
                         JsonNode jsonNode = node.get(MsgTypeEnum.text.toString());
                         if (jsonNode.isNumber()) {
-                            objectNode.set(MsgTypeEnum.text.toString(), new TextNode(jsonNode.asText()));
+                            objectNode.put(MsgTypeEnum.text.toString(), jsonNode.asText());
                         }
                     }
                 }
@@ -776,7 +775,7 @@ public final class BaniraUtils {
             if (node instanceof ObjectNode objectNode) {
                 JsonNode jsonNode = node.get(MsgTypeEnum.text.toString());
                 if (jsonNode.isNumber()) {
-                    objectNode.set(MsgTypeEnum.text.toString(), new TextNode(jsonNode.asText()));
+                    objectNode.put(MsgTypeEnum.text.toString(), jsonNode.asText());
                 }
             }
             return arrayMsg;
