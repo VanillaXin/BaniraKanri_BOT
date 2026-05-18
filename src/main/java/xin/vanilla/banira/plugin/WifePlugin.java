@@ -191,8 +191,7 @@ public class WifePlugin extends BasePlugin {
             if (insConfig.get().base().enable().contains(operate)) {
                 if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
                     return bot.setMsgEmojiLikeNo(event.getMessageId());
-                groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> new OtherConfig())
+                BaniraUtils.getOthersConfig(event.getGroupId())
                         .wifeConfig()
                         .removeIf(wife -> DISABLED.equals(wife)
                                 || (DISABLED.reg().equals(wife.reg()) && DISABLED.nick().equals(wife.nick()))
@@ -204,8 +203,7 @@ public class WifePlugin extends BasePlugin {
             else if (insConfig.get().base().disable().contains(operate)) {
                 if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
                     return bot.setMsgEmojiLikeNo(event.getMessageId());
-                groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> new OtherConfig())
+                BaniraUtils.getOthersConfig(event.getGroupId())
                         .wifeConfig()
                         .add(DISABLED);
                 BaniraUtils.saveGroupConfig();
@@ -222,9 +220,7 @@ public class WifePlugin extends BasePlugin {
                         , CollectionUtils.getOrDefault(args, 3, SUCCESS_CONTENT)
                         , CollectionUtils.getOrDefault(args, 4, FAIL_CONTENT)
                 );
-                groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> new OtherConfig())
-                        .wifeConfig().add(wifeConfig);
+                BaniraUtils.getOthersConfig(event.getGroupId()).wifeConfig().add(wifeConfig);
                 BaniraUtils.saveGroupConfig();
                 return bot.setMsgEmojiLikeOk(event.getMessageId());
             }
@@ -239,8 +235,7 @@ public class WifePlugin extends BasePlugin {
                         , CollectionUtils.getOrDefault(args, 3, null)
                         , CollectionUtils.getOrDefault(args, 4, null)
                 );
-                groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> new OtherConfig())
+                BaniraUtils.getOthersConfig(event.getGroupId())
                         .wifeConfig()
                         .removeIf(config -> config.reg().equals(wifeConfig.reg())
                                 && (StringUtils.isNullOrEmpty(wifeConfig.nick()) || config.nick().equals(wifeConfig.nick()))
@@ -253,9 +248,7 @@ public class WifePlugin extends BasePlugin {
             }
             // 查询
             else if (insConfig.get().base().list().contains(operate)) {
-                List<WifeConfig> wifeConfigs = groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> new OtherConfig())
-                        .wifeConfig();
+                List<WifeConfig> wifeConfigs = BaniraUtils.getOthersConfig(event.getGroupId()).wifeConfig();
                 if (wifeConfigs.isEmpty()) {
                     ActionData<MsgId> msgIdData = bot.sendGroupMsg(event.getGroupId(), "该群没有独立的配置喵！", false);
                     return bot.isActionDataMsgIdNotEmpty(msgIdData);

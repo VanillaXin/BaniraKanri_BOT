@@ -8,10 +8,11 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.type.TypeReference;
-import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.McModCommentConfig;
 import xin.vanilla.banira.config.entity.extended.ModWatchInfo;
+import xin.vanilla.banira.config.other.OtherConfigKeys;
+import xin.vanilla.banira.config.other.OtherConfigRegistry;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.util.*;
 import xin.vanilla.banira.util.mcmod.*;
@@ -21,7 +22,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -34,7 +34,7 @@ import java.util.stream.Collectors;
 public class McModCommentService {
 
     @Resource
-    private Supplier<GroupConfig> groupConfig;
+    private OtherConfigRegistry otherConfigRegistry;
 
     /**
      * 缓存历史评论ID, cacheKey (type:containerId) -> Set<McModCommentRow>
@@ -520,7 +520,7 @@ public class McModCommentService {
      */
     public Map<String, List<ModWatchInfo>> getAllMonitoredContainers() {
         Map<String, List<ModWatchInfo>> cacheKeyToWatchInfos = new HashMap<>();
-        Map<Long, OtherConfig> otherConfigMap = groupConfig.get().otherConfig();
+        Map<Long, OtherConfig> otherConfigMap = otherConfigRegistry.getGroupedSnapshot(OtherConfigKeys.GROUP_OTHER, OtherConfig.class);
 
         for (Map.Entry<Long, OtherConfig> entry : otherConfigMap.entrySet()) {
             Long groupId = entry.getKey();

@@ -5,7 +5,6 @@ import com.google.gson.JsonObject;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.StringUtils;
@@ -25,7 +24,7 @@ import java.util.function.Supplier;
 public class SocialMediaApiService {
 
     @Resource
-    private Supplier<GlobalConfig> globalConfig;
+    private Supplier<SocialMediaSettings> socialMediaConfig;
 
     public List<SocialMediaContent> parse(SocialMediaParser parser, String msg) {
         if (parser == null || StringUtils.isNullOrEmptyEx(msg) || !parser.hasSocialMedia(msg)) {
@@ -148,10 +147,10 @@ public class SocialMediaApiService {
         if (StringUtils.isNullOrEmptyEx(parserType)) {
             return List.of();
         }
-        if (globalConfig == null || globalConfig.get() == null || globalConfig.get().socialMedia() == null) {
+        if (socialMediaConfig == null || socialMediaConfig.get() == null) {
             return List.of();
         }
-        List<SocialMediaApiSettings> apis = globalConfig.get().socialMedia().apis();
+        List<SocialMediaApiSettings> apis = socialMediaConfig.get().apis();
         if (CollectionUtils.isNullOrEmpty(apis)) {
             return List.of();
         }

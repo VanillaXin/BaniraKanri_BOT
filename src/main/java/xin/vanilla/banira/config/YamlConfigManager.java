@@ -17,10 +17,12 @@ import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.basic.PermissionConfig;
+import xin.vanilla.banira.config.entity.basic.PluginConfig;
 import xin.vanilla.banira.config.entity.extended.*;
 import xin.vanilla.banira.event.GlobalConfigReloadedEvent;
 import xin.vanilla.banira.event.GroupConfigReloadedEvent;
 import xin.vanilla.banira.event.InstructionsConfigReloadedEvent;
+import xin.vanilla.banira.event.PluginConfigReloadedEvent;
 import xin.vanilla.banira.util.DateUtils;
 
 import java.io.IOException;
@@ -667,6 +669,8 @@ public class YamlConfigManager<T> {
                 eventPublisher.publishEvent(new GroupConfigReloadedEvent(this, configName, config));
             } else if (instance instanceof InstructionsConfig config) {
                 eventPublisher.publishEvent(new InstructionsConfigReloadedEvent(this, configName, config));
+            } else if (instance instanceof PluginConfig config) {
+                eventPublisher.publishEvent(new PluginConfigReloadedEvent(this, configName, config));
             }
         }
     }

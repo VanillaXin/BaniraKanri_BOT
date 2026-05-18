@@ -4,8 +4,6 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
-import xin.vanilla.banira.config.entity.basic.PluginConfig;
-import xin.vanilla.banira.plugin.socialmedia.SocialMediaSettings;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,14 +41,6 @@ public class GlobalConfig {
      * 后台群
      */
     private List<Long> backGroup;
-    /**
-     * 插件配置
-     */
-    private PluginConfig pluginConfig;
-    /**
-     * 社交媒体配置
-     */
-    private SocialMediaSettings socialMedia;
 
 
     {
@@ -60,8 +50,6 @@ public class GlobalConfig {
         this.owner = 0L;
         this.botNick = "香草酱";
         this.backGroup = new ArrayList<>();
-        this.pluginConfig = new PluginConfig();
-        this.socialMedia = new SocialMediaSettings();
     }
 
 }

@@ -83,9 +83,7 @@ public class SocialMediaPlugin extends BasePlugin {
             if (insConfig.get().base().enable().contains(operate)) {
                 if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
                     return bot.setMsgEmojiLikeNo(event.getMessageId());
-                groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> new OtherConfig())
-                        .socialMedia(true);
+                BaniraUtils.getOthersConfig(event.getGroupId()).socialMedia(true);
                 BaniraUtils.saveGroupConfig();
                 return bot.setMsgEmojiLikeOk(event.getMessageId());
             }
@@ -93,9 +91,7 @@ public class SocialMediaPlugin extends BasePlugin {
             else if (insConfig.get().base().disable().contains(operate)) {
                 if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
                     return bot.setMsgEmojiLikeNo(event.getMessageId());
-                groupConfig.get().otherConfig()
-                        .computeIfAbsent(event.getGroupId(), k -> new OtherConfig())
-                        .socialMedia(false);
+                BaniraUtils.getOthersConfig(event.getGroupId()).socialMedia(false);
                 BaniraUtils.saveGroupConfig();
                 return bot.setMsgEmojiLikeOk(event.getMessageId());
             }
@@ -155,11 +151,11 @@ public class SocialMediaPlugin extends BasePlugin {
 
     private boolean isEnable(Long groupId) {
         // 群组配置
-        if (BaniraUtils.isGroupIdValid(groupId)) {
-            OtherConfig config = groupConfig.get().otherConfig().getOrDefault(groupId, null);
+        if (BaniraUtils.hasGroupOthersConfig(groupId)) {
+            OtherConfig config = BaniraUtils.getOthersConfig(groupId);
             if (config != null) return config.socialMedia();
         }
         // 全局配置
-        return groupConfig.get().otherConfig().computeIfAbsent(0L, k -> new OtherConfig()).socialMedia();
+        return BaniraUtils.getOthersConfig().socialMedia();
     }
 }

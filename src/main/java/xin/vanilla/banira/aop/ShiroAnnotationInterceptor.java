@@ -9,7 +9,7 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.reflect.MethodSignature;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.config.entity.GlobalConfig;
+import xin.vanilla.banira.config.entity.basic.PluginConfig;
 import xin.vanilla.banira.plugin.RecorderPlugin;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 
@@ -20,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Supplier;
 
 /**
- * 通过GlobalConfig.base.capability配置检查插件是否启用，并手动设置BaniraBot参数
+ * 通过PluginConfig.capability配置检查插件是否启用，并手动设置BaniraBot参数
  */
 @Slf4j
 @Aspect
@@ -29,15 +29,15 @@ public class ShiroAnnotationInterceptor {
 
     private static final String TARGET_PACKAGE = "com.mikuac.shiro.annotation";
 
-    private final Supplier<GlobalConfig> globalConfig;
+    private final Supplier<PluginConfig> pluginConfig;
     private final BotContainer botContainer;
 
     private final Map<Method, Boolean> hasTargetAnnotationCache = new ConcurrentHashMap<>();
 
-    public ShiroAnnotationInterceptor(Supplier<GlobalConfig> globalConfig
+    public ShiroAnnotationInterceptor(Supplier<PluginConfig> pluginConfig
             , BotContainer botContainer
     ) {
-        this.globalConfig = globalConfig;
+        this.pluginConfig = pluginConfig;
         this.botContainer = botContainer;
     }
 
@@ -99,13 +99,12 @@ public class ShiroAnnotationInterceptor {
 
     private boolean shouldProceed(String className) {
         if (RecorderPlugin.class.getName().equalsIgnoreCase(className)) return true;
-        if (globalConfig.get() == null
-                || globalConfig.get().pluginConfig() == null
-                || globalConfig.get().pluginConfig().capability() == null
+        if (pluginConfig.get() == null
+                || pluginConfig.get().capability() == null
         ) {
             return false;
         }
-        Integer cap = globalConfig.get().pluginConfig().capability().get(className);
+        Integer cap = pluginConfig.get().capability().get(className);
         return cap != null && cap > 0;
     }
 

@@ -28,6 +28,7 @@ import oshi.hardware.GlobalMemory;
 import oshi.hardware.VirtualMemory;
 import oshi.software.os.OperatingSystem;
 import xin.vanilla.banira.config.BaniraVersionInfo;
+import xin.vanilla.banira.config.entity.basic.PluginConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
@@ -48,6 +49,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Duration;
 import java.util.*;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 /**
@@ -64,6 +66,8 @@ public class StatusPlugin extends BasePlugin {
     private BaniraVersionInfo baniraVersionInfo;
     @Resource
     private IMessageRecordManager messageRecordManager;
+    @Resource
+    private Supplier<PluginConfig> pluginConfig;
 
     private volatile long lastRenderTime = 0;
     private static final Random RANDOM = new Random();
@@ -439,11 +443,11 @@ public class StatusPlugin extends BasePlugin {
 
     private boolean isPluginEnabled(String className) {
         if (RecorderPlugin.class.getName().equalsIgnoreCase(className)) return true;
-        if (globalConfig.get() == null || globalConfig.get().pluginConfig().capability() == null
+        if (pluginConfig.get() == null || pluginConfig.get().capability() == null
         ) {
             return false;
         }
-        Integer cap = globalConfig.get().pluginConfig().capability().get(className);
+        Integer cap = pluginConfig.get().capability().get(className);
         return cap != null && cap > 0;
     }
 }

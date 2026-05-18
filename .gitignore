@@ -38,10 +38,10 @@ out/
 
 
 ### Banira ####
-logs
-data
-config
-cache
+/logs/
+/data/
+/config/
+/cache/
 dist/
 
 # 构建镜像用字体（本地拷贝，不提交仓库）

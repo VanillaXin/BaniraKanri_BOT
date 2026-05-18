@@ -34,6 +34,8 @@ import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.*;
+import xin.vanilla.banira.config.other.OtherConfigKeys;
+import xin.vanilla.banira.config.other.OtherConfigRegistry;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumCacheFileType;
@@ -108,6 +110,10 @@ public final class BaniraUtils {
         return SpringContextHolder.getBean(IMessageRecordManager.class);
     }
 
+    private static OtherConfigRegistry getOtherConfigRegistry() {
+        return SpringContextHolder.getBean(OtherConfigRegistry.class);
+    }
+
     public static boolean saveGlobalConfig() {
         try {
             getGlobalConfigManager().save();
@@ -121,6 +127,7 @@ public final class BaniraUtils {
     public static boolean saveGroupConfig() {
         try {
             getGroupConfigManager().save();
+            getOtherConfigRegistry().saveGrouped(OtherConfigKeys.GROUP_OTHER);
         } catch (Exception e) {
             LOGGER.error("Failed to save group config", e);
             return false;
@@ -129,6 +136,13 @@ public final class BaniraUtils {
     }
 
     public static boolean saveConfig() {
+        try {
+            getOtherConfigRegistry().saveShared(OtherConfigKeys.PLUGIN);
+            getOtherConfigRegistry().saveShared(OtherConfigKeys.SOCIAL_MEDIA);
+        } catch (Exception e) {
+            LOGGER.error("Failed to save shared other config", e);
+            return false;
+        }
         return saveGlobalConfig() && saveGroupConfig();
     }
 
@@ -142,22 +156,15 @@ public final class BaniraUtils {
     }
 
     public static OtherConfig getOthersConfig(Long groupId) {
-        OtherConfig otherConfig = null;
-        Map<Long, OtherConfig> otherConfigMap = getGroupConfig().otherConfig();
-        if (isGroupIdValid(groupId) && otherConfigMap.containsKey(groupId)) {
-            // 群聊配置
-            if (otherConfigMap.get(groupId) != null) {
-                otherConfig = otherConfigMap.get(groupId);
-            } else {
-                otherConfigMap.put(groupId, new OtherConfig());
-                saveGroupConfig();
-            }
+        OtherConfigRegistry registry = getOtherConfigRegistry();
+        if (isGroupIdValid(groupId) && registry.hasGrouped(OtherConfigKeys.GROUP_OTHER, groupId)) {
+            return registry.getGrouped(OtherConfigKeys.GROUP_OTHER, groupId, OtherConfig.class);
         }
-        // 全局配置
-        else {
-            otherConfig = otherConfigMap.computeIfAbsent(0L, k -> new OtherConfig());
-        }
-        return otherConfig;
+        return registry.getGrouped(OtherConfigKeys.GROUP_OTHER, 0L, OtherConfig.class);
+    }
+
+    public static boolean hasGroupOthersConfig(Long groupId) {
+        return isGroupIdValid(groupId) && getOtherConfigRegistry().hasGrouped(OtherConfigKeys.GROUP_OTHER, groupId);
     }
 
     public static BaseInstructionsConfig getBaseIns() {

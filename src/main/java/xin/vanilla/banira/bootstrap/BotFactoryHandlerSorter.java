@@ -8,9 +8,8 @@ import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.util.MultiValueMap;
-import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.basic.PluginConfig;
-import xin.vanilla.banira.event.GlobalConfigReloadedEvent;
+import xin.vanilla.banira.event.PluginConfigReloadedEvent;
 import xin.vanilla.banira.plugin.RecorderPlugin;
 import xin.vanilla.banira.util.ReflectionUtils;
 
@@ -20,17 +19,17 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 /**
- * 通过GlobalConfig.base.capability配置修改插件排序
+ * 通过PluginConfig.capability配置修改插件排序
  */
 @Slf4j
 @Component
 public class BotFactoryHandlerSorter implements ApplicationListener<ContextRefreshedEvent> {
 
-    private final Supplier<GlobalConfig> globalConfig;
+    private final Supplier<PluginConfig> pluginConfig;
     private final BotFactory botFactory;
 
-    public BotFactoryHandlerSorter(Supplier<GlobalConfig> globalConfig, BotFactory botFactory) {
-        this.globalConfig = globalConfig;
+    public BotFactoryHandlerSorter(Supplier<PluginConfig> pluginConfig, BotFactory botFactory) {
+        this.pluginConfig = pluginConfig;
         this.botFactory = botFactory;
     }
 
@@ -40,8 +39,8 @@ public class BotFactoryHandlerSorter implements ApplicationListener<ContextRefre
     }
 
     @EventListener
-    public void onConfigReloaded(GlobalConfigReloadedEvent event) {
-        sortHandlers("Hot update sorting (GlobalConfig reload)");
+    public void onConfigReloaded(PluginConfigReloadedEvent event) {
+        sortHandlers("Hot update sorting (PluginConfig reload)");
     }
 
     private void sortHandlers(String reason) {
@@ -69,9 +68,8 @@ public class BotFactoryHandlerSorter implements ApplicationListener<ContextRefre
         if (annotationHandler.isEmpty()) {
             LOGGER.debug("No handlers to sort");
         } else {
-            Map<String, Integer> capabilityMap = Optional.ofNullable(globalConfig)
+            Map<String, Integer> capabilityMap = Optional.ofNullable(pluginConfig)
                     .map(Supplier::get)
-                    .map(GlobalConfig::pluginConfig)
                     .map(PluginConfig::capability)
                     .orElse(Collections.emptyMap());
 

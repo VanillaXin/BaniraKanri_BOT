@@ -15,7 +15,6 @@ import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.McModCommentConfig;
@@ -31,7 +30,6 @@ import xin.vanilla.banira.util.*;
 import xin.vanilla.banira.util.mcmod.*;
 
 import java.util.*;
-import java.util.function.Supplier;
 
 /**
  * MCMod百科插件
@@ -43,8 +41,6 @@ public class McModPlugin extends BasePlugin {
 
     @Resource
     private IMessageRecordManager messageRecordManager;
-    @Resource
-    private Supplier<GroupConfig> groupConfig;
 
     @Resource
     private McModCommentScheduler mcModCommentScheduler;
@@ -799,7 +795,6 @@ public class McModPlugin extends BasePlugin {
             // 添加监控配置，记录群号和botId
             Long botId = bot.getSelfId();
             config.addModWatch(commentType, containerId, groupId, botId);
-            groupConfig.get().otherConfig().put(groupId, otherConfig);
             BaniraUtils.saveGroupConfig();
 
             // 首次添加记录则获取全量评论列表
@@ -838,7 +833,6 @@ public class McModPlugin extends BasePlugin {
 
             // 删除该群对该容器的监控
             config.removeModWatch(commentType, containerId, groupId);
-            groupConfig.get().otherConfig().put(groupId, otherConfig);
             BaniraUtils.saveGroupConfig();
 
             // 重新调度任务

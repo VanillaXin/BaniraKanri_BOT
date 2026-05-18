@@ -86,7 +86,7 @@ public class AIChatPlugin extends BasePlugin {
 
             String operate = split[1];
             if (baseIns.enable().contains(operate)) {
-                OtherConfig otherConfig = groupConfig.get().otherConfig().computeIfAbsent(event.getGroupId(), k -> new OtherConfig());
+                OtherConfig otherConfig = BaniraUtils.getOthersConfig(event.getGroupId());
                 if (otherConfig.chatConfig() == null) {
                     otherConfig.chatConfig(new ChatConfig());
                 }
@@ -97,7 +97,7 @@ public class AIChatPlugin extends BasePlugin {
                     return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                 }
             } else if (baseIns.disable().contains(operate)) {
-                OtherConfig otherConfig = groupConfig.get().otherConfig().computeIfAbsent(event.getGroupId(), k -> new OtherConfig());
+                OtherConfig otherConfig = BaniraUtils.getOthersConfig(event.getGroupId());
                 if (otherConfig.chatConfig() == null) {
                     otherConfig.chatConfig(new ChatConfig());
                 }
@@ -133,12 +133,14 @@ public class AIChatPlugin extends BasePlugin {
 
         AIChatService chatService = null;
         if (context.msgType() == EnumMessageType.GROUP) {
-            OtherConfig otherConfig = groupConfig.get().otherConfig().get(event.getGroupId());
+            OtherConfig otherConfig = BaniraUtils.hasGroupOthersConfig(event.getGroupId())
+                    ? BaniraUtils.getOthersConfig(event.getGroupId())
+                    : null;
             if (otherConfig != null && otherConfig.chatConfig() != null) {
                 chatService = chatServiceMap.computeIfAbsent(event.getGroupId(), k -> new AIChatService(otherConfig.chatConfig(), messageRecordManager));
             }
         } else {
-            OtherConfig globalOtherConfig = groupConfig.get().otherConfig().computeIfAbsent(0L, k -> new OtherConfig());
+            OtherConfig globalOtherConfig = BaniraUtils.getOthersConfig();
             if (globalOtherConfig.chatConfig() != null) {
                 chatService = chatServiceMap.computeIfAbsent(0L, k -> new AIChatService(globalOtherConfig.chatConfig(), messageRecordManager));
             }
