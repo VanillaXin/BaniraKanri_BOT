@@ -55,7 +55,15 @@ public class KanriPlugin extends BasePlugin {
                 }
                 KanriHandler existed = handlerByAction.putIfAbsent(actionKey, handler);
                 if (existed != null) {
-                    throw new IllegalStateException("Duplicate kanri action detected: " + action);
+                    if (existed == handler) {
+                        LOGGER.warn("Duplicate action '{}' found in handler '{}', ignored", action, handler.getClass().getSimpleName());
+                        continue;
+                    }
+                    LOGGER.warn("Duplicate kanri action '{}' between handlers '{}' and '{}', keep '{}'",
+                            action,
+                            existed.getClass().getSimpleName(),
+                            handler.getClass().getSimpleName(),
+                            existed.getClass().getSimpleName());
                 }
             }
         }

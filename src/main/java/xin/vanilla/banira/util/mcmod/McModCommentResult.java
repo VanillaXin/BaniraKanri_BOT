@@ -20,7 +20,7 @@ public class McModCommentResult {
      * 是否登录
      */
     @JsonProperty("is_login")
-    private boolean isLogin;
+    private Boolean isLogin;
     /**
      * 分页信息
      */
