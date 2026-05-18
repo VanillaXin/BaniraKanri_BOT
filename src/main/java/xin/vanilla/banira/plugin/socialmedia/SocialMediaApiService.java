@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import xin.vanilla.banira.util.HttpUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.JsonUtils;
 import xin.vanilla.banira.util.StringUtils;
@@ -14,7 +15,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 社交媒体外部接口服务
@@ -22,6 +26,11 @@ import java.util.function.Supplier;
 @Slf4j
 @Service
 public class SocialMediaApiService {
+
+    private static final Pattern DOUYIN_PATH_AWEME_ID_PATTERN = Pattern.compile("/(?:video|note)/(\\d+)");
+    private static final Pattern DOUYIN_QUERY_AWEME_ID_PATTERN = Pattern.compile("[?&]aweme_id=(\\d+)");
+    private static final Pattern DOUYIN_SHORT_URL_PATTERN = Pattern.compile("https?://v\\.douyin\\.com/[\\w-]{6,32}/?");
+    private static final Pattern PURE_AWEME_ID_PATTERN = Pattern.compile("^\\d{18,}$");
 
     @Resource
     private Supplier<SocialMediaSettings> socialMediaConfig;
@@ -55,8 +64,12 @@ public class SocialMediaApiService {
                 continue;
             }
             try {
-                String api = buildApiUrl(apiConfig.api(), target);
-                String response = HttpUtil.get(api);
+                String apiTarget = resolveApiTarget(target, apiConfig.targetMode());
+                if (StringUtils.isNullOrEmptyEx(apiTarget)) {
+                    continue;
+                }
+                String api = buildApiUrl(apiConfig.api(), apiTarget);
+                String response = requestApi(api, apiConfig.headers());
                 JsonObject jsonObject = JsonUtils.parseJsonObject(response);
                 if (jsonObject == null) {
                     continue;
@@ -85,11 +98,11 @@ public class SocialMediaApiService {
         SocialMediaContent content = new SocialMediaContent();
         content.url(target);
         content.title(getString(jsonObject, fields.titlePath()));
-        content.cover(getString(jsonObject, fields.coverPath()));
+        content.cover(getString(jsonObject, fields.coverPathFallback(), fields.coverPath()));
         content.desc(getString(jsonObject, fields.descPath()));
         content.authorName(getString(jsonObject, fields.authorNamePath()));
         content.authorAvatar(getString(jsonObject, fields.authorAvatarPath()));
-        content.video(getString(jsonObject, fields.videoPath()));
+        content.video(getString(jsonObject, fields.videoPathFallback(), fields.videoPath()));
         content.audio(getString(jsonObject, fields.audioPath()));
         content.summary(getString(jsonObject, fields.summaryPath()));
         content.like(getInt(jsonObject, fields.likePath()));
@@ -129,11 +142,67 @@ public class SocialMediaApiService {
         return apiTemplate + encoded;
     }
 
+    private String requestApi(String api, Map<String, String> headers) {
+        if (headers == null || headers.isEmpty()) {
+            return HttpUtil.get(api);
+        }
+        return HttpUtil.createGet(api).headerMap(headers, true).execute().body();
+    }
+
+    private String resolveApiTarget(String target, String targetMode) {
+        String mode = StringUtils.isNullOrEmptyEx(targetMode) ? "url" : targetMode.trim().toLowerCase(Locale.ROOT);
+        if ("awemeid".equals(mode)) {
+            return extractAwemeId(target);
+        }
+        return target;
+    }
+
+    private String extractAwemeId(String target) {
+        if (StringUtils.isNullOrEmptyEx(target)) {
+            return null;
+        }
+        String trimmed = target.trim();
+        if (PURE_AWEME_ID_PATTERN.matcher(trimmed).matches()) {
+            return trimmed;
+        }
+
+        String redirected = trimmed;
+        if (DOUYIN_SHORT_URL_PATTERN.matcher(trimmed).find()) {
+            redirected = HttpUtils.getRedirectedUrl(trimmed);
+        }
+        if (StringUtils.isNullOrEmptyEx(redirected)) {
+            redirected = trimmed;
+        }
+
+        Matcher pathMatcher = DOUYIN_PATH_AWEME_ID_PATTERN.matcher(redirected);
+        if (pathMatcher.find()) {
+            return pathMatcher.group(1);
+        }
+
+        Matcher queryMatcher = DOUYIN_QUERY_AWEME_ID_PATTERN.matcher(redirected);
+        if (queryMatcher.find()) {
+            return queryMatcher.group(1);
+        }
+        return null;
+    }
+
     private String getString(JsonObject jsonObject, String path) {
         if (StringUtils.isNullOrEmptyEx(path)) {
             return "";
         }
         return JsonUtils.getString(jsonObject, path, "");
+    }
+
+    private String getString(JsonObject jsonObject, List<String> fallbackPaths, String path) {
+        if (CollectionUtils.isNotNullOrEmpty(fallbackPaths)) {
+            for (String fallbackPath : fallbackPaths) {
+                String value = getString(jsonObject, fallbackPath);
+                if (StringUtils.isNotNullOrEmpty(value)) {
+                    return value;
+                }
+            }
+        }
+        return getString(jsonObject, path);
     }
 
     private int getInt(JsonObject jsonObject, String path) {

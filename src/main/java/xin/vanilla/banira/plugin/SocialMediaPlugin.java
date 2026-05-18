@@ -131,20 +131,16 @@ public class SocialMediaPlugin extends BasePlugin {
         String botName = bot.getLoginInfoEx().getNickname();
 
         for (SocialMediaContent content : contents) {
-            StringBuilder sb = new StringBuilder();
             if (StringUtils.isNotNullOrEmpty(content.msg())) {
-                sb.append(content.msg());
+                forwardMsg.add(ShiroUtils.generateSingleMsg(botId, botName, content.msg()));
             }
             if (StringUtils.isNotNullOrEmpty(content.video())) {
-                if (!sb.isEmpty()) {
-                    sb.append("\n");
-                }
-                sb.append(MsgUtils.builder().video(content.video(), content.cover()).build());
+                forwardMsg.add(ShiroUtils.generateSingleMsg(
+                        botId,
+                        botName,
+                        MsgUtils.builder().video(content.video(), content.cover()).build()
+                ));
             }
-            if (StringUtils.isNullOrEmptyEx(sb.toString())) {
-                continue;
-            }
-            forwardMsg.add(ShiroUtils.generateSingleMsg(botId, botName, sb.toString()));
         }
         return forwardMsg;
     }
