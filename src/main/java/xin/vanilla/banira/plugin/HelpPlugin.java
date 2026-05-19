@@ -100,24 +100,34 @@ public class HelpPlugin extends BasePlugin {
             String[] split = argString.split("\\s+");
             HelpQueryArgs args = parseHelpArgs(split);
 
-            List<HelpMessage> helpMessages = helpService.buildMessages(event.getGroupId(), args.path(), args.page());
-            if (helpMessages.isEmpty()) {
-                return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
-            }
-
             LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
             String defaultNickname = loginInfoEx.getNickname();
             List<Map<String, Object>> msg = new ArrayList<>();
             msg.add(ShiroUtils.generateSingleMsg(
                     event.getUserId(), event.getSender().getNickname(), event.getMessage()
             ));
-            helpMessages.forEach(help -> msg.add(
-                    ShiroUtils.generateSingleMsg(
-                            bot.getSelfId(),
-                            StringUtils.isNotNullOrEmpty(help.senderName()) ? help.senderName() : defaultNickname,
-                            MsgUtils.builder().text(help.content()).build()
-                    )
-            ));
+
+            if (args.extended()) {
+                List<Map<String, Object>> helpNodes = helpService.buildExtendedNodes(
+                        event.getGroupId(), args.path(), args.page(), bot.getSelfId(), defaultNickname
+                );
+                if (helpNodes.isEmpty()) {
+                    return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                }
+                msg.addAll(helpNodes);
+            } else {
+                List<HelpMessage> helpMessages = helpService.buildMessages(event.getGroupId(), args.path(), args.page());
+                if (helpMessages.isEmpty()) {
+                    return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                }
+                helpMessages.forEach(help -> msg.add(
+                        ShiroUtils.generateSingleMsg(
+                                bot.getSelfId(),
+                                StringUtils.isNotNullOrEmpty(help.senderName()) ? help.senderName() : defaultNickname,
+                                MsgUtils.builder().text(help.content()).build()
+                        )
+                ));
+            }
 
             ActionData<MsgId> msgId = bot.sendForwardMsg(event, msg);
             return bot.isActionDataMsgIdNotEmpty(msgId);
@@ -148,7 +158,16 @@ public class HelpPlugin extends BasePlugin {
     @Nonnull
     private HelpQueryArgs parseHelpArgs(@Nonnull String[] split) {
         if (split.length <= 1) {
-            return new HelpQueryArgs(List.of(), 1);
+            return new HelpQueryArgs(List.of(), 1, false);
+        }
+        int start = 1;
+        boolean extended = false;
+        if ("-ex".equalsIgnoreCase(split[1])) {
+            extended = true;
+            start = 2;
+        }
+        if (split.length <= start) {
+            return new HelpQueryArgs(List.of(), 1, extended);
         }
         int argEnd = split.length;
         long page = 1;
@@ -159,13 +178,13 @@ public class HelpPlugin extends BasePlugin {
             argEnd = split.length - 1;
         }
         List<String> path = new ArrayList<>();
-        for (int i = 1; i < argEnd; i++) {
+        for (int i = start; i < argEnd; i++) {
             path.add(split[i]);
         }
-        return new HelpQueryArgs(path, page);
+        return new HelpQueryArgs(path, page, extended);
     }
 
-    private record HelpQueryArgs(@Nonnull List<String> path, long page) {
+    private record HelpQueryArgs(@Nonnull List<String> path, long page, boolean extended) {
     }
 
 }

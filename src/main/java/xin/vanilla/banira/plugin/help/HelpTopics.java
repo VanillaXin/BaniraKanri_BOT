@@ -2,8 +2,10 @@ package xin.vanilla.banira.plugin.help;
 
 import jakarta.annotation.Nonnull;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.Collection;
+import java.util.List;
 
 /**
  * HelpTopic 构建工具
@@ -74,6 +76,23 @@ public final class HelpTopics {
     @Nonnull
     public static String joinAliases(@Nonnull Collection<String> aliases) {
         return String.join(", ", aliases);
+    }
+
+    /**
+     * 格式化示例指令中的可选别名组：多个别名时用尖括号包裹，如 {@code <delcomment, 删除评论>}
+     */
+    @Nonnull
+    public static String formatAliasChoices(@Nonnull Collection<String> aliases) {
+        List<String> list = aliases.stream()
+                .filter(StringUtils::isNotNullOrEmpty)
+                .toList();
+        if (list.isEmpty()) {
+            return "";
+        }
+        if (list.size() == 1) {
+            return list.getFirst();
+        }
+        return "<" + String.join(", ", list) + ">";
     }
 
 }

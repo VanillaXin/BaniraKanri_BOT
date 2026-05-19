@@ -1,5 +1,6 @@
 package xin.vanilla.banira.plugin.help;
 
+import com.mikuac.shiro.common.utils.ShiroUtils;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
@@ -8,9 +9,7 @@ import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Supplier;
 
 /**
@@ -22,6 +21,7 @@ public class HelpService {
     private static final long PAGE_SIZE = 98L;
     private static final String SENDER_FEATURE_LIST = "功能列表";
     private static final String SENDER_SUB_FEATURE_LIST = "子功能列表";
+    private static final int MAX_EXTENDED_NEST_DEPTH = 4;
 
     @Resource
     private HelpTopicRegistry registry;
@@ -30,10 +30,6 @@ public class HelpService {
 
     /**
      * 构建帮助合并转发消息，每条对应合并转发中的一条消息
-     *
-     * @param groupId 群号
-     * @param path    功能路径（可为空）
-     * @param page    页码，从 1 开始
      */
     @Nonnull
     public List<HelpMessage> buildMessages(@Nullable Long groupId
@@ -48,29 +44,81 @@ public class HelpService {
 
         if (path.isEmpty()) {
             appendFeatureListMessages(messages, registry.list(groupId));
-            return paginate(messages, page);
+            return paginateMessages(messages, page);
         }
 
+        ResolvedHelp resolved = resolvePath(groupId, path);
+        if (!resolved.ok()) {
+            messages.add(HelpMessage.of(resolved.error()));
+            return paginateMessages(messages, page);
+        }
+
+        messages.add(HelpMessage.of(buildFeatureSection(resolved.root()), resolved.root().name()));
+        appendFocusContent(messages, resolved.focus());
+        return paginateMessages(messages, page);
+    }
+
+    /**
+     * 构建 -ex 嵌套合并转发节点（不含用户触发消息）
+     */
+    @Nonnull
+    public List<Map<String, Object>> buildExtendedNodes(@Nullable Long groupId
+            , @Nonnull List<String> path
+            , long page
+            , long botId
+            , @Nonnull String defaultNickname
+    ) {
+        if (page <= 0) {
+            page = 1;
+        }
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        nodes.add(singleNode(botId, defaultNickname, buildUsageHeader()));
+
+        if (path.isEmpty()) {
+            List<HelpTopic> topics = registry.list(groupId);
+            if (topics.isEmpty()) {
+                nodes.add(singleNode(botId, SENDER_FEATURE_LIST, "暂无可用功能。"));
+            } else {
+                for (HelpTopic topic : topics) {
+                    nodes.add(wrapTopLevelNestedNode(botId, topic));
+                }
+            }
+            return paginateNodes(nodes, page);
+        }
+
+        ResolvedHelp resolved = resolvePath(groupId, path);
+        if (!resolved.ok()) {
+            nodes.add(singleNode(botId, defaultNickname, resolved.error()));
+            return paginateNodes(nodes, page);
+        }
+
+        nodes.add(singleNode(botId, resolved.root().name(), buildFeatureSection(resolved.root())));
+        appendExtendedFocusContent(nodes, botId, resolved.focus(), path.size());
+        return paginateNodes(nodes, page);
+    }
+
+    /**
+     * 路径段数达到上限时，最外层改用简单文本展示
+     */
+    private static boolean shouldUseSimpleDisplay(int pathDepth) {
+        return pathDepth >= MAX_EXTENDED_NEST_DEPTH - 1;
+    }
+
+    @Nonnull
+    private ResolvedHelp resolvePath(@Nullable Long groupId, @Nonnull List<String> path) {
         HelpTopic root = registry.resolve(groupId, path.getFirst());
         if (root == null) {
-            messages.add(HelpMessage.of("未找到功能：" + path.getFirst()));
-            return paginate(messages, page);
+            return ResolvedHelp.error("未找到功能：" + path.getFirst());
         }
-
-        messages.add(HelpMessage.of(buildFeatureSection(root), root.name()));
-
         HelpTopic focus = root;
         for (int i = 1; i < path.size(); i++) {
             Optional<HelpTopic> next = focus.findChild(path.get(i));
             if (next.isEmpty()) {
-                messages.add(HelpMessage.of("未找到子功能：" + path.get(i)));
-                return paginate(messages, page);
+                return ResolvedHelp.error("未找到子功能：" + path.get(i));
             }
             focus = next.get();
         }
-
-        appendFocusContent(messages, focus);
-        return paginate(messages, page);
+        return ResolvedHelp.of(root, focus);
     }
 
     /**
@@ -86,21 +134,119 @@ public class HelpService {
         }
     }
 
+    private void appendExtendedFocusContent(@Nonnull List<Map<String, Object>> nodes
+            , long botId
+            , @Nonnull HelpTopic focus
+            , int pathDepth
+    ) {
+        if (shouldUseSimpleDisplay(pathDepth)) {
+            appendSimpleFocusContent(nodes, botId, focus);
+            return;
+        }
+        if (!focus.sortedChildren().isEmpty()) {
+            for (HelpTopic child : focus.sortedChildren()) {
+                nodes.add(wrapNestedTopicNode(botId, child));
+            }
+            return;
+        }
+        if (StringUtils.isNotNullOrEmpty(focus.detail()) || StringUtils.isNotNullOrEmpty(focus.description())) {
+            nodes.add(wrapNestedTopicNode(botId, focus));
+        }
+    }
+
+    private void appendSimpleFocusContent(@Nonnull List<Map<String, Object>> nodes, long botId, @Nonnull HelpTopic focus) {
+        if (!focus.sortedChildren().isEmpty()) {
+            nodes.add(singleNode(botId, focus.name(), formatTopicEntry(focus)));
+            nodes.add(singleNode(botId, SENDER_SUB_FEATURE_LIST, "包含子功能："));
+            for (HelpTopic child : focus.sortedChildren()) {
+                nodes.add(singleNode(botId, child.name(), buildLeafTextContent(child)));
+            }
+            return;
+        }
+        String content = StringUtils.isNotNullOrEmpty(focus.detail())
+                ? buildSubFeatureDetail(focus)
+                : formatTopicEntry(focus);
+        nodes.add(singleNode(botId, focus.name(), content));
+    }
+
+    @Nonnull
+    private Map<String, Object> wrapTopLevelNestedNode(long botId, @Nonnull HelpTopic topic) {
+        return wrapNestedTopicNode(botId, topic, 1);
+    }
+
+    @Nonnull
+    private Map<String, Object> wrapNestedTopicNode(long botId, @Nonnull HelpTopic topic) {
+        return wrapNestedTopicNode(botId, topic, 1);
+    }
+
+    @Nonnull
+    private Map<String, Object> wrapNestedTopicNode(long botId, @Nonnull HelpTopic topic, int nestLevel) {
+        return nestedForwardNode(botId, topic.name(), buildNestedInnerForward(botId, topic, nestLevel));
+    }
+
+    /**
+     * 构建嵌套合并转发的内层节点；有子功能且未达深度上限时，每个子功能独立套一层合并转发
+     */
+    @Nonnull
+    private List<Map<String, Object>> buildNestedInnerForward(long botId, @Nonnull HelpTopic topic, int nestLevel) {
+        List<Map<String, Object>> result = new ArrayList<>();
+        result.add(singleNode(botId, topic.name(), formatTopicEntry(topic)));
+
+        if (topic.sortedChildren().isEmpty()) {
+            if (StringUtils.isNotNullOrEmpty(topic.detail())) {
+                result.add(singleNode(botId, topic.name(), topic.detail()));
+            }
+            return result;
+        }
+
+        if (nestLevel >= MAX_EXTENDED_NEST_DEPTH) {
+            result.add(singleNode(botId, SENDER_SUB_FEATURE_LIST, "包含子功能："));
+            for (HelpTopic child : topic.sortedChildren()) {
+                result.add(singleNode(botId, child.name(), buildLeafTextContent(child)));
+            }
+            return result;
+        }
+
+        for (HelpTopic child : topic.sortedChildren()) {
+            result.add(wrapNestedTopicNode(botId, child, nestLevel + 1));
+        }
+        return result;
+    }
+
+    @Nonnull
+    private String buildLeafTextContent(@Nonnull HelpTopic topic) {
+        if (StringUtils.isNotNullOrEmpty(topic.detail())) {
+            return buildSubFeatureDetail(topic);
+        }
+        return formatTopicEntry(topic);
+    }
+
+    @Nonnull
+    private Map<String, Object> nestedForwardNode(long botId, @Nonnull String senderName, @Nonnull List<Map<String, Object>> innerForward) {
+        Map<String, Object> data = new HashMap<>();
+        data.put("name", senderName);
+        data.put("uin", String.valueOf(botId));
+        data.put("content", innerForward);
+        Map<String, Object> node = new HashMap<>();
+        node.put("type", "node");
+        node.put("data", data);
+        return node;
+    }
+
+    @Nonnull
+    private Map<String, Object> singleNode(long botId, @Nonnull String senderName, @Nonnull String content) {
+        return ShiroUtils.generateSingleMsg(botId, senderName, content);
+    }
+
     @Nonnull
     private String buildUsageHeader() {
         String prefix = BaniraUtils.getInsPrefixWithSpace();
-        String helpIns = HelpTopics.joinAliases(insConfig.get().base().help());
-        return "指令帮助\n\n"
-                + "用法：\n"
-                + prefix + helpIns + " [<页数>]\n"
-                + prefix + helpIns + " <功能别名> [<页数>]\n"
-                + prefix + helpIns + " <功能别名> <子功能别名> [<页数>]\n"
-                + prefix + helpIns + " <功能别名> <子功能别名> ... [<页数>]\n\n"
-                + "示例：\n"
-                + prefix + insConfig.get().base().help().getFirst() + "\n"
-                + prefix + insConfig.get().base().help().getFirst() + " keyword\n"
-                + prefix + insConfig.get().base().help().getFirst() + " mcmod 评论检测\n"
-                + prefix + insConfig.get().base().help().getFirst() + " mcmod 评论检测 添加";
+        String helpIns = HelpTopics.formatAliasChoices(insConfig.get().base().help());
+        String cmd = prefix + helpIns;
+        return "指令帮助\n\n用法：\n"
+                + cmd + " [<页数>]\n"
+                + cmd + " <功能> [<子功能> ...] [<页数>]\n"
+                + cmd + " -ex <功能> [<子功能> ...] [<页数>]";
     }
 
     private void appendFeatureListMessages(@Nonnull List<HelpMessage> messages, @Nonnull List<HelpTopic> topics) {
@@ -153,11 +299,36 @@ public class HelpService {
     }
 
     @Nonnull
-    private List<HelpMessage> paginate(@Nonnull List<HelpMessage> messages, long page) {
+    private List<HelpMessage> paginateMessages(@Nonnull List<HelpMessage> messages, long page) {
         return messages.stream()
                 .skip((page - 1) * PAGE_SIZE)
                 .limit(PAGE_SIZE)
                 .toList();
+    }
+
+    @Nonnull
+    private List<Map<String, Object>> paginateNodes(@Nonnull List<Map<String, Object>> nodes, long page) {
+        return nodes.stream()
+                .skip((page - 1) * PAGE_SIZE)
+                .limit(PAGE_SIZE)
+                .toList();
+    }
+
+    private record ResolvedHelp(@Nullable HelpTopic root, @Nullable HelpTopic focus, @Nullable String error) {
+
+        @Nonnull
+        static ResolvedHelp of(@Nonnull HelpTopic root, @Nonnull HelpTopic focus) {
+            return new ResolvedHelp(root, focus, null);
+        }
+
+        @Nonnull
+        static ResolvedHelp error(@Nonnull String error) {
+            return new ResolvedHelp(null, null, error);
+        }
+
+        boolean ok() {
+            return error == null;
+        }
     }
 
 }

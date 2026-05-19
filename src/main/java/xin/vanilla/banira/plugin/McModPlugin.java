@@ -92,12 +92,12 @@ public class McModPlugin extends BasePlugin {
                 buildSearchDetail(slashCmd, TUTORIAL_INS, false)));
         topic.child(search);
         topic.child(HelpTopics.sub("随便看看", "随机显示 MOD。", 2, MOD_RANDOM_INS,
-                slashCmd + " " + HelpTopics.joinAliases(MOD_RANDOM_INS)));
+                slashCmd + " " + HelpTopics.formatAliasChoices(MOD_RANDOM_INS)));
         topic.child(HelpTopics.sub("用户卡片", "展示用户卡片信息。", 3, USER_CARD_INS,
-                slashCmd + " " + HelpTopics.joinAliases(USER_CARD_INS) + " <用户ID>"));
+                slashCmd + " " + HelpTopics.formatAliasChoices(USER_CARD_INS) + " <用户ID>"));
         topic.child(HelpTopics.sub("评论管理", "管理员回复或删除 MC 百科评论（仅群聊）。", 4, List.of("delcomment", "reply", "评论管理"),
-                "回复评论（需回复含评论信息的消息）：\n" + slashCmd + " " + HelpTopics.joinAliases(COMMENT_REPLY_INS) + " <回复内容>\n\n"
-                        + "删除评论：\n" + slashCmd + " " + HelpTopics.joinAliases(DEL_COMMENT_INS) + " <评论ID>\n\n"
+                "回复评论（需回复含评论信息的消息）：\n" + slashCmd + " " + HelpTopics.formatAliasChoices(COMMENT_REPLY_INS) + " <回复内容>\n\n"
+                        + "删除评论：\n" + slashCmd + " " + HelpTopics.formatAliasChoices(DEL_COMMENT_INS) + " <评论ID>\n\n"
                         + "需要群管理员权限。"));
         HelpTopic commentWatch = HelpTopics.of("评论检测", "检测 MC 百科评论变化并提示。", 5, List.of("commentWatch", "评论检测"));
         commentWatch.child(HelpTopics.opAdd(base,
@@ -115,7 +115,7 @@ public class McModPlugin extends BasePlugin {
 
     @Nonnull
     private static String buildSearchDetail(@Nonnull String slashCmd, @Nonnull Collection<String> aliases, boolean supportPaging) {
-        String ins = HelpTopics.joinAliases(aliases);
+        String ins = HelpTopics.formatAliasChoices(aliases);
         StringBuilder sb = new StringBuilder();
         sb.append(slashCmd).append(' ').append(ins).append(" <关键词>");
         if (supportPaging) {
