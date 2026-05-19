@@ -22,7 +22,6 @@ import xin.vanilla.banira.plugin.help.HelpMessage;
 import xin.vanilla.banira.plugin.help.HelpService;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
-import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
@@ -99,35 +98,9 @@ public class HelpPlugin extends BasePlugin {
         try {
             String argString = super.deleteCommandPrefix(context);
             String[] split = argString.split("\\s+");
-            long page = StringUtils.toLong(CollectionUtils.getLast(split), -1);
+            HelpQueryArgs args = parseHelpArgs(split);
 
-            String featureAlias = null;
-            String subAlias = null;
-            if (split.length == 1) {
-                page = 1;
-            } else if (split.length == 2) {
-                if (page == StringUtils.toLong(CollectionUtils.getLast(split))) {
-                    page = Math.max(page, 1);
-                } else {
-                    featureAlias = split[1];
-                    page = 1;
-                }
-            } else {
-                int argEnd = split.length;
-                if (page == StringUtils.toLong(CollectionUtils.getLast(split))) {
-                    argEnd = split.length - 1;
-                } else {
-                    page = 1;
-                }
-                if (argEnd >= 2) {
-                    featureAlias = split[1];
-                }
-                if (argEnd >= 3) {
-                    subAlias = split[2];
-                }
-            }
-
-            List<HelpMessage> helpMessages = helpService.buildMessages(event.getGroupId(), featureAlias, subAlias, page);
+            List<HelpMessage> helpMessages = helpService.buildMessages(event.getGroupId(), args.path(), args.page());
             if (helpMessages.isEmpty()) {
                 return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             }
@@ -170,6 +143,29 @@ public class HelpPlugin extends BasePlugin {
             }
         }
         return sb.toString();
+    }
+
+    @Nonnull
+    private HelpQueryArgs parseHelpArgs(@Nonnull String[] split) {
+        if (split.length <= 1) {
+            return new HelpQueryArgs(List.of(), 1);
+        }
+        int argEnd = split.length;
+        long page = 1;
+        String last = split[split.length - 1];
+        long maybePage = StringUtils.toLong(last, -1);
+        if (maybePage >= 1 && String.valueOf(maybePage).equals(last)) {
+            page = maybePage;
+            argEnd = split.length - 1;
+        }
+        List<String> path = new ArrayList<>();
+        for (int i = 1; i < argEnd; i++) {
+            path.add(split[i]);
+        }
+        return new HelpQueryArgs(path, page);
+    }
+
+    private record HelpQueryArgs(@Nonnull List<String> path, long page) {
     }
 
 }

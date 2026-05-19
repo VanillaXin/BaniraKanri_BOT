@@ -10,7 +10,7 @@ import xin.vanilla.banira.util.StringUtils;
 import java.util.*;
 
 /**
- * 帮助主题，支持功能与子功能两级结构
+ * 帮助主题，支持多级嵌套结构
  */
 @Getter
 @Setter
@@ -91,6 +91,24 @@ public class HelpTopic {
                 .filter(child -> child.matches(alias))
                 .min(Comparator.comparingInt((HelpTopic t) -> t.order())
                         .thenComparing((HelpTopic t) -> t.name()));
+    }
+
+    /**
+     * 按别名路径逐级解析子主题
+     */
+    @Nonnull
+    public Optional<HelpTopic> resolveChildPath(@Nonnull List<String> segments) {
+        if (segments.isEmpty()) {
+            return Optional.of(this);
+        }
+        Optional<HelpTopic> child = findChild(segments.getFirst());
+        if (child.isEmpty()) {
+            return Optional.empty();
+        }
+        if (segments.size() == 1) {
+            return child;
+        }
+        return child.get().resolveChildPath(segments.subList(1, segments.size()));
     }
 
     @Nonnull

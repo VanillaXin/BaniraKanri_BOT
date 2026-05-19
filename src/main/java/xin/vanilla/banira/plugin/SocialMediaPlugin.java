@@ -11,21 +11,20 @@ import com.mikuac.shiro.dto.action.response.MsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.dto.event.notice.MessageEmojiLikeNoticeEvent;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.group.SocialMediaGroupConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.plugin.socialmedia.SocialMediaApiService;
 import xin.vanilla.banira.plugin.socialmedia.SocialMediaContent;
 import xin.vanilla.banira.plugin.socialmedia.SocialMediaGroupSettings;
 import xin.vanilla.banira.plugin.socialmedia.SocialMediaParser;
-import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
-import xin.vanilla.banira.plugin.help.HelpTopic;
-import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
@@ -54,11 +53,37 @@ public class SocialMediaPlugin extends BasePlugin {
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
         List<String> socialMedia = insConfig.get().socialMedia();
-        BaseInstructionsConfig base = insConfig.get().base();
+        BaseInstructionsConfig base = BaniraUtils.getBaseIns();
         String prefix = BaniraUtils.getInsPrefixWithSpace();
-        topics.add(HelpTopics.of("社交媒体解析", "自动解析社交媒体链接。", 99, socialMedia)
-                .child(HelpTopics.opEnable(base, prefix + socialMedia + " " + base.enable()))
-                .child(HelpTopics.opDisable(base, prefix + socialMedia + " " + base.disable())));
+        String cmd = socialMedia.getFirst();
+        String socialCmd = prefix + cmd;
+
+        HelpTopic topic = HelpTopics.of("社交媒体解析", "自动解析消息中的社交媒体链接。", 99, socialMedia)
+                .detail("启用插件并配置触发方式后，可通过直接发送链接、回复含链接的消息，或对消息点赞指定表情来触发解析。");
+
+        topic.child(HelpTopics.opEnable(base,
+                "启用插件：\n" + socialCmd + " " + base.enable().getFirst() + "\n\n"
+                        + "启用某项触发（管理员）：\n" + socialCmd + " " + base.enable().getFirst() + " <触发项>\n"
+                        + "触发项：direct(直接触发)、reply(回复触发)、likeNotice(表情点赞触发)、recognizeEmoji(识别提示表情)"));
+        topic.child(HelpTopics.opDisable(base,
+                "禁用插件：\n" + socialCmd + " " + base.disable().getFirst() + "\n\n"
+                        + "禁用某项触发（管理员）：\n" + socialCmd + " " + base.disable().getFirst() + " <触发项>"));
+        topic.child(HelpTopics.opAdd(base,
+                socialCmd + " " + base.add().getFirst() + " emoji <表情ID>\n\n"
+                        + "添加 likeNotice 触发用的表情 ID。"));
+        topic.child(HelpTopics.opDel(base,
+                socialCmd + " " + base.del().getFirst() + " emoji <表情ID>\n\n"
+                        + "移除已配置的触发表情 ID。"));
+        topic.child(HelpTopics.opList(base,
+                socialCmd + " " + base.list().getFirst() + " / " + base.status().getFirst() + "\n\n"
+                        + "查看当前群的社交媒体解析配置。"));
+        topic.child(HelpTopics.sub("回复方式", "设置解析结果的回复形式。", 6, List.of("mode", "回复方式"),
+                socialCmd + " mode <forward|detail|video>\n\n"
+                        + "forward：合并转发（默认）\n"
+                        + "detail：详情文本\n"
+                        + "video：视频直链"));
+
+        topics.add(topic);
     }
 
     /**

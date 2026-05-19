@@ -73,25 +73,57 @@ public class McModPlugin extends BasePlugin {
         commentTypes.addAll(AUTHOR_INS);
         commentTypes.addAll(USER_INS);
 
+        String slashCmd = "/" + command.getFirst();
+        String baniraCmd = prefix + command.getFirst();
+
         HelpTopic topic = HelpTopics.of("MC百科", "MCMod 百科检索与评论检测。", 99, command);
-        topic.child(HelpTopics.sub("检索", "搜索模组、整合包或作者。", 1, List.of("search", "检索"),
-                "搜索模组：\n/" + command + " " + MOD_INS + " <关键词>\n\n"
-                        + "搜索整合包：\n/" + command + " " + MOD_PACK_INS + " <关键词>\n\n"
-                        + "搜索作者：\n/" + command + " " + AUTHOR_INS + " <关键词>"));
+        HelpTopic search = HelpTopics.of("检索", "搜索模组、整合包、作者、用户、资料或教程。", 1, List.of("search", "检索"));
+        search.child(HelpTopics.sub("模组", "按关键词搜索模组。", 1, MOD_INS,
+                buildSearchDetail(slashCmd, MOD_INS, true)));
+        search.child(HelpTopics.sub("整合包", "按关键词搜索整合包。", 2, MOD_PACK_INS,
+                buildSearchDetail(slashCmd, MOD_PACK_INS, true)));
+        search.child(HelpTopics.sub("作者", "按关键词搜索作者。", 3, AUTHOR_INS,
+                buildSearchDetail(slashCmd, AUTHOR_INS, true)));
+        search.child(HelpTopics.sub("用户", "按关键词搜索用户。", 4, USER_INS,
+                buildSearchDetail(slashCmd, USER_INS, false)));
+        search.child(HelpTopics.sub("资料", "按关键词搜索资料。", 5, ITEM_INS,
+                buildSearchDetail(slashCmd, ITEM_INS, false)));
+        search.child(HelpTopics.sub("教程", "按关键词搜索教程。", 6, TUTORIAL_INS,
+                buildSearchDetail(slashCmd, TUTORIAL_INS, false)));
+        topic.child(search);
         topic.child(HelpTopics.sub("随便看看", "随机显示 MOD。", 2, MOD_RANDOM_INS,
-                "/" + command + " " + MOD_RANDOM_INS));
+                slashCmd + " " + HelpTopics.joinAliases(MOD_RANDOM_INS)));
         topic.child(HelpTopics.sub("用户卡片", "展示用户卡片信息。", 3, USER_CARD_INS,
-                "/" + command + " " + USER_CARD_INS + " <用户ID>"));
-        HelpTopic commentWatch = HelpTopics.of("评论检测", "检测 MC 百科评论变化并提示。", 4, List.of("commentWatch", "评论检测"));
+                slashCmd + " " + HelpTopics.joinAliases(USER_CARD_INS) + " <用户ID>"));
+        topic.child(HelpTopics.sub("评论管理", "管理员回复或删除 MC 百科评论（仅群聊）。", 4, List.of("delcomment", "reply", "评论管理"),
+                "回复评论（需回复含评论信息的消息）：\n" + slashCmd + " " + HelpTopics.joinAliases(COMMENT_REPLY_INS) + " <回复内容>\n\n"
+                        + "删除评论：\n" + slashCmd + " " + HelpTopics.joinAliases(DEL_COMMENT_INS) + " <评论ID>\n\n"
+                        + "需要群管理员权限。"));
+        HelpTopic commentWatch = HelpTopics.of("评论检测", "检测 MC 百科评论变化并提示。", 5, List.of("commentWatch", "评论检测"));
         commentWatch.child(HelpTopics.opAdd(base,
-                prefix + command + " " + base.add() + " " + commentTypes + " <容器ID>"));
+                baniraCmd + " " + base.add().getFirst() + " <类型> <容器ID>\n"
+                        + "类型：" + HelpTopics.joinAliases(commentTypes)));
         commentWatch.child(HelpTopics.opDel(base,
-                prefix + command + " " + base.del() + " " + commentTypes + " <容器ID>"));
-        commentWatch.child(HelpTopics.opList(base, prefix + command + " " + base.list()));
-        commentWatch.child(HelpTopics.opEnable(base, prefix + command + " " + base.enable()));
-        commentWatch.child(HelpTopics.opDisable(base, prefix + command + " " + base.disable()));
+                baniraCmd + " " + base.del().getFirst() + " <类型> <容器ID>\n"
+                        + "类型：" + HelpTopics.joinAliases(commentTypes)));
+        commentWatch.child(HelpTopics.opList(base, baniraCmd + " " + base.list().getFirst()));
+        commentWatch.child(HelpTopics.opEnable(base, baniraCmd + " " + base.enable().getFirst()));
+        commentWatch.child(HelpTopics.opDisable(base, baniraCmd + " " + base.disable().getFirst()));
         topic.child(commentWatch);
         topics.add(topic);
+    }
+
+    @Nonnull
+    private static String buildSearchDetail(@Nonnull String slashCmd, @Nonnull Collection<String> aliases, boolean supportPaging) {
+        String ins = HelpTopics.joinAliases(aliases);
+        StringBuilder sb = new StringBuilder();
+        sb.append(slashCmd).append(' ').append(ins).append(" <关键词>");
+        if (supportPaging) {
+            sb.append('\n')
+                    .append(slashCmd).append(' ').append(ins).append(" -a <关键词>\n")
+                    .append("（分页搜索，结果较多时使用）");
+        }
+        return sb.toString();
     }
 
     @AnyMessageHandler

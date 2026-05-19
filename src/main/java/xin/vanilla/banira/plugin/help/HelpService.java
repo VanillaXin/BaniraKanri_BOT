@@ -10,6 +10,7 @@ import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.Supplier;
 
 /**
@@ -30,53 +31,59 @@ public class HelpService {
     /**
      * 构建帮助合并转发消息，每条对应合并转发中的一条消息
      *
-     * @param groupId      群号
-     * @param featureAlias 功能别名，可为空
-     * @param subAlias     子功能别名，可为空
-     * @param page         页码，从 1 开始
+     * @param groupId 群号
+     * @param path    功能路径（可为空）
+     * @param page    页码，从 1 开始
      */
     @Nonnull
     public List<HelpMessage> buildMessages(@Nullable Long groupId
-            , @Nullable String featureAlias
-            , @Nullable String subAlias
+            , @Nonnull List<String> path
             , long page
     ) {
         if (page <= 0) {
             page = 1;
         }
         List<HelpMessage> messages = new ArrayList<>();
-        // 第二条：统一帮助提示，使用机器人默认昵称
         messages.add(HelpMessage.of(buildUsageHeader()));
 
-        if (StringUtils.isNullOrEmptyEx(featureAlias)) {
+        if (path.isEmpty()) {
             appendFeatureListMessages(messages, registry.list(groupId));
             return paginate(messages, page);
         }
 
-        HelpTopic topic = registry.resolve(groupId, featureAlias);
-        if (topic == null) {
-            messages.add(HelpMessage.of("未找到功能：" + featureAlias));
+        HelpTopic root = registry.resolve(groupId, path.getFirst());
+        if (root == null) {
+            messages.add(HelpMessage.of("未找到功能：" + path.getFirst()));
             return paginate(messages, page);
         }
 
-        messages.add(HelpMessage.of(buildFeatureSection(topic), topic.name()));
+        messages.add(HelpMessage.of(buildFeatureSection(root), root.name()));
 
-        if (topic.sortedChildren().isEmpty()) {
-            if (StringUtils.isNotNullOrEmpty(topic.detail())) {
-                messages.add(HelpMessage.of(buildDetailSection(topic.name(), topic.detail()), topic.name()));
+        HelpTopic focus = root;
+        for (int i = 1; i < path.size(); i++) {
+            Optional<HelpTopic> next = focus.findChild(path.get(i));
+            if (next.isEmpty()) {
+                messages.add(HelpMessage.of("未找到子功能：" + path.get(i)));
+                return paginate(messages, page);
             }
-            return paginate(messages, page);
+            focus = next.get();
         }
 
-        appendSubFeatureEntries(messages, topic.sortedChildren());
-
-        if (StringUtils.isNotNullOrEmpty(subAlias)) {
-            topic.findChild(subAlias).ifPresent(sub ->
-                    messages.add(HelpMessage.of(buildSubFeatureDetail(sub), sub.name()))
-            );
-        }
-
+        appendFocusContent(messages, focus);
         return paginate(messages, page);
+    }
+
+    /**
+     * 仅展示当前聚焦节点的子功能列表或详情，不包含上级节点的同级功能
+     */
+    private void appendFocusContent(@Nonnull List<HelpMessage> messages, @Nonnull HelpTopic focus) {
+        if (!focus.sortedChildren().isEmpty()) {
+            appendSubFeatureEntries(messages, focus.sortedChildren());
+            return;
+        }
+        if (StringUtils.isNotNullOrEmpty(focus.detail())) {
+            messages.add(HelpMessage.of(buildSubFeatureDetail(focus), focus.name()));
+        }
     }
 
     @Nonnull
@@ -87,11 +94,13 @@ public class HelpService {
                 + "用法：\n"
                 + prefix + helpIns + " [<页数>]\n"
                 + prefix + helpIns + " <功能别名> [<页数>]\n"
-                + prefix + helpIns + " <功能别名> <子功能别名> [<页数>]\n\n"
+                + prefix + helpIns + " <功能别名> <子功能别名> [<页数>]\n"
+                + prefix + helpIns + " <功能别名> <子功能别名> ... [<页数>]\n\n"
                 + "示例：\n"
                 + prefix + insConfig.get().base().help().getFirst() + "\n"
                 + prefix + insConfig.get().base().help().getFirst() + " keyword\n"
-                + prefix + insConfig.get().base().help().getFirst() + " keyword add";
+                + prefix + insConfig.get().base().help().getFirst() + " mcmod 评论检测\n"
+                + prefix + insConfig.get().base().help().getFirst() + " mcmod 评论检测 添加";
     }
 
     private void appendFeatureListMessages(@Nonnull List<HelpMessage> messages, @Nonnull List<HelpTopic> topics) {
@@ -139,22 +148,8 @@ public class HelpService {
         }
         if (StringUtils.isNotNullOrEmpty(sub.detail())) {
             sb.append('\n').append(sub.detail());
-        } else if (!sub.sortedChildren().isEmpty()) {
-            sb.append("\n\n");
-            for (HelpTopic child : sub.sortedChildren()) {
-                sb.append('【').append(child.name()).append("】\n");
-                if (StringUtils.isNotNullOrEmpty(child.detail())) {
-                    sb.append(child.detail());
-                }
-                sb.append("\n\n");
-            }
         }
         return sb.toString().stripTrailing();
-    }
-
-    @Nonnull
-    private String buildDetailSection(@Nonnull String title, @Nonnull String detail) {
-        return title + "\n\n" + detail;
     }
 
     @Nonnull

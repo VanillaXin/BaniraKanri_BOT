@@ -19,7 +19,6 @@ import com.mikuac.shiro.dto.action.response.LoginInfoResp;
 import com.mikuac.shiro.dto.action.response.VersionInfoResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -82,8 +81,19 @@ public class StatusPlugin extends BasePlugin {
 
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
-        topics.add(HelpTopics.of("框架状态", "获取框架及系统状态信息总览。", 2, insConfig.get().base().status())
-                .detail(BaniraUtils.getInsPrefixWithSpace() + insConfig.get().base().status()));
+        String prefix = BaniraUtils.getInsPrefixWithSpace();
+        List<String> statusAliases = insConfig.get().base().status();
+        List<String> aliveAliases = insConfig.get().alive();
+        List<String> aliases = new ArrayList<>(statusAliases.size() + aliveAliases.size());
+        aliases.addAll(statusAliases);
+        aliases.addAll(aliveAliases);
+
+        HelpTopic topic = HelpTopics.of("状态监控", "框架状态与存活检测。", 2, aliases);
+        topic.child(HelpTopics.sub("状态总览", "生成框架及系统状态截图。", 1, statusAliases,
+                prefix + statusAliases.getFirst() + "\n\n限频：同一来源 1 分钟内仅可请求一次。"));
+        topic.child(HelpTopics.sub("存活检测", "确认机器人在线。", 2, aliveAliases,
+                prefix + aliveAliases.getFirst() + "\n\n群内回复表情 66，私聊回复带表情 66 的消息。"));
+        topics.add(topic);
     }
 
     @AnyMessageHandler

@@ -62,19 +62,23 @@ public class McQueryPlugin extends BasePlugin {
         BaseInstructionsConfig base = BaniraUtils.getBaseIns();
         String prefix = BaniraUtils.getInsPrefixWithSpace();
         List<String> mcQuery = insConfig.get().mcQuery();
+        String cmd = mcQuery.getFirst();
+        String mcCmd = prefix + cmd;
         HelpTopic topic = HelpTopics.of("MC服务器", "查询 Minecraft 服务器状态。", 99, mcQuery);
         topic.child(HelpTopics.opAdd(base,
                 "增加 MC 服务器配置，下次可直接使用名称查询。\n\n"
-                        + "用法1：\n" + prefix + "mc " + base.add() + " [<服务器名称>] <查询地址> <查询端口>\n\n"
-                        + "用法2：\n" + prefix + "mc " + base.add() + " [<服务器名称>] <查询地址:查询端口>"));
+                        + "用法1：\n" + mcCmd + " " + base.add().getFirst() + " [<服务器名称>] <查询地址> <查询端口>\n\n"
+                        + "用法2：\n" + mcCmd + " " + base.add().getFirst() + " [<服务器名称>] <查询地址:查询端口>"));
         topic.child(HelpTopics.opDel(base,
-                "用法1：(根据编号删除)\n" + prefix + "mc " + base.del() + " <MC服务器编号> ...\n\n"
-                        + "用法2：(回复添加成功的响应消息)\n" + prefix + "mc " + base.del()));
+                "用法1：(根据编号删除)\n" + mcCmd + " " + base.del().getFirst() + " <MC服务器编号> ...\n\n"
+                        + "用法2：(回复添加成功的响应消息)\n" + mcCmd + " " + base.del().getFirst()));
         topic.child(HelpTopics.opList(base,
-                "用法：\n" + prefix + "mc " + base.list() + " [<页数>] <MC服务器名称>"));
-        topic.child(HelpTopics.sub("直接查询", "不保存配置，直接通过地址查询。", 4, querys,
-                "用法1：\n" + querys + " [<服务器名称>] <查询地址> <查询端口>\n\n"
-                        + "用法2：\n" + querys + " [<服务器名称>] <查询地址:查询端口>"));
+                "用法：\n" + mcCmd + " " + base.list().getFirst() + " [<页数>] [<MC服务器名称>]"));
+        topic.child(HelpTopics.sub("直接查询", "不保存配置，直接通过地址或已保存名称查询。", 4, querys,
+                "用法1：\n/list [<服务器名称>] <查询地址> <查询端口>\n\n"
+                        + "用法2：\n/list [<服务器名称>] <查询地址:查询端口>\n\n"
+                        + "别名：/ls\n"
+                        + "已保存的服务器也可直接使用名称查询。"));
         topics.add(topic);
     }
 

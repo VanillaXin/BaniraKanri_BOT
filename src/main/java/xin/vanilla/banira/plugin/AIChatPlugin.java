@@ -43,10 +43,15 @@ public class AIChatPlugin extends BasePlugin {
         BaseInstructionsConfig base = BaniraUtils.getBaseIns();
         String prefix = BaniraUtils.getInsPrefixWithSpace();
         List<String> aiChat = insConfig.get().aiChat();
-        topics.add(HelpTopics.of("AI聊天", "AI 对话功能配置。", 100, aiChat)
-                .child(HelpTopics.opEnable(base, prefix + aiChat + " " + base.enable()))
-                .child(HelpTopics.opDisable(base, prefix + aiChat + " " + base.disable()))
-                .child(HelpTopics.opRefresh(base, prefix + aiChat + " " + base.refresh())));
+        String cmd = aiChat.getFirst();
+        String aiCmd = prefix + cmd;
+        topics.add(HelpTopics.of("AI聊天", "AI 对话功能。", 100, aiChat)
+                .child(HelpTopics.sub("对话", "启用后自动响应对话消息。", 1, List.of("对话", "聊天"),
+                        "启用并配置 chatConfig 后，在群内或私聊发送普通消息即可触发 AI 回复。\n"
+                                + "首次启用会生成默认配置，需手动修改 API 等参数后保存。"))
+                .child(HelpTopics.opEnable(base, aiCmd + " " + base.enable().getFirst() + "\n\n仅全局 OP 可用。"))
+                .child(HelpTopics.opDisable(base, aiCmd + " " + base.disable().getFirst() + "\n\n仅全局 OP 可用。"))
+                .child(HelpTopics.opRefresh(base, aiCmd + " " + base.refresh().getFirst() + "\n\n重载聊天配置，仅全局 OP 可用。")));
     }
 
     @AnyMessageHandler

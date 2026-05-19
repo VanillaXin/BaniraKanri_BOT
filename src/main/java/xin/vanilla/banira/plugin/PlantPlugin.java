@@ -5,7 +5,6 @@ import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.domain.BaniraCodeContext;
@@ -19,7 +18,6 @@ import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.PlantCipher;
 import xin.vanilla.banira.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -32,8 +30,11 @@ public class PlantPlugin extends BasePlugin {
 
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
+        String cmd = insConfig.get().plant().getFirst();
+        String plantCmd = BaniraUtils.getInsPrefixWithSpace() + cmd;
         topics.add(HelpTopics.of("花言草语", "将消息内容进行植物编码/解码。", 99, insConfig.get().plant())
-                .detail(BaniraUtils.getInsPrefixWithSpace() + insConfig.get().plant()));
+                .detail("用法1（回复消息）：\n" + plantCmd + "（回复要编码/解码的消息）\n\n"
+                        + "用法2（跟内容）：\n" + plantCmd + " <要编码/解码的内容>"));
     }
 
     @AnyMessageHandler

@@ -37,8 +37,11 @@ public class DownloadMediaPlugin extends BasePlugin {
 
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
-        topics.add(HelpTopics.of("媒体资源下载", "回复带有媒体资源的消息以获取其中的媒体详情。", 99, insConfig.get().media())
-                .detail(BaniraUtils.getInsPrefixWithSpace() + insConfig.get().media()));
+        String cmd = insConfig.get().media().getFirst();
+        String mediaCmd = BaniraUtils.getInsPrefixWithSpace() + cmd;
+        topics.add(HelpTopics.of("媒体资源下载", "提取消息中的图片、视频或语音链接。", 99, insConfig.get().media())
+                .detail("回复带有媒体资源的消息后发送：\n" + mediaCmd + "\n\n"
+                        + "支持图片、视频、语音及带 file_id 的未知类型消息。"));
     }
 
     @AnyMessageHandler
