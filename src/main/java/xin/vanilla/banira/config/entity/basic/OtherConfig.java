@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.config.entity.extended.*;
+import xin.vanilla.banira.plugin.socialmedia.SocialMediaGroupSettings;
 import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.ArrayList;
@@ -45,6 +46,10 @@ public class OtherConfig {
      * 社交媒体解析
      */
     private boolean socialMedia;
+    /**
+     * 社交媒体触发与回复配置（群组级别）
+     */
+    private SocialMediaGroupSettings socialMediaSettings;
 
     /**
      * MCMod评论监控配置
@@ -68,6 +73,7 @@ public class OtherConfig {
         this.mcConfig = new McConfig();
         this.chatConfig = new ChatConfig();
         this.socialMedia = false;
+        this.socialMediaSettings = new SocialMediaGroupSettings();
         this.mcModCommentConfig = new McModCommentConfig();
         this.mcModCookieConfig = new McModCookieConfig();
 

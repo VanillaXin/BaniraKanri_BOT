@@ -2,6 +2,7 @@ package xin.vanilla.banira.plugin;
 
 import com.mikuac.shiro.annotation.AnyMessageHandler;
 import com.mikuac.shiro.annotation.GroupMsgDeleteNoticeHandler;
+import com.mikuac.shiro.annotation.MessageEmojiLikeNoticeHandler;
 import com.mikuac.shiro.annotation.PrivateMsgDeleteNoticeHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.JsonUtils;
@@ -13,6 +14,7 @@ import com.mikuac.shiro.dto.action.response.GetForwardMsgResp;
 import com.mikuac.shiro.dto.action.response.MsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.dto.event.notice.GroupMsgDeleteNoticeEvent;
+import com.mikuac.shiro.dto.event.notice.MessageEmojiLikeNoticeEvent;
 import com.mikuac.shiro.dto.event.notice.PrivateMsgDeleteNoticeEvent;
 import com.mikuac.shiro.model.ArrayMsg;
 import jakarta.annotation.Nonnull;
@@ -55,6 +57,11 @@ public class RecorderPlugin extends BasePlugin {
     @Override
     public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
         return List.of();
+    }
+
+    @MessageEmojiLikeNoticeHandler
+    public void recorder(BaniraBot bot, MessageEmojiLikeNoticeEvent event) {
+        LOGGER.debug("EmojiLikeEvent: {}", event);
     }
 
     @AnyMessageHandler

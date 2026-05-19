@@ -27,12 +27,13 @@ configurations {
 }
 
 repositories {
-    maven { url 'https://maven.aliyun.com/repository/public' }
-    maven { url "https://jitpack.io" }
-    mavenCentral()
     flatDir {
         dir 'libs'
     }
+    mavenLocal()
+    maven { url 'https://maven.aliyun.com/repository/public' }
+    maven { url "https://jitpack.io" }
+    mavenCentral()
 }
 
 dependencies {

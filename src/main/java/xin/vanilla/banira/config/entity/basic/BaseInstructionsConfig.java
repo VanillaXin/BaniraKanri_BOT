@@ -73,8 +73,8 @@ public class BaseInstructionsConfig {
         this.add = BaniraUtils.mutableListOf("添加", "add", "put", "insert");
         this.del = BaniraUtils.mutableListOf("删除", "del", "delete", "remove");
         this.list = BaniraUtils.mutableListOf("查询", "list", "ls", "sel", "get");
-        this.enable = BaniraUtils.mutableListOf("启用", "enable", "open");
-        this.disable = BaniraUtils.mutableListOf("禁用", "disable", "close");
+        this.enable = BaniraUtils.mutableListOf("启用", "开启", "enable", "open");
+        this.disable = BaniraUtils.mutableListOf("禁用", "关闭", "disable", "close");
         this.global = BaniraUtils.mutableListOf("全局", "all", "global");
         this.that = BaniraUtils.mutableListOf("当前", "that", "this", "here");
         this.atAll = BaniraUtils.mutableListOf("@全体成员", "@全体", "@所有人", "@all", "@All", "@ALL");
