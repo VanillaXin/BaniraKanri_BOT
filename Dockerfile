@@ -20,7 +20,7 @@ RUN sed -i "s|services.gradle.org/distributions|${GRADLE_DIST_PATH}|g" gradle/wr
 
 # 挂载主机 Maven 本地仓库，使 mavenLocal() 与 IDEA 一致
 RUN --mount=type=bind,from=maven_local,source=.,target=/root/.m2/repository,readonly \
-    ./gradlew bootJar --no-daemon -x test \
+    ./gradlew jar --no-daemon -x test \
     && mkdir -p /out \
     && cd build/libs \
     && cp "$(ls banira-kanri-*.jar | grep -v plain)" /out/app.jar \

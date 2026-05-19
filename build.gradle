@@ -102,10 +102,33 @@ tasks.named('processResources') {
     }
 }
 
-tasks.named('bootJar') {
-    excludes = ["*.jar"]
+// region 瘦包：主 jar（扁平类路径）+ libs/ 依赖
+bootJar {
+    enabled = false
+}
 
-    dependsOn clearJar
+def thinRuntimeClasspath = configurations.runtimeClasspath
+
+def thinManifestClassPath = { ->
+    thinRuntimeClasspath.files.collect { "libs/${it.name}" }.join(' ')
+}
+
+// 清除现有的 libs 目录
+tasks.register('clearJar', Delete) {
+    delete file("${buildDir}/libs/libs")
+}
+
+// 将运行时依赖复制到 libs 目录
+tasks.register('copyJar', Copy) {
+    dependsOn 'clearJar'
+    from thinRuntimeClasspath
+    into file("${buildDir}/libs/libs")
+}
+
+tasks.named('jar') {
+    enabled = true
+    archiveClassifier.set('')
+    duplicatesStrategy = DuplicatesStrategy.INCLUDE
     dependsOn copyJar
 
     manifest {
@@ -115,24 +138,13 @@ tasks.named('bootJar') {
                 'Built-By': System.getProperty('user.name'),
                 'Created-By': "Gradle ${gradle.gradleVersion}",
                 'Built-Java': buildJavaVersion,
-                "Manifest-Version": 1.0,
-                'Class-Path': configurations.compileClasspath.files.collect { "libs/$it.name" }.join(' ')
+                'Manifest-Version': 1.0,
+                'Main-Class': appMainClassName,
+                'Class-Path': thinManifestClassPath()
         )
     }
-    duplicatesStrategy = DuplicatesStrategy.INCLUDE
 }
-
-// 清除现有的libs目录
-tasks.register('clearJar', Delete) {
-    delete file("${buildDir}/libs/libs")
-}
-
-// 将依赖包复制到libs目录
-tasks.register('copyJar', Copy) {
-    dependsOn 'clearJar'
-    from configurations.compileClasspath
-    into file("${buildDir}/libs/libs")
-}
+// endregion 瘦包
 
 def safeGitOutput = { String... args ->
     try {

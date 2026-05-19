@@ -15,7 +15,7 @@ cache
 data
 config
 
-# Git 与杂项（保留 .git 供 generateGitProperties / bootJar 使用）
+# Git 与杂项（保留 .git 供 generateGitProperties / jar 使用）
 .gitignore
 *.md
 docker-compose*.yml
