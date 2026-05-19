@@ -37,6 +37,10 @@ public class SocialMediaGroupSettings {
      * 回复方式：forward | detail | video
      */
     private String replyMode;
+    /**
+     * 识别到可解析内容时，是否自动回复 emojiIds[0]
+     */
+    private boolean replyEmojiOnRecognize;
 
     {
         this.triggerDirect = false;
@@ -44,5 +48,6 @@ public class SocialMediaGroupSettings {
         this.triggerEmojiLikeNotice = true;
         this.emojiIds = BaniraUtils.mutableListOf(10068L);
         this.replyMode = "forward";
+        this.replyEmojiOnRecognize = true;
     }
 }
