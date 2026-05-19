@@ -2,126 +2,186 @@ package xin.vanilla.banira.config.other;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.stereotype.Component;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import xin.vanilla.banira.config.YamlConfigManager;
 import xin.vanilla.banira.config.YamlConfigWatcherService;
+import xin.vanilla.banira.config.contract.GroupConfig;
+import xin.vanilla.banira.config.contract.SharedConfig;
 
+import java.lang.reflect.Modifier;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.function.Supplier;
 
+/**
+ * 其他配置注册中心。
+ * 自动扫描 SharedConfig / GroupConfig 实现类并统一托管。
+ */
 @Slf4j
 @Component
 public class OtherConfigRegistry {
-    private final Map<String, OtherConfigDefinition<?>> definitionMap = new HashMap<>();
-    private final Map<String, YamlConfigManager<?>> sharedManagers = new HashMap<>();
-    private final Map<String, GroupedYamlConfigManager<?>> groupedManagers = new HashMap<>();
+    private static final String CONFIG_SCAN_PACKAGE = "xin.vanilla.banira";
 
-    public OtherConfigRegistry(List<OtherConfigDefinition<?>> definitions,
+    private final Map<Class<?>, YamlConfigManager<?>> sharedManagers = new HashMap<>();
+    private final Map<Class<?>, GroupedYamlConfigManager<?>> groupedManagers = new HashMap<>();
+
+    public OtherConfigRegistry(
                                YamlConfigWatcherService watcherService,
                                ApplicationEventPublisher publisher
     ) throws Exception {
-        for (OtherConfigDefinition<?> definition : definitions) {
-            definition.validate();
-            String key = definition.key();
-            if (definitionMap.containsKey(key)) {
-                throw new IllegalStateException("Duplicated other config key: " + key);
-            }
-            definitionMap.put(key, definition);
-            if (definition.scope() == OtherConfigScope.SHARED) {
-                sharedManagers.put(key, buildSharedManager(definition, watcherService, publisher));
-            } else {
-                groupedManagers.put(key, buildGroupedManager(definition, watcherService));
-            }
+        for (Class<? extends SharedConfig> sharedType : scanManagedTypes(SharedConfig.class)) {
+            sharedManagers.put(sharedType, buildSharedManager(sharedType, watcherService, publisher));
         }
-        LOGGER.info("Loaded {} other config definitions", definitionMap.size());
+        for (Class<? extends GroupConfig> groupedType : scanManagedTypes(GroupConfig.class)) {
+            groupedManagers.put(groupedType, buildGroupedManager(groupedType, watcherService));
+        }
+        LOGGER.info("Loaded shared configs: {}, group configs: {}", sharedManagers.size(), groupedManagers.size());
     }
 
-    private <T> YamlConfigManager<T> buildSharedManager(OtherConfigDefinition<T> definition,
-                                                        YamlConfigWatcherService watcherService,
-                                                        ApplicationEventPublisher publisher
+    private <T extends SharedConfig> YamlConfigManager<T> buildSharedManager(Class<T> type,
+                                                                              YamlConfigWatcherService watcherService,
+                                                                              ApplicationEventPublisher publisher
     ) throws Exception {
-        Path path = Paths.get("./config/other/shared/" + definition.key() + ".yml");
+        Path path = Paths.get("./config/shared/" + toKebabFileName(type) + ".yml");
         return new YamlConfigManager<>(
                 path,
-                definition.defaultSupplier().get(),
-                definition.type(),
-                "other-shared-" + definition.key(),
+                createDefault(type),
+                type,
+                "shared-" + type.getSimpleName(),
                 watcherService,
                 publisher
         );
     }
 
-    private <T> GroupedYamlConfigManager<T> buildGroupedManager(OtherConfigDefinition<T> definition,
-                                                                YamlConfigWatcherService watcherService
+    private <T extends GroupConfig> GroupedYamlConfigManager<T> buildGroupedManager(Class<T> type,
+                                                                                     YamlConfigWatcherService watcherService
     ) throws Exception {
-        Path path = Paths.get("./config/other/grouped/" + definition.key() + ".yml");
+        Path path = Paths.get("./config/group/" + toKebabFileName(type) + ".yml");
         return new GroupedYamlConfigManager<>(
                 path,
-                definition.type(),
-                definition.defaultSupplier().get(),
+                type,
+                createDefault(type),
                 watcherService
         );
     }
 
-    public <T> T getShared(String key, Class<T> clazz) {
-        OtherConfigDefinition<?> definition = requiredDefinition(key, OtherConfigScope.SHARED);
-        ensureType(definition, clazz);
-        YamlConfigManager<?> manager = sharedManagers.get(key);
+    public <T extends SharedConfig> T getShared(Class<T> clazz) {
+        YamlConfigManager<?> manager = requireSharedManager(clazz);
         return clazz.cast(manager.getCurrent());
     }
 
-    public <T> T getGrouped(String key, Long groupId, Class<T> clazz) {
-        OtherConfigDefinition<?> definition = requiredDefinition(key, OtherConfigScope.GROUPED);
-        ensureType(definition, clazz);
-        GroupedYamlConfigManager<?> manager = groupedManagers.get(key);
+    /**
+     * 获取群配置（群优先，缺失时回退群0配置）。
+     */
+    public <T extends GroupConfig> T getGroupOrGlobal(Class<T> clazz, Long groupId) {
+        GroupedYamlConfigManager<?> manager = requireGroupedManager(clazz);
+        return clazz.cast(manager.getOrGlobal(groupId));
+    }
+
+    public <T extends GroupConfig> T getGrouped(Class<T> clazz, Long groupId) {
+        GroupedYamlConfigManager<?> manager = requireGroupedManager(clazz);
         return clazz.cast(manager.get(groupId));
     }
 
-    public boolean hasGrouped(String key, Long groupId) {
-        requiredDefinition(key, OtherConfigScope.GROUPED);
-        GroupedYamlConfigManager<?> manager = groupedManagers.get(key);
+    public <T extends GroupConfig> Optional<T> getGroupedOnly(Class<T> clazz, Long groupId) {
+        GroupedYamlConfigManager<?> manager = requireGroupedManager(clazz);
+        return manager.getOnly(groupId).map(clazz::cast);
+    }
+
+    public <T extends GroupConfig> boolean hasGrouped(Class<T> clazz, Long groupId) {
+        GroupedYamlConfigManager<?> manager = requireGroupedManager(clazz);
         return manager.contains(groupId);
     }
 
-    public <T> Map<Long, T> getGroupedSnapshot(String key, Class<T> clazz) {
-        OtherConfigDefinition<?> definition = requiredDefinition(key, OtherConfigScope.GROUPED);
-        ensureType(definition, clazz);
-        GroupedYamlConfigManager<?> manager = groupedManagers.get(key);
+    public <T extends GroupConfig> Map<Long, T> getGroupedSnapshot(Class<T> clazz) {
+        GroupedYamlConfigManager<?> manager = requireGroupedManager(clazz);
         Map<Long, ?> snapshot = manager.snapshot();
         Map<Long, T> result = new HashMap<>();
         snapshot.forEach((k, v) -> result.put(k, clazz.cast(v)));
         return result;
     }
 
-    public void saveShared(String key) throws Exception {
-        requiredDefinition(key, OtherConfigScope.SHARED);
-        YamlConfigManager<?> manager = sharedManagers.get(key);
+    /**
+     * 共享配置 Supplier。
+     */
+    public <T extends SharedConfig> Supplier<T> sharedSupplier(Class<T> clazz) {
+        return () -> getShared(clazz);
+    }
+
+    /**
+     * 群配置 Supplier（群优先，缺失回退0群）。
+     */
+    public <T extends GroupConfig> Supplier<T> groupSupplier(Class<T> clazz, Long groupId) {
+        return () -> getGroupOrGlobal(clazz, groupId);
+    }
+
+    /**
+     * 群配置 Supplier（仅指定群，不回退）。
+     */
+    public <T extends GroupConfig> Supplier<Optional<T>> groupOnlySupplier(Class<T> clazz, Long groupId) {
+        return () -> getGroupedOnly(clazz, groupId);
+    }
+
+    public <T extends SharedConfig> void saveShared(Class<T> clazz) throws Exception {
+        YamlConfigManager<?> manager = requireSharedManager(clazz);
         manager.save();
     }
 
-    public void saveGrouped(String key) throws Exception {
-        requiredDefinition(key, OtherConfigScope.GROUPED);
-        GroupedYamlConfigManager<?> manager = groupedManagers.get(key);
+    public <T extends GroupConfig> void saveGrouped(Class<T> clazz) throws Exception {
+        GroupedYamlConfigManager<?> manager = requireGroupedManager(clazz);
         manager.save();
     }
 
-    private OtherConfigDefinition<?> requiredDefinition(String key, OtherConfigScope scope) {
-        OtherConfigDefinition<?> definition = definitionMap.get(key);
-        if (definition == null) {
-            throw new IllegalArgumentException("Unknown other config key: " + key);
+    private <T extends SharedConfig> YamlConfigManager<?> requireSharedManager(Class<T> clazz) {
+        YamlConfigManager<?> manager = sharedManagers.get(clazz);
+        if (manager == null) {
+            throw new IllegalArgumentException("Unknown shared config type: " + clazz.getName());
         }
-        if (definition.scope() != scope) {
-            throw new IllegalArgumentException("Other config key scope mismatch, key=" + key + ", expected=" + scope);
-        }
-        return definition;
+        return manager;
     }
 
-    private <T> void ensureType(OtherConfigDefinition<?> definition, Class<T> clazz) {
-        if (!clazz.isAssignableFrom(definition.type())) {
-            throw new IllegalArgumentException("Other config type mismatch, key=" + definition.key() + ", expected=" + clazz.getName() + ", actual=" + definition.type().getName());
+    private <T extends GroupConfig> GroupedYamlConfigManager<?> requireGroupedManager(Class<T> clazz) {
+        GroupedYamlConfigManager<?> manager = groupedManagers.get(clazz);
+        if (manager == null) {
+            throw new IllegalArgumentException("Unknown group config type: " + clazz.getName());
         }
+        return manager;
+    }
+
+    private <T> T createDefault(Class<T> type) throws Exception {
+        return type.getDeclaredConstructor().newInstance();
+    }
+
+    /**
+     * 扫描可托管配置类型。
+     */
+    @SuppressWarnings("unchecked")
+    private <T> java.util.List<Class<? extends T>> scanManagedTypes(Class<T> assignableType) throws Exception {
+        java.util.List<Class<? extends T>> result = new ArrayList<>();
+        ClassPathScanningCandidateComponentProvider scanner = new ClassPathScanningCandidateComponentProvider(false);
+        scanner.addIncludeFilter(new AssignableTypeFilter(assignableType));
+        for (var candidate : scanner.findCandidateComponents(CONFIG_SCAN_PACKAGE)) {
+            Class<?> type = Class.forName(candidate.getBeanClassName());
+            if (type.isInterface() || Modifier.isAbstract(type.getModifiers())) {
+                continue;
+            }
+            if (!assignableType.isAssignableFrom(type)) {
+                continue;
+            }
+            result.add((Class<? extends T>) type);
+        }
+        return result;
+    }
+
+    private String toKebabFileName(Class<?> type) {
+        String name = type.getSimpleName();
+        String kebab = name.replaceAll("([a-z])([A-Z])", "$1-$2").toLowerCase();
+        return kebab;
     }
 }

@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.BaniraCode;
 import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.config.entity.extended.McConfig;
+import xin.vanilla.banira.config.entity.group.McQueryGroupConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumCodeType;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -86,7 +87,7 @@ public class McQueryCode implements MessageCoder {
         McQueryHelper mcQuery = McQueryHelper.create(name, ip + ":" + port);
         mcQuery.query();
         StringBuilder info = new StringBuilder();
-        McConfig mcConfig = BaniraUtils.getOthersConfig().mcConfig();
+        McConfig mcConfig = BaniraUtils.getGroupConfigOrGlobal(McQueryGroupConfig.class, 0L).mcConfig();
 
         if (StringUtils.isNotNullOrEmpty(mcQuery.error())) {
             switch (mcQuery.error()) {

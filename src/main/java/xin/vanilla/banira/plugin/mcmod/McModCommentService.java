@@ -8,10 +8,9 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import tools.jackson.core.type.TypeReference;
-import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.McModCommentConfig;
 import xin.vanilla.banira.config.entity.extended.ModWatchInfo;
-import xin.vanilla.banira.config.other.OtherConfigKeys;
+import xin.vanilla.banira.config.entity.group.McModGroupConfig;
 import xin.vanilla.banira.config.other.OtherConfigRegistry;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.util.*;
@@ -422,7 +421,7 @@ public class McModCommentService {
      */
     public static void sendCommentToGroup(BaniraBot bot, Long groupId, EnumContentType commentType, String containerId, McModCommentRow comment) {
         try {
-            OtherConfig othersConfig = BaniraUtils.getOthersConfig(groupId);
+            McModGroupConfig othersConfig = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
             if (othersConfig == null || othersConfig.mcModCommentConfig() == null || !othersConfig.mcModCommentConfig().enable()) {
                 return;
             }
@@ -520,9 +519,9 @@ public class McModCommentService {
      */
     public Map<String, List<ModWatchInfo>> getAllMonitoredContainers() {
         Map<String, List<ModWatchInfo>> cacheKeyToWatchInfos = new HashMap<>();
-        Map<Long, OtherConfig> otherConfigMap = otherConfigRegistry.getGroupedSnapshot(OtherConfigKeys.GROUP_OTHER, OtherConfig.class);
+        Map<Long, McModGroupConfig> otherConfigMap = otherConfigRegistry.getGroupedSnapshot(McModGroupConfig.class);
 
-        for (Map.Entry<Long, OtherConfig> entry : otherConfigMap.entrySet()) {
+        for (Map.Entry<Long, McModGroupConfig> entry : otherConfigMap.entrySet()) {
             Long groupId = entry.getKey();
             if (groupId == null || groupId == 0L) {
                 continue; // 跳过全局配置

@@ -10,8 +10,8 @@ import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
 import org.jsoup.select.Elements;
 import tools.jackson.core.type.TypeReference;
-import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.McModCookieConfig;
+import xin.vanilla.banira.config.entity.group.McModGroupConfig;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.util.http.HttpResponse;
 import xin.vanilla.banira.util.mcmod.*;
@@ -64,7 +64,7 @@ public final class McModUtils {
         ReentrantLock lock = getGroupLock(groupId);
         lock.lock();
         try {
-            OtherConfig otherConfig = BaniraUtils.getOthersConfig(groupId);
+            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
             if (otherConfig == null) {
                 LOGGER.error("Failed to get config, groupId: {}", groupId);
                 return null;
@@ -812,7 +812,7 @@ public final class McModUtils {
         ReentrantLock lock = getGroupLock(groupId);
         lock.lock();
         try {
-            OtherConfig otherConfig = BaniraUtils.getOthersConfig(groupId);
+            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
             if (otherConfig == null || otherConfig.mcModCookieConfig() == null) {
                 return null;
             }
@@ -1432,7 +1432,7 @@ public final class McModUtils {
         ReentrantLock lock = getGroupLock(groupId);
         lock.lock();
         try {
-            OtherConfig otherConfig = BaniraUtils.getOthersConfig(groupId);
+            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
             if (otherConfig != null && otherConfig.mcModCookieConfig() != null) {
                 otherConfig.mcModCookieConfig().cookie(null).expireTime(null).userId(null);
                 BaniraUtils.saveGroupConfig();

@@ -15,7 +15,7 @@ import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.config.entity.basic.OtherConfig;
+import xin.vanilla.banira.config.entity.group.SocialMediaGroupConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
@@ -94,7 +94,7 @@ public class SocialMediaPlugin extends BasePlugin {
             if (insConfig.get().base().enable().contains(operate)) {
                 if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
                     return bot.setMsgEmojiLikeNo(event.getMessageId());
-                BaniraUtils.getOthersConfig(event.getGroupId()).socialMedia(true);
+                BaniraUtils.getGroupConfigOrGlobal(SocialMediaGroupConfig.class, event.getGroupId()).socialMedia(true);
                 BaniraUtils.saveGroupConfig();
                 return bot.setMsgEmojiLikeOk(event.getMessageId());
             }
@@ -102,7 +102,7 @@ public class SocialMediaPlugin extends BasePlugin {
             else if (insConfig.get().base().disable().contains(operate)) {
                 if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
                     return bot.setMsgEmojiLikeNo(event.getMessageId());
-                BaniraUtils.getOthersConfig(event.getGroupId()).socialMedia(false);
+                BaniraUtils.getGroupConfigOrGlobal(SocialMediaGroupConfig.class, event.getGroupId()).socialMedia(false);
                 BaniraUtils.saveGroupConfig();
                 return bot.setMsgEmojiLikeOk(event.getMessageId());
             }
@@ -562,7 +562,7 @@ public class SocialMediaPlugin extends BasePlugin {
      * 获取群组级社交媒体配置
      */
     private SocialMediaGroupSettings getGroupSettings(Long groupId) {
-        OtherConfig config = BaniraUtils.getOthersConfig(groupId);
+        SocialMediaGroupConfig config = BaniraUtils.getGroupConfigOrGlobal(SocialMediaGroupConfig.class, groupId);
         if (config == null || config.socialMediaSettings() == null) {
             return new SocialMediaGroupSettings();
         }
@@ -574,11 +574,11 @@ public class SocialMediaPlugin extends BasePlugin {
      */
     private boolean isEnable(Long groupId) {
         // 群组配置
-        if (BaniraUtils.hasGroupOthersConfig(groupId)) {
-            OtherConfig config = BaniraUtils.getOthersConfig(groupId);
+        if (BaniraUtils.hasGroupConfig(SocialMediaGroupConfig.class, groupId)) {
+            SocialMediaGroupConfig config = BaniraUtils.getGroupConfigOrGlobal(SocialMediaGroupConfig.class, groupId);
             if (config != null) return config.socialMedia();
         }
         // 全局配置
-        return BaniraUtils.getOthersConfig().socialMedia();
+        return BaniraUtils.getGroupConfigOrGlobal(SocialMediaGroupConfig.class, 0L).socialMedia();
     }
 }

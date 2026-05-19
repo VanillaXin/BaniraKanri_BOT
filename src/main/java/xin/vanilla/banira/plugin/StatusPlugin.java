@@ -29,6 +29,7 @@ import oshi.hardware.VirtualMemory;
 import oshi.software.os.OperatingSystem;
 import xin.vanilla.banira.config.BaniraVersionInfo;
 import xin.vanilla.banira.config.entity.basic.PluginConfig;
+import xin.vanilla.banira.config.entity.group.StatusGroupConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
@@ -397,7 +398,7 @@ public class StatusPlugin extends BasePlugin {
     }
 
     private String getBgUrl() {
-        String url = BaniraUtils.getOthersConfig().statusBgUrl();
+        String url = BaniraUtils.getGroupConfigOrGlobal(StatusGroupConfig.class, 0L).statusBgUrl();
         try {
             if (StringUtils.isNotNullOrEmpty(url)) {
                 // 判断是否链接

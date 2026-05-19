@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
+import xin.vanilla.banira.config.contract.SharedConfig;
 import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.List;
@@ -15,7 +16,7 @@ import java.util.List;
 @Setter
 @Accessors(chain = true, fluent = true)
 @JsonAutoDetect(fieldVisibility = JsonAutoDetect.Visibility.ANY)
-public class SocialMediaSettings {
+public class SocialMediaSettings implements SharedConfig {
 
     /**
      * 外部自定义接口列表

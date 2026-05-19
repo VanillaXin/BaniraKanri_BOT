@@ -10,8 +10,8 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
-import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.ChatConfig;
+import xin.vanilla.banira.config.entity.group.AIChatGroupConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.plugin.chat.AIChatService;
@@ -86,22 +86,22 @@ public class AIChatPlugin extends BasePlugin {
 
             String operate = split[1];
             if (baseIns.enable().contains(operate)) {
-                OtherConfig otherConfig = BaniraUtils.getOthersConfig(event.getGroupId());
-                if (otherConfig.chatConfig() == null) {
-                    otherConfig.chatConfig(new ChatConfig());
+                AIChatGroupConfig config = BaniraUtils.getGroupConfigOrGlobal(AIChatGroupConfig.class, event.getGroupId());
+                if (config.chatConfig() == null) {
+                    config.chatConfig(new ChatConfig());
                 }
-                otherConfig.chatConfig().enabled(true);
+                config.chatConfig().enabled(true);
                 if (BaniraUtils.saveGroupConfig()) {
                     bot.sendMsg(event, MsgUtils.builder().reply(event.getMessageId()).text("已生成聊天配置，请手动修改相关配置并保存。").build(), false);
                 } else {
                     return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                 }
             } else if (baseIns.disable().contains(operate)) {
-                OtherConfig otherConfig = BaniraUtils.getOthersConfig(event.getGroupId());
-                if (otherConfig.chatConfig() == null) {
-                    otherConfig.chatConfig(new ChatConfig());
+                AIChatGroupConfig config = BaniraUtils.getGroupConfigOrGlobal(AIChatGroupConfig.class, event.getGroupId());
+                if (config.chatConfig() == null) {
+                    config.chatConfig(new ChatConfig());
                 }
-                otherConfig.chatConfig().enabled(false);
+                config.chatConfig().enabled(false);
                 if (BaniraUtils.saveGroupConfig()) {
                     bot.sendMsg(event, MsgUtils.builder().reply(event.getMessageId()).text("已禁用聊天配置。").build(), false);
                 } else {
@@ -133,16 +133,16 @@ public class AIChatPlugin extends BasePlugin {
 
         AIChatService chatService = null;
         if (context.msgType() == EnumMessageType.GROUP) {
-            OtherConfig otherConfig = BaniraUtils.hasGroupOthersConfig(event.getGroupId())
-                    ? BaniraUtils.getOthersConfig(event.getGroupId())
+            AIChatGroupConfig config = BaniraUtils.hasGroupConfig(AIChatGroupConfig.class, event.getGroupId())
+                    ? BaniraUtils.getGroupConfigOrGlobal(AIChatGroupConfig.class, event.getGroupId())
                     : null;
-            if (otherConfig != null && otherConfig.chatConfig() != null) {
-                chatService = chatServiceMap.computeIfAbsent(event.getGroupId(), k -> new AIChatService(otherConfig.chatConfig(), messageRecordManager));
+            if (config != null && config.chatConfig() != null) {
+                chatService = chatServiceMap.computeIfAbsent(event.getGroupId(), k -> new AIChatService(config.chatConfig(), messageRecordManager));
             }
         } else {
-            OtherConfig globalOtherConfig = BaniraUtils.getOthersConfig();
-            if (globalOtherConfig.chatConfig() != null) {
-                chatService = chatServiceMap.computeIfAbsent(0L, k -> new AIChatService(globalOtherConfig.chatConfig(), messageRecordManager));
+            AIChatGroupConfig globalConfig = BaniraUtils.getGroupConfigOrGlobal(AIChatGroupConfig.class, 0L);
+            if (globalConfig.chatConfig() != null) {
+                chatService = chatServiceMap.computeIfAbsent(0L, k -> new AIChatService(globalConfig.chatConfig(), messageRecordManager));
             }
         }
 

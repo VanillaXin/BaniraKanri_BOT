@@ -32,7 +32,7 @@ public class YamlConfigAutoConfiguration {
     public YamlConfigManager<GroupConfig> groupConfigManager(YamlConfigWatcherService watcherService,
                                                              ApplicationEventPublisher publisher
     ) throws Exception {
-        Path path = Paths.get("./config/group-config.yml");
+        Path path = Paths.get("./config/group/group-core-config.yml");
         GroupConfig defaults = new GroupConfig();
         return new YamlConfigManager<>(path, defaults, GroupConfig.class, "group-config", watcherService, publisher);
     }

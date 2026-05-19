@@ -24,8 +24,8 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
-import xin.vanilla.banira.config.entity.basic.OtherConfig;
 import xin.vanilla.banira.config.entity.extended.WifeConfig;
+import xin.vanilla.banira.config.entity.group.WifeGroupConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.WifeRecord;
 import xin.vanilla.banira.enums.EnumCacheFileType;
@@ -191,7 +191,7 @@ public class WifePlugin extends BasePlugin {
             if (insConfig.get().base().enable().contains(operate)) {
                 if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
                     return bot.setMsgEmojiLikeNo(event.getMessageId());
-                BaniraUtils.getOthersConfig(event.getGroupId())
+                BaniraUtils.getGroupConfigOrGlobal(WifeGroupConfig.class, event.getGroupId())
                         .wifeConfig()
                         .removeIf(wife -> DISABLED.equals(wife)
                                 || (DISABLED.reg().equals(wife.reg()) && DISABLED.nick().equals(wife.nick()))
@@ -203,7 +203,7 @@ public class WifePlugin extends BasePlugin {
             else if (insConfig.get().base().disable().contains(operate)) {
                 if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
                     return bot.setMsgEmojiLikeNo(event.getMessageId());
-                BaniraUtils.getOthersConfig(event.getGroupId())
+                BaniraUtils.getGroupConfigOrGlobal(WifeGroupConfig.class, event.getGroupId())
                         .wifeConfig()
                         .add(DISABLED);
                 BaniraUtils.saveGroupConfig();
@@ -220,7 +220,7 @@ public class WifePlugin extends BasePlugin {
                         , CollectionUtils.getOrDefault(args, 3, SUCCESS_CONTENT)
                         , CollectionUtils.getOrDefault(args, 4, FAIL_CONTENT)
                 );
-                BaniraUtils.getOthersConfig(event.getGroupId()).wifeConfig().add(wifeConfig);
+                BaniraUtils.getGroupConfigOrGlobal(WifeGroupConfig.class, event.getGroupId()).wifeConfig().add(wifeConfig);
                 BaniraUtils.saveGroupConfig();
                 return bot.setMsgEmojiLikeOk(event.getMessageId());
             }
@@ -235,7 +235,7 @@ public class WifePlugin extends BasePlugin {
                         , CollectionUtils.getOrDefault(args, 3, null)
                         , CollectionUtils.getOrDefault(args, 4, null)
                 );
-                BaniraUtils.getOthersConfig(event.getGroupId())
+                BaniraUtils.getGroupConfigOrGlobal(WifeGroupConfig.class, event.getGroupId())
                         .wifeConfig()
                         .removeIf(config -> config.reg().equals(wifeConfig.reg())
                                 && (StringUtils.isNullOrEmpty(wifeConfig.nick()) || config.nick().equals(wifeConfig.nick()))
@@ -248,7 +248,7 @@ public class WifePlugin extends BasePlugin {
             }
             // 查询
             else if (insConfig.get().base().list().contains(operate)) {
-                List<WifeConfig> wifeConfigs = BaniraUtils.getOthersConfig(event.getGroupId()).wifeConfig();
+                List<WifeConfig> wifeConfigs = BaniraUtils.getGroupConfigOrGlobal(WifeGroupConfig.class, event.getGroupId()).wifeConfig();
                 if (wifeConfigs.isEmpty()) {
                     ActionData<MsgId> msgIdData = bot.sendGroupMsg(event.getGroupId(), "该群没有独立的配置喵！", false);
                     return bot.isActionDataMsgIdNotEmpty(msgIdData);
@@ -693,7 +693,7 @@ public class WifePlugin extends BasePlugin {
 
     private List<WifeConfig> getWifeConfig(Long groupId) {
         List<WifeConfig> wifeConfig = new ArrayList<>();
-        OtherConfig othersConfig = BaniraUtils.getOthersConfig(groupId);
+        WifeGroupConfig othersConfig = BaniraUtils.getGroupConfigOrGlobal(WifeGroupConfig.class, groupId);
         if (CollectionUtils.isNotNullOrEmpty(othersConfig.wifeConfig())) {
             wifeConfig = othersConfig.wifeConfig();
             // 判断群聊是否禁用
@@ -707,7 +707,7 @@ public class WifePlugin extends BasePlugin {
         }
         // 全局配置
         if (wifeConfig.isEmpty()) {
-            othersConfig = BaniraUtils.getOthersConfig();
+            othersConfig = BaniraUtils.getGroupConfigOrGlobal(WifeGroupConfig.class, 0L);
             if (CollectionUtils.isNotNullOrEmpty(othersConfig.wifeConfig())) {
                 wifeConfig = othersConfig.wifeConfig();
                 // 判断全局是否禁用

@@ -34,7 +34,12 @@ import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.*;
-import xin.vanilla.banira.config.other.OtherConfigKeys;
+import xin.vanilla.banira.config.entity.group.AIChatGroupConfig;
+import xin.vanilla.banira.config.entity.group.McModGroupConfig;
+import xin.vanilla.banira.config.entity.group.McQueryGroupConfig;
+import xin.vanilla.banira.config.entity.group.SocialMediaGroupConfig;
+import xin.vanilla.banira.config.entity.group.StatusGroupConfig;
+import xin.vanilla.banira.config.entity.group.WifeGroupConfig;
 import xin.vanilla.banira.config.other.OtherConfigRegistry;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.domain.MessageRecord;
@@ -42,6 +47,7 @@ import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
+import xin.vanilla.banira.plugin.socialmedia.SocialMediaSettings;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.start.SpringContextHolder;
 
@@ -94,12 +100,6 @@ public final class BaniraUtils {
         );
     }
 
-    private static YamlConfigManager<GroupConfig> getGroupConfigManager() {
-        return SpringContextHolder.getBean(
-                ResolvableType.forClassWithGenerics(YamlConfigManager.class, GroupConfig.class)
-        );
-    }
-
     private static YamlConfigManager<InstructionsConfig> getInsConfigManager() {
         return SpringContextHolder.getBean(
                 ResolvableType.forClassWithGenerics(YamlConfigManager.class, InstructionsConfig.class)
@@ -126,8 +126,13 @@ public final class BaniraUtils {
 
     public static boolean saveGroupConfig() {
         try {
-            getGroupConfigManager().save();
-            getOtherConfigRegistry().saveGrouped(OtherConfigKeys.GROUP_OTHER);
+            OtherConfigRegistry registry = getOtherConfigRegistry();
+            registry.saveGrouped(AIChatGroupConfig.class);
+            registry.saveGrouped(SocialMediaGroupConfig.class);
+            registry.saveGrouped(WifeGroupConfig.class);
+            registry.saveGrouped(McQueryGroupConfig.class);
+            registry.saveGrouped(StatusGroupConfig.class);
+            registry.saveGrouped(McModGroupConfig.class);
         } catch (Exception e) {
             LOGGER.error("Failed to save group config", e);
             return false;
@@ -137,8 +142,8 @@ public final class BaniraUtils {
 
     public static boolean saveConfig() {
         try {
-            getOtherConfigRegistry().saveShared(OtherConfigKeys.PLUGIN);
-            getOtherConfigRegistry().saveShared(OtherConfigKeys.SOCIAL_MEDIA);
+            getOtherConfigRegistry().saveShared(PluginConfig.class);
+            getOtherConfigRegistry().saveShared(SocialMediaSettings.class);
         } catch (Exception e) {
             LOGGER.error("Failed to save shared other config", e);
             return false;
@@ -151,20 +156,29 @@ public final class BaniraUtils {
         return StringUtils.isNotNullOrEmpty(nick) ? nick : "香草酱";
     }
 
-    public static OtherConfig getOthersConfig() {
-        return getOthersConfig(null);
-    }
-
-    public static OtherConfig getOthersConfig(Long groupId) {
+    /**
+     * 获取群配置，优先指定群，失败回退到群0配置。
+     */
+    public static <T extends xin.vanilla.banira.config.contract.GroupConfig> T getGroupConfigOrGlobal(Class<T> clazz, Long groupId) {
         OtherConfigRegistry registry = getOtherConfigRegistry();
-        if (isGroupIdValid(groupId) && registry.hasGrouped(OtherConfigKeys.GROUP_OTHER, groupId)) {
-            return registry.getGrouped(OtherConfigKeys.GROUP_OTHER, groupId, OtherConfig.class);
-        }
-        return registry.getGrouped(OtherConfigKeys.GROUP_OTHER, 0L, OtherConfig.class);
+        return registry.getGroupOrGlobal(clazz, isGroupIdValid(groupId) ? groupId : 0L);
     }
 
-    public static boolean hasGroupOthersConfig(Long groupId) {
-        return isGroupIdValid(groupId) && getOtherConfigRegistry().hasGrouped(OtherConfigKeys.GROUP_OTHER, groupId);
+    /**
+     * 判断指定群是否存在独立配置。
+     */
+    public static <T extends xin.vanilla.banira.config.contract.GroupConfig> boolean hasGroupConfig(Class<T> clazz, Long groupId) {
+        return isGroupIdValid(groupId) && getOtherConfigRegistry().hasGrouped(clazz, groupId);
+    }
+
+    /**
+     * 仅获取指定群配置，不回退全局配置。
+     */
+    public static <T extends xin.vanilla.banira.config.contract.GroupConfig> Optional<T> getOnlyGroupConfig(Class<T> clazz, Long groupId) {
+        if (!isGroupIdValid(groupId)) {
+            return Optional.empty();
+        }
+        return getOtherConfigRegistry().getGroupedOnly(clazz, groupId);
     }
 
     public static BaseInstructionsConfig getBaseIns() {

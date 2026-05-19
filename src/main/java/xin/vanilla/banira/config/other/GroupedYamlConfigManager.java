@@ -15,8 +15,13 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+/**
+ * 分群配置管理器。
+ * 按 groupId 持久化配置，并监听配置文件变化。
+ */
 @Slf4j
 public class GroupedYamlConfigManager<T> {
     private final Path configPath;
@@ -99,14 +104,41 @@ public class GroupedYamlConfigManager<T> {
         return currentMap.computeIfAbsent(normalized, key -> deepCopy(defaultInstance));
     }
 
+    /**
+     * 仅获取指定群配置，不触发默认创建。
+     */
+    public synchronized Optional<T> getOnly(Long groupId) {
+        return Optional.ofNullable(currentMap.get(normalizeGroupId(groupId)));
+    }
+
+    /**
+     * 获取指定群配置，若不存在则回退群号0配置。
+     */
+    public synchronized T getOrGlobal(Long groupId) {
+        Long normalized = normalizeGroupId(groupId);
+        if (normalized != 0L && currentMap.containsKey(normalized)) {
+            return currentMap.get(normalized);
+        }
+        return get(0L);
+    }
+
+    /**
+     * 指定群配置是否存在。
+     */
     public synchronized boolean contains(Long groupId) {
         return currentMap.containsKey(normalizeGroupId(groupId));
     }
 
+    /**
+     * 保存当前所有群配置。
+     */
     public synchronized void save() throws IOException {
         writeMap(currentMap);
     }
 
+    /**
+     * 获取当前配置快照。
+     */
     public synchronized Map<Long, T> snapshot() {
         return new LinkedHashMap<>(currentMap);
     }
