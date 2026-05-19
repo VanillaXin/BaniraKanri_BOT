@@ -37,6 +37,8 @@ import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.mapper.param.KeywordRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.service.IKeywordManager;
 import xin.vanilla.banira.service.IKeywordRecordManager;
 import xin.vanilla.banira.start.SpringContextHolder;
@@ -61,133 +63,35 @@ public class KeywordPlugin extends BasePlugin {
     @Autowired(required = false)
     private List<EventCoder> eventCoders = new ArrayList<>();
 
-    /**
-     * 获取帮助信息
-     *
-     * @param groupId 群组ID
-     * @param types   帮助类型
-     */
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, @Nullable Long groupId) {
         KeyInstructionsConfig keyIns = BaniraUtils.getKeyIns();
-        BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
-        String prefixWithSpace = BaniraUtils.getInsPrefixWithSpace();
-        String operate = CollectionUtils.getOrDefault(types, 1, "");
+        BaseInstructionsConfig base = BaniraUtils.getBaseIns();
+        String prefix = BaniraUtils.getInsPrefixWithSpace();
+        List<String> aliases = keyIns.locator().stream().map(KeyValue::getKey).toList();
+        Set<String> keywordTypes = BaniraUtils.mutableSetOf();
+        keywordTypes.addAll(keyIns.exactly());
+        keywordTypes.addAll(keyIns.contain());
+        keywordTypes.addAll(keyIns.pinyin());
+        keywordTypes.addAll(keyIns.regex());
+        String targetHint = String.format("[%s, %s, <群号>]", String.join(", ", base.global()), String.join(", ", base.that()));
+        String locatorValues = keyIns.locator().stream().map(KeyValue::getValue).toList().toString();
 
-        if (keyIns.locator().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.getKey().equalsIgnoreCase(type))) {
-            if (baseIns.example().contains(operate)) {
-                result.add("关键词回复 - 增加：\n\n" +
-                        "例子1：" + "\n" +
-                        prefixWithSpace +
-                        keyIns.locator().getFirst().getKey() + " " +
-                        baseIns.add().getFirst() + " " +
-                        keyIns.exactly().getFirst() + " " +
-                        "关键词" + " " +
-                        keyIns.locator().getFirst().getValue() + " " +
-                        "回复内容" + "\n\n" +
-                        "例子2：" + "\n" +
-                        prefixWithSpace +
-                        keyIns.locator().getLast().getKey() + " " +
-                        baseIns.add().getLast() + " " +
-                        baseIns.global().getFirst() + " " +
-                        keyIns.contain().getFirst() + " " +
-                        "关键词" + " " +
-                        keyIns.locator().getLast().getValue() + " " +
-                        "回复内容"
-                );
-                result.add("关键词回复 - 删除：\n\n" +
-                        "例子1：" + "\n" +
-                        prefixWithSpace +
-                        keyIns.locator().getFirst().getKey() + " " +
-                        baseIns.del().getFirst() + " " +
-                        baseIns.global().getFirst() + " " +
-                        keyIns.pinyin().getFirst() + " " +
-                        "关键词" + " " +
-                        keyIns.locator().getFirst().getValue() + " " +
-                        "回复内容" + "\n\n" +
-                        "例子2：" + "\n" +
-                        prefixWithSpace +
-                        keyIns.locator().getLast().getKey() + " " +
-                        baseIns.del().getLast() + " " +
-                        baseIns.global().getLast() + " " +
-                        keyIns.regex().getFirst() + " " +
-                        "关键词"
-                );
-            } else {
-                Set<String> keywordTargets = BaniraUtils.mutableSetOf("<\\d{5,10}>");
-                keywordTargets.addAll(baseIns.that());
-                keywordTargets.addAll(baseIns.global());
-
-                Set<String> keywordTypes = BaniraUtils.mutableSetOf();
-                keywordTypes.addAll(keyIns.exactly());
-                keywordTypes.addAll(keyIns.contain());
-                keywordTypes.addAll(keyIns.pinyin());
-                keywordTypes.addAll(keyIns.regex());
-
-                result.add("关键词回复 - 增加：\n" +
-                        "增加关键词回复规则。可选帮助参数：" + baseIns.example() + "\n\n" +
-                        "用法1：\n" +
-                        prefixWithSpace +
-                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                        baseIns.add() + " " +
-                        String.format("[%s, %s, <群号>]"
-                                , String.join(", ", baseIns.global())
-                                , String.join(", ", baseIns.that())
-                        ) + " " +
-                        keywordTypes + " " +
-                        "<关键词>" + " " +
-                        keyIns.locator().stream().map(KeyValue::getValue).toList() + " " +
-                        "<回复内容>"
-                );
-                result.add("关键词回复 - 删除：\n" +
-                        "删除关键词回复规则。可选帮助参数：" + baseIns.example() + "\n\n" +
-                        "用法1：\n" +
-                        prefixWithSpace +
-                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                        baseIns.del() + " " +
-                        String.format("[%s, %s, <群号>]"
-                                , String.join(", ", baseIns.global())
-                                , String.join(", ", baseIns.that())
-                        ) + " " +
-                        keywordTypes + " " +
-                        "<关键词>" + " " +
-                        keyIns.locator().stream().map(KeyValue::getValue).toList() + " " +
-                        "<回复内容>" + "\n\n" +
-                        "用法2：(根据关键词编号删除)\n" +
-                        prefixWithSpace +
-                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                        baseIns.del() + " " +
-                        "<关键词编号> ..." + "\n\n" +
-                        "用法3：(回复添加成功的响应消息)\n" +
-                        prefixWithSpace +
-                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                        baseIns.del()
-                );
-                result.add("关键词回复 - 启用：\n" +
-                        "启用关键词回复规则。\n\n" +
-                        "用法1：(根据关键词编号启用)\n" +
-                        prefixWithSpace +
-                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                        baseIns.enable() + " " +
-                        "<关键词编号> ..." + "\n\n" +
-                        "用法2：(回复添加成功的响应消息)\n" +
-                        prefixWithSpace +
-                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                        baseIns.add()
-                );
-                result.add("关键词回复 - 查询：\n\n" +
-                        prefixWithSpace +
-                        keyIns.locator().stream().map(KeyValue::getKey).toList() + " " +
-                        baseIns.list() + " " +
-                        "[<页数>]" + " " +
-                        "<关键词内容>"
-                );
-            }
-        }
-        return result;
+        HelpTopic topic = HelpTopics.of("关键词回复", "按关键词自动回复消息。", 2, aliases);
+        topic.child(HelpTopics.opAdd(base,
+                "用法：\n" + prefix + aliases + " " + base.add() + " " + targetHint + " " + keywordTypes
+                        + " <关键词> " + locatorValues + " <回复内容>"));
+        topic.child(HelpTopics.opDel(base,
+                "用法1：\n" + prefix + aliases + " " + base.del() + " " + targetHint + " " + keywordTypes
+                        + " <关键词> " + locatorValues + " <回复内容>\n\n"
+                        + "用法2：(根据编号删除)\n" + prefix + aliases + " " + base.del() + " <关键词编号> ...\n\n"
+                        + "用法3：(回复添加成功的响应消息)\n" + prefix + aliases + " " + base.del()));
+        topic.child(HelpTopics.opEnable(base,
+                "用法1：(根据编号启用)\n" + prefix + aliases + " " + base.enable() + " <关键词编号> ...\n\n"
+                        + "用法2：(回复添加成功的响应消息)\n" + prefix + aliases + " " + base.enable()));
+        topic.child(HelpTopics.opList(base,
+                "用法：\n" + prefix + aliases + " " + base.list() + " [<页数>] <关键词内容>"));
+        topics.add(topic);
     }
 
     @AnyMessageHandler

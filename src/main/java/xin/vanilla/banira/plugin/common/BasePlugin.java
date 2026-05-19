@@ -16,6 +16,8 @@ import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.RegexpHelper;
 
+import xin.vanilla.banira.plugin.help.HelpTopic;
+
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -271,12 +273,12 @@ public abstract class BasePlugin {
     }
 
     /**
-     * 获取帮助信息
+     * 向帮助中心注册本插件的功能主题
      *
-     * @param groupId 群组ID
-     * @param types   帮助类型
+     * @param topics  主题收集列表
+     * @param groupId 群组ID，可用于差异化帮助
      */
-    @Nonnull
-    public abstract List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types);
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, @Nullable Long groupId) {
+    }
 
 }

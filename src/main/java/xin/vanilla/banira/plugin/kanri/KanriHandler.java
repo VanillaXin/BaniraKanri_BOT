@@ -2,7 +2,9 @@ package xin.vanilla.banira.plugin.kanri;
 
 import com.mikuac.shiro.common.utils.MsgUtils;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nonnull;
 import xin.vanilla.banira.domain.KanriContext;
+import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.List;
@@ -17,7 +19,7 @@ public interface KanriHandler {
     int BOT_NO_OP = -3;
 
     @Nonnull
-    List<String> getHelpInfo(String... types);
+    HelpTopic getHelpSubTopic();
 
     /**
      * 机器人是否有权限执行

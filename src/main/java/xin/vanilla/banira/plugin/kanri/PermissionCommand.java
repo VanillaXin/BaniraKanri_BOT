@@ -9,9 +9,10 @@ import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.PermissionConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
+import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.StringUtils;
 
 import java.util.*;
 import java.util.function.Supplier;
@@ -29,32 +30,21 @@ public class PermissionCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("群管 - 设置管家或女仆的权限：\n\n" +
-                    "增加权限：\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    insConfig.get().base().add() + " " +
-                    "<QQ号|艾特> ..." + " " +
-                    "<权限别称> ..." + "\n\n" +
-                    "删除权限：\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    insConfig.get().base().del() + " " +
-                    "<QQ号|艾特> ..." + " " +
-                    "<权限别称> ..." + "\n\n" +
-                    "权限别称列表：\n" +
-                    EnumPermission.getAll().stream()
-                            .sorted()
-                            .map(op -> op.name() + "：" + op.getDesc())
-                            .reduce((a, b) -> a + "\n" + b)
-                            .orElse("")
-            );
-        }
-        return result;
+    public HelpTopic getHelpSubTopic() {
+        String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
+        BaseInstructionsConfig base = insConfig.get().base();
+        String permissionList = EnumPermission.getAll().stream()
+                .sorted()
+                .map(op -> op.name() + "：" + op.getDesc())
+                .reduce((a, b) -> a + "\n" + b)
+                .orElse("");
+        return HelpTopics.of("设置权限", "设置管家或女仆的权限。", 24, getAction())
+                .child(HelpTopics.opAdd(base,
+                        "用法：\n" + prefix + getAction() + " " + base.add() + " <QQ号|艾特> ... <权限别称> ...\n\n"
+                                + "权限别称列表：\n" + permissionList))
+                .child(HelpTopics.opDel(base,
+                        "用法：\n" + prefix + getAction() + " " + base.del() + " <QQ号|艾特> ... <权限别称> ...\n\n"
+                                + "权限别称列表：\n" + permissionList));
     }
 
     @Override

@@ -9,7 +9,7 @@ import com.mikuac.shiro.dto.action.common.MsgId;
 import com.mikuac.shiro.dto.action.response.LoginInfoResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -18,12 +18,16 @@ import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
-import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.plugin.help.HelpMessage;
+import xin.vanilla.banira.plugin.help.HelpService;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 指令帮助插件
@@ -33,144 +37,134 @@ import java.util.stream.Collectors;
 @Component
 public class HelpPlugin extends BasePlugin {
 
-    @Autowired(required = false)
-    private List<BasePlugin> plugins = new ArrayList<>();
+    private static final List<String> CODE_ALIASES = List.of(
+            "BaniraCode", "baniracode", "bkode", "bk", "code", "特殊码", "bk码"
+    );
+
+    @Resource
+    private HelpService helpService;
     @Autowired(required = false)
     private List<MessageCoder> msgCoders = new ArrayList<>();
     @Autowired(required = false)
     private List<EventCoder> eventCoders = new ArrayList<>();
 
-
-    private static final List<String> codeType = List.of(
-            "BaniraCode", "baniracode", "bkode", "bk", "code", "特殊码", "bk码"
-    );
-
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {
-        return List.of();
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
+        HelpTopic codeTopic = HelpTopics.of("BaniraCode", "消息码与事件码，用于高级消息编排。", 90, CODE_ALIASES);
+        msgCoders.stream()
+                .filter(coder -> StringUtils.isNotNullOrEmpty(coder.getName()))
+                .forEach(coder -> codeTopic.child(
+                        HelpTopics.sub(
+                                "消息码 - " + coder.getName(),
+                                coder.getDesc(),
+                                100,
+                                List.of(coder.getName()),
+                                buildCodeDetail(coder.getDesc(), coder.getExample())
+                        )
+                ));
+        eventCoders.stream()
+                .filter(coder -> StringUtils.isNotNullOrEmpty(coder.getName()))
+                .forEach(coder -> codeTopic.child(
+                        HelpTopics.sub(
+                                "事件码 - " + coder.getName(),
+                                coder.getDesc(),
+                                100,
+                                List.of(coder.getName()),
+                                buildCodeDetail(coder.getDesc(), coder.getExample())
+                        )
+                ));
+        codeTopic.detail(
+                """
+                        BaniraCode 可选属性：
+                        $w：将该解析结果写入运行时变量集，$w:变量名称
+                        $r：从运行时变量集读取结果作为 value，$r:变量名称
+                        $auto：与 $r 配合($r:$auto)，将 Code 的 value 中 $ 开头的占位符替换为运行时变量集中存在的值
+                        $void：与 $w 配合($w:xxx,$void:true)，使 Code 结果仅写入运行时变量集而不体现在回复内容中"""
+        );
+        topics.add(codeTopic);
     }
 
     @AnyMessageHandler
     public boolean help(BaniraBot bot, AnyMessageEvent event) {
         BaniraCodeContext context = new BaniraCodeContext(bot, event);
-        if (super.isCommand(context)
-                && insConfig.get().base().help() != null
-                && insConfig.get().base().help().stream().anyMatch(ins -> {
+        if (!super.isCommand(context)
+                || insConfig.get().base().help() == null
+                || insConfig.get().base().help().stream().noneMatch(ins -> {
             String s = super.deleteCommandPrefix(context);
             return s.startsWith(ins + " ") || s.equals(ins);
-        })
-        ) {
-            try {
+        })) {
+            return false;
+        }
 
-                String argString = super.deleteCommandPrefix(context);
-                String[] split = argString.split("\\s+");
+        try {
+            String argString = super.deleteCommandPrefix(context);
+            String[] split = argString.split("\\s+");
+            long page = StringUtils.toLong(CollectionUtils.getLast(split), -1);
 
-                long page = StringUtils.toLong(CollectionUtils.getLast(split), -1);
-
-                String[] type;
-                if (split.length == 1) {
-                    type = new String[]{};
-                } else if (split.length == 2) {
-                    if (page != StringUtils.toLong(CollectionUtils.getLast(split))) {
-                        type = Arrays.copyOfRange(split, 1, split.length);
-                    } else {
-                        type = new String[]{};
-                    }
-                } else if (split.length >= 3) {
-                    int len;
-                    if (page != StringUtils.toLong(CollectionUtils.getLast(split))) {
-                        len = split.length;
-                    } else {
-                        len = split.length - 1;
-                    }
-                    type = Arrays.copyOfRange(split, 1, len);
+            String featureAlias = null;
+            String subAlias = null;
+            if (split.length == 1) {
+                page = 1;
+            } else if (split.length == 2) {
+                if (page == StringUtils.toLong(CollectionUtils.getLast(split))) {
+                    page = Math.max(page, 1);
                 } else {
-                    return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                    featureAlias = split[1];
+                    page = 1;
                 }
-                if (page <= 0) page = 1;
-
-                LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
-                List<Map<String, Object>> msg = new ArrayList<>();
-                msg.add(ShiroUtils.generateSingleMsg(event.getUserId(), event.getSender().getNickname(), event.getMessage()));
-                List<String> helpMsgList;
-                if (type.length > 0 && codeType.contains(CollectionUtils.getOrDefault(type, 0, ""))) {
-                    msg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                            , "指令帮助：" + "\n\n" +
-                                    BaniraUtils.getInsPrefixWithSpace() +
-                                    insConfig.get().base().help() + " " +
-                                    "[<指令类型>]" + " " + "[<页数>]" + "\n\n" +
-                                    "例子：" + "\n" +
-                                    BaniraUtils.getInsPrefixWithSpace() +
-                                    insConfig.get().base().help().getFirst() + " " + CollectionUtils.getRandomElement(codeType) + "\n\n" +
-                                    "BaniraCode可选属性：\n" +
-                                    "$w：将该解析结果写入运行时变量集，$w:变量名称\n" +
-                                    "$r：从运行时变量集读取结果作为value，$r:变量名称\n" +
-                                    "$auto：与$r配合($r:$auto)，将Code的value中$开头的占位符替换为运行时变量集中存在的值\n" +
-                                    "$void：与$w配合($w:xxx,$void:true)，使Code结果仅写入运行时变量集而不体现在回复内容中\n"
-                    ));
-                    Set<String> coderType = new HashSet<>();
-                    if (type.length > 1) {
-                        coderType.addAll(BaniraUtils.mutableListOf(type).subList(1, type.length));
-                    }
-                    helpMsgList = msgCoders.stream()
-                            .filter(coder -> coderType.isEmpty() || coderType.contains(coder.getName()))
-                            .filter(coder -> StringUtils.isNotNullOrEmpty(coder.getName()))
-                            .map(coder -> {
-                                String title = String.format("消息码 - %s\n%s", coder.getName(), coder.getDesc());
-                                return buildCodeExample(title, coder.getExample());
-                            }).collect(Collectors.toList());
-                    eventCoders.stream()
-                            .filter(coder -> coderType.isEmpty() || coderType.contains(coder.getName()))
-                            .filter(coder -> StringUtils.isNotNullOrEmpty(coder.getName()))
-                            .map(coder -> {
-                                String title = String.format("事件码 - %s\n%s", coder.getName(), coder.getDesc());
-                                return buildCodeExample(title, coder.getExample());
-                            }).forEach(helpMsgList::add);
+            } else {
+                int argEnd = split.length;
+                if (page == StringUtils.toLong(CollectionUtils.getLast(split))) {
+                    argEnd = split.length - 1;
                 } else {
-                    msg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
-                            , "指令帮助：" + "\n\n" +
-                                    BaniraUtils.getInsPrefixWithSpace() +
-                                    insConfig.get().base().help() + " " +
-                                    "[<指令类型>]" + " " + "[<页数>]" + "\n\n" +
-                                    "例子：" + "\n" +
-                                    BaniraUtils.getInsPrefixWithSpace() +
-                                    insConfig.get().base().help().getFirst() + " keyword"
-                    ));
-                    helpMsgList = plugins.stream()
-                            .map(plugin -> plugin.getHelpInfo(event.getGroupId(), type))
-                            .flatMap(List::stream).toList();
+                    page = 1;
                 }
+                if (argEnd >= 2) {
+                    featureAlias = split[1];
+                }
+                if (argEnd >= 3) {
+                    subAlias = split[2];
+                }
+            }
 
-                helpMsgList.stream()
-                        .sorted()
-                        .skip((page - 1) * 98L)
-                        .limit(98L)
-                        .forEach(help -> msg.add(
-                                ShiroUtils.generateSingleMsg(
-                                        bot.getSelfId()
-                                        , loginInfoEx.getNickname()
-                                        , MsgUtils.builder().text(help).build()
-                                )
-                        ));
-
-                ActionData<MsgId> msgId = bot.sendForwardMsg(event, msg);
-                return bot.isActionDataMsgIdNotEmpty(msgId);
-            } catch (Exception e) {
-                LOGGER.error("Failed to generate help", e);
+            List<HelpMessage> helpMessages = helpService.buildMessages(event.getGroupId(), featureAlias, subAlias, page);
+            if (helpMessages.isEmpty()) {
                 return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             }
+
+            LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
+            String defaultNickname = loginInfoEx.getNickname();
+            List<Map<String, Object>> msg = new ArrayList<>();
+            msg.add(ShiroUtils.generateSingleMsg(
+                    event.getUserId(), event.getSender().getNickname(), event.getMessage()
+            ));
+            helpMessages.forEach(help -> msg.add(
+                    ShiroUtils.generateSingleMsg(
+                            bot.getSelfId(),
+                            StringUtils.isNotNullOrEmpty(help.senderName()) ? help.senderName() : defaultNickname,
+                            MsgUtils.builder().text(help.content()).build()
+                    )
+            ));
+
+            ActionData<MsgId> msgId = bot.sendForwardMsg(event, msg);
+            return bot.isActionDataMsgIdNotEmpty(msgId);
+        } catch (Exception e) {
+            LOGGER.error("Failed to generate help", e);
+            return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
         }
-        return false;
     }
 
-    private String buildCodeExample(String title, List<String> example) {
-        StringBuilder sb = new StringBuilder(title).append("\n\n");
+    private String buildCodeDetail(String desc, List<String> example) {
+        StringBuilder sb = new StringBuilder();
+        if (StringUtils.isNotNullOrEmpty(desc)) {
+            sb.append(desc).append("\n\n");
+        }
         for (int i = 0; i < example.size(); i++) {
             sb.append("例子");
-            if (example.size() > 1) sb.append(i + 1);
-            sb.append("：\n");
-            sb.append(example.get(i));
+            if (example.size() > 1) {
+                sb.append(i + 1);
+            }
+            sb.append("：\n").append(example.get(i));
             if (i != example.size() - 1) {
                 sb.append("\n\n");
             }

@@ -24,7 +24,10 @@ import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.extended.WifeConfig;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.config.entity.group.WifeGroupConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.WifeRecord;
@@ -68,54 +71,25 @@ public class WifePlugin extends BasePlugin {
             new Dimension(50, 50), CollisionMode.PIXEL_PERFECT
     ).getBufferedImage().createGraphics().getFontMetrics();
 
-    /**
-     * 获取帮助信息
-     *
-     * @param groupId 群组ID
-     * @param types   帮助类型
-     */
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (insConfig.get().wife().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            List<WifeConfig> wifeConfig = getWifeConfig(groupId);
-            result.add("抽老婆：\n" +
-                    "抽取每日群友老婆喵。\n\n" +
-                    wifeConfig.stream().map(WifeConfig::reg).sorted().toList()
-            );
-            result.add("抽老婆 - 年度统计：\n\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().wife() + " " +
-                    insConfig.get().base().status()
-            );
-            result.add("抽老婆 - 设置规则：\n\n" +
-                    "启用：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().wife() + " " +
-                    insConfig.get().base().enable() + "\n\n" +
-                    "禁用：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().wife() + " " +
-                    insConfig.get().base().disable() + "\n\n" +
-                    "添加规则：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().wife() + " " +
-                    insConfig.get().base().add() + "\n" +
-                    "<正则表达式>\n" + "[<昵称表达式>]\n" + "[<抽取成功提示>]\n" + "[<抽取失败提示>]" + "\n\n" +
-                    "删除规则：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().wife() + " " +
-                    insConfig.get().base().del() + "\n" +
-                    "<正则表达式>\n" + "[<昵称表达式>]\n" + "[<抽取成功提示>]\n" + "[<抽取失败提示>]" + "\n\n" +
-                    "查询规则：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().wife() + " " +
-                    insConfig.get().base().list()
-            );
-        }
-        return result;
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
+        BaseInstructionsConfig base = insConfig.get().base();
+        String prefix = BaniraUtils.getInsPrefixWithSpace();
+        List<String> wife = insConfig.get().wife();
+        List<WifeConfig> wifeConfig = getWifeConfig(groupId);
+        HelpTopic topic = HelpTopics.of("抽老婆", "抽取每日群友老婆。", 99, wife);
+        topic.child(HelpTopics.sub("抽取", "按群规则抽取老婆。", 1, wife,
+                "可用规则：\n" + wifeConfig.stream().map(WifeConfig::reg).sorted().toList()));
+        topic.child(HelpTopics.sub("年度统计", "查看抽老婆年度统计。", 2, base.status(),
+                prefix + wife + " " + base.status()));
+        topic.child(HelpTopics.opEnable(base, prefix + wife + " " + base.enable()));
+        topic.child(HelpTopics.opDisable(base, prefix + wife + " " + base.disable()));
+        topic.child(HelpTopics.opAdd(base,
+                prefix + wife + " " + base.add() + "\n<正则表达式>\n[<昵称表达式>]\n[<抽取成功提示>]\n[<抽取失败提示>]"));
+        topic.child(HelpTopics.opDel(base,
+                prefix + wife + " " + base.del() + "\n<正则表达式>\n[<昵称表达式>]\n[<抽取成功提示>]\n[<抽取失败提示>]"));
+        topic.child(HelpTopics.opList(base, prefix + wife + " " + base.list()));
+        topics.add(topic);
     }
 
     /**

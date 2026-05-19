@@ -23,6 +23,8 @@ import xin.vanilla.banira.domain.TimerRecord;
 import xin.vanilla.banira.mapper.param.TimerRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.plugin.timer.TimerPermissionService;
 import xin.vanilla.banira.service.ITimerRecordManager;
 import xin.vanilla.banira.util.*;
@@ -44,10 +46,22 @@ public class TimerPlugin extends BasePlugin {
     @Resource
     private TimerPermissionService timerPermissionService;
 
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {
-        return List.of();
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
+        TimerInstructionsConfig timerIns = BaniraUtils.getTimerIns();
+        BaseInstructionsConfig base = BaniraUtils.getBaseIns();
+        String prefix = BaniraUtils.getInsPrefixWithSpace();
+        List<String> aliases = timerIns.locator().stream().map(kv -> kv.getKey()).toList();
+        HelpTopic topic = HelpTopics.of("定时任务", "按 Cron 表达式定时发送消息。", 2, aliases);
+        String locatorKeys = timerIns.locator().stream().map(kv -> kv.getKey() + " ... " + kv.getValue()).toList().toString();
+        topic.child(HelpTopics.opAdd(base,
+                "用法：\n" + prefix + "<" + locatorKeys + "> <Cron表达式> <回复内容>"));
+        topic.child(HelpTopics.opDel(base,
+                "用法1：(根据编号删除)\n" + prefix + aliases + " " + base.del() + " <定时任务编号> ...\n\n"
+                        + "用法2：(回复添加成功的响应消息)\n" + prefix + aliases + " " + base.del()));
+        topic.child(HelpTopics.opList(base,
+                "用法：\n" + prefix + aliases + " " + base.list() + " [<页数>] [<关键词>]"));
+        topics.add(topic);
     }
 
 

@@ -6,11 +6,12 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -27,21 +28,12 @@ public class KickCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("群管 - 踢出群成员：\n\n" +
-                    "用法1：\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    "<QQ号|艾特> ..." + "\n\n" +
-                    "用法2：(回复要踢的成员)\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction()
-            );
-        }
-        return result;
+    public HelpTopic getHelpSubTopic() {
+        String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
+        String detail = "用法1：\n" + prefix + getAction() + " " +
+                "<QQ号|艾特> ..." + "\n\n" +
+                "用法2：(回复要踢的成员)\n" + prefix + getAction();
+        return HelpTopics.of("踢出成员", "踢出群成员。", 12, getAction()).detail(detail);
     }
 
     @Override

@@ -8,11 +8,11 @@ import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -31,21 +31,11 @@ public class CardCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("群管 - 设置群名片：\n\n" +
-                    "用法1：\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    "<QQ号|艾特> ... " + "<名片>" + "\n\n" +
-                    "用法2：(回复要设置的内容)\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction()
-            );
-        }
-        return result;
+    public HelpTopic getHelpSubTopic() {
+        String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
+        String detail = "用法1：\n" + prefix + getAction() + " <QQ号|艾特> ... <名片>\n\n"
+                + "用法2：(回复要设置的内容)\n" + prefix + getAction();
+        return HelpTopics.of("设置群名片", "设置群成员名片。", 14, getAction()).detail(detail);
     }
 
     @Override

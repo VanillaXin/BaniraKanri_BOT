@@ -47,18 +47,6 @@ public class RecorderPlugin extends BasePlugin {
     @Resource
     private IMessageRecordManager messageRecordManager;
 
-    /**
-     * 获取帮助信息
-     *
-     * @param groupId 群组ID
-     * @param types   帮助类型
-     */
-    @Nonnull
-    @Override
-    public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
-        return List.of();
-    }
-
     @MessageEmojiLikeNoticeHandler
     public void recorder(BaniraBot bot, MessageEmojiLikeNoticeEvent event) {
         LOGGER.debug("EmojiLikeEvent: {}", event);

@@ -10,11 +10,12 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
+import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
@@ -31,34 +32,16 @@ public class EssenceCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("群管 - 群精华消息 - 添加：\n\n" +
-                    "用法1：\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    insConfig.get().base().add() + " " +
-                    "<精华消息>" + "\n\n" +
-                    "用法2：(回复要添加的内容)：\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() +
-                    insConfig.get().base().add()
-            );
-            result.add("群管 - 群精华消息 - 删除：\n\n" +
-                    "用法1：\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    insConfig.get().base().add() + " " +
-                    "<精华消息>" + "\n\n" +
-                    "用法2：(回复要删除的内容)\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    insConfig.get().base().del()
-            );
-        }
-        return result;
+    public HelpTopic getHelpSubTopic() {
+        String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
+        BaseInstructionsConfig base = insConfig.get().base();
+        return HelpTopics.of("群精华消息", "添加或删除群精华消息。", 23, getAction())
+                .child(HelpTopics.opAdd(base,
+                        "用法1：\n" + prefix + getAction() + " " + base.add() + " <精华消息>\n\n"
+                                + "用法2：(回复要添加的内容)\n" + prefix + getAction() + base.add().getFirst()))
+                .child(HelpTopics.opDel(base,
+                        "用法1：\n" + prefix + getAction() + " " + base.del() + " <精华消息>\n\n"
+                                + "用法2：(回复要删除的内容)\n" + prefix + getAction() + " " + base.del().getFirst()));
     }
 
     @Override

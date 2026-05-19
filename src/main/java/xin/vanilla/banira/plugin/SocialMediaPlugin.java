@@ -23,6 +23,9 @@ import xin.vanilla.banira.plugin.socialmedia.SocialMediaApiService;
 import xin.vanilla.banira.plugin.socialmedia.SocialMediaContent;
 import xin.vanilla.banira.plugin.socialmedia.SocialMediaGroupSettings;
 import xin.vanilla.banira.plugin.socialmedia.SocialMediaParser;
+import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
@@ -48,32 +51,14 @@ public class SocialMediaPlugin extends BasePlugin {
     private final LinkedHashSet<Integer> processedMsgIds = new LinkedHashSet<>();
     private final Object processedLock = new Object();
 
-    /**
-     * 获取帮助信息
-     *
-     * @param groupId 群组ID
-     * @param types   帮助类型
-     */
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
         List<String> socialMedia = insConfig.get().socialMedia();
-        if (socialMedia.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("社交媒体解析：\n" +
-                    "自动解析社交媒体链接。\n\n" +
-                    "启用：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    socialMedia + " " +
-                    insConfig.get().base().enable() + "\n\n" +
-                    "禁用：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    socialMedia + " " +
-                    insConfig.get().base().disable()
-            );
-        }
-        return result;
+        BaseInstructionsConfig base = insConfig.get().base();
+        String prefix = BaniraUtils.getInsPrefixWithSpace();
+        topics.add(HelpTopics.of("社交媒体解析", "自动解析社交媒体链接。", 99, socialMedia)
+                .child(HelpTopics.opEnable(base, prefix + socialMedia + " " + base.enable()))
+                .child(HelpTopics.opDisable(base, prefix + socialMedia + " " + base.disable())));
     }
 
     /**

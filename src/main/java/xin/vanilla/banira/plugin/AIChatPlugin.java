@@ -18,11 +18,10 @@ import xin.vanilla.banira.plugin.chat.AIChatService;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.service.IMessageRecordManager;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,36 +38,15 @@ public class AIChatPlugin extends BasePlugin {
     @Resource
     private IMessageRecordManager messageRecordManager;
 
-    /**
-     * 获取帮助信息
-     *
-     * @param groupId 群组ID
-     * @param types   帮助类型
-     */
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
-        if (insConfig.get().aiChat().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("AI聊天 - 启用：\n\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().aiChat() +
-                    baseIns.enable()
-            );
-            result.add("AI聊天 - 禁用：\n\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().aiChat() +
-                    baseIns.disable()
-            );
-            result.add("AI聊天 - 刷新：\n\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().aiChat() +
-                    baseIns.refresh()
-            );
-        }
-        return result;
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
+        BaseInstructionsConfig base = BaniraUtils.getBaseIns();
+        String prefix = BaniraUtils.getInsPrefixWithSpace();
+        List<String> aiChat = insConfig.get().aiChat();
+        topics.add(HelpTopics.of("AI聊天", "AI 对话功能配置。", 100, aiChat)
+                .child(HelpTopics.opEnable(base, prefix + aiChat + " " + base.enable()))
+                .child(HelpTopics.opDisable(base, prefix + aiChat + " " + base.disable()))
+                .child(HelpTopics.opRefresh(base, prefix + aiChat + " " + base.refresh())));
     }
 
     @AnyMessageHandler

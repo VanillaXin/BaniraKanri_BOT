@@ -18,8 +18,9 @@ import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
@@ -34,25 +35,10 @@ import java.util.Map;
 @Component
 public class DownloadMediaPlugin extends BasePlugin {
 
-    /**
-     * 获取帮助信息
-     *
-     * @param groupId 群组ID
-     * @param types   帮助类型
-     */
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (insConfig.get().media().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("媒体资源下载：\n" +
-                    "使用指令回复带有媒体资源的消息以获得其中的媒体详情。\n\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().media()
-            );
-        }
-        return result;
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
+        topics.add(HelpTopics.of("媒体资源下载", "回复带有媒体资源的消息以获取其中的媒体详情。", 99, insConfig.get().media())
+                .detail(BaniraUtils.getInsPrefixWithSpace() + insConfig.get().media()));
     }
 
     @AnyMessageHandler

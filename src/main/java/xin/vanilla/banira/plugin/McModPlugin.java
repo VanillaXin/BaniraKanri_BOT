@@ -23,6 +23,8 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.plugin.mcmod.McModCommentScheduler;
 import xin.vanilla.banira.plugin.mcmod.McModCommentService;
 import xin.vanilla.banira.service.IMessageRecordManager;
@@ -60,79 +62,36 @@ public class McModPlugin extends BasePlugin {
     private static final Set<String> COMMENT_REPLY_INS = BaniraUtils.mutableSetOf("reply", "回复");
 
 
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {
-        List<String> result = new ArrayList<>();
-        String type = types.length > 0 ? types[0] : "";
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, @Nullable Long groupId) {
         List<String> command = insConfig.get().mcMod();
-        if (command.stream().anyMatch(type::equalsIgnoreCase) || types.length == 0) {
-            BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
-            result.add("MC百科插件 - 检索：\n" +
-                    "提供简单的百科信息搜索。" + "\n\n" +
-                    "搜索模组：\n" +
-                    "/" +
-                    command + " " +
-                    MOD_INS + " " +
-                    "<关键词>" + "\n\n" +
-                    "搜索整合包：\n" +
-                    "/" +
-                    command + " " +
-                    MOD_PACK_INS + " " +
-                    "<关键词>" + "\n\n" +
-                    "搜索作者：\n" +
-                    "/" +
-                    command + " " +
-                    AUTHOR_INS + " " +
-                    "<关键词>"
-            );
-            result.add("MC百科插件 - 随便看看：\n" +
-                    "随机显示MOD。" + "\n\n" +
-                    "/" +
-                    command + " " +
-                    MOD_RANDOM_INS
-            );
-            result.add("MC百科插件 - 用户卡片：\n" +
-                    "展示用户卡片信息。" + "\n\n" +
-                    "/" +
-                    command + " " +
-                    USER_CARD_INS + " " +
-                    "<用户ID>"
-            );
-            Set<String> commentTypes = new HashSet<>();
-            commentTypes.addAll(MOD_INS);
-            commentTypes.addAll(MOD_PACK_INS);
-            commentTypes.addAll(AUTHOR_INS);
-            commentTypes.addAll(USER_INS);
-            result.add("MC百科插件 - 评论检测：\n" +
-                    "检测MC百科评论变化并进行提示。" + "\n\n" +
-                    "添加评论检测：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    command + " " +
-                    baseIns.add() + " " +
-                    commentTypes + " " +
-                    "<容器ID>" + "\n\n" +
-                    "删除评论检测：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    command + " " +
-                    baseIns.del() + " " +
-                    commentTypes + " " +
-                    "<容器ID>" + "\n\n" +
-                    "查询评论检测：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    command + " " +
-                    baseIns.list() + "\n\n" +
-                    "启用评论检测：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    command + " " +
-                    baseIns.enable() + "\n\n" +
-                    "禁用评论检测：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    command + " " +
-                    baseIns.disable()
-            );
-        }
-        return result;
+        BaseInstructionsConfig base = BaniraUtils.getBaseIns();
+        String prefix = BaniraUtils.getInsPrefixWithSpace();
+        Set<String> commentTypes = new HashSet<>();
+        commentTypes.addAll(MOD_INS);
+        commentTypes.addAll(MOD_PACK_INS);
+        commentTypes.addAll(AUTHOR_INS);
+        commentTypes.addAll(USER_INS);
+
+        HelpTopic topic = HelpTopics.of("MC百科", "MCMod 百科检索与评论检测。", 99, command);
+        topic.child(HelpTopics.sub("检索", "搜索模组、整合包或作者。", 1, List.of("search", "检索"),
+                "搜索模组：\n/" + command + " " + MOD_INS + " <关键词>\n\n"
+                        + "搜索整合包：\n/" + command + " " + MOD_PACK_INS + " <关键词>\n\n"
+                        + "搜索作者：\n/" + command + " " + AUTHOR_INS + " <关键词>"));
+        topic.child(HelpTopics.sub("随便看看", "随机显示 MOD。", 2, MOD_RANDOM_INS,
+                "/" + command + " " + MOD_RANDOM_INS));
+        topic.child(HelpTopics.sub("用户卡片", "展示用户卡片信息。", 3, USER_CARD_INS,
+                "/" + command + " " + USER_CARD_INS + " <用户ID>"));
+        HelpTopic commentWatch = HelpTopics.of("评论检测", "检测 MC 百科评论变化并提示。", 4, List.of("commentWatch", "评论检测"));
+        commentWatch.child(HelpTopics.opAdd(base,
+                prefix + command + " " + base.add() + " " + commentTypes + " <容器ID>"));
+        commentWatch.child(HelpTopics.opDel(base,
+                prefix + command + " " + base.del() + " " + commentTypes + " <容器ID>"));
+        commentWatch.child(HelpTopics.opList(base, prefix + command + " " + base.list()));
+        commentWatch.child(HelpTopics.opEnable(base, prefix + command + " " + base.enable()));
+        commentWatch.child(HelpTopics.opDisable(base, prefix + command + " " + base.disable()));
+        topic.child(commentWatch);
+        topics.add(topic);
     }
 
     @AnyMessageHandler

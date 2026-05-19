@@ -20,6 +20,8 @@ import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.plugin.kanri.KanriHandler;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
@@ -40,9 +42,7 @@ public class KanriPlugin extends BasePlugin {
     @Resource
     private ToGroupCode toGroupCode;
 
-    private static final Set<String> helpType = BaniraUtils.mutableSetOf(
-            "kanri", "群管"
-    );
+    private static final List<String> KANRI_ALIASES = List.of("kanri", "群管");
 
     @PostConstruct
     public void initHandlerMap() {
@@ -69,28 +69,13 @@ public class KanriPlugin extends BasePlugin {
         }
     }
 
-    /**
-     * 获取帮助信息
-     *
-     * @param groupId 群组ID
-     * @param types   帮助类型
-     */
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
-        String type = CollectionUtils.getOrDefault(types, 0, "");
-        String finalType;
-        if (helpType.stream().anyMatch(type::equalsIgnoreCase)) {
-            finalType = "";
-        } else {
-            finalType = type;
-        }
-        return this.handlers.stream()
-                .map(h -> h.getHelpInfo(finalType))
-                .filter(CollectionUtils::isNotNullOrEmpty)
-                .flatMap(List::stream)
-                .filter(StringUtils::isNotNullOrEmpty)
-                .sorted().toList();
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
+        HelpTopic kanri = HelpTopics.of("群管", "群管理相关指令。", 1, KANRI_ALIASES);
+        handlers.stream()
+                .map(KanriHandler::getHelpSubTopic)
+                .forEach(kanri::child);
+        topics.add(kanri);
     }
 
     @GroupMessageHandler

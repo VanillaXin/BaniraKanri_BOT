@@ -4,12 +4,15 @@ import com.mikuac.shiro.annotation.AnyMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
@@ -26,26 +29,10 @@ import java.util.List;
 @Component
 public class TapPlugin extends BasePlugin {
 
-    /**
-     * 获取帮助信息
-     *
-     * @param groupId 群组ID
-     * @param types   帮助类型
-     */
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (insConfig.get().tap().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("戳一戳：\n\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().tap() + " " +
-                    "<QQ号|艾特> ... " +
-                    "[<次数>]"
-            );
-        }
-        return result;
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
+        topics.add(HelpTopics.of("戳一戳", "对指定用户发送戳一戳。", 99, insConfig.get().tap())
+                .detail(BaniraUtils.getInsPrefixWithSpace() + insConfig.get().tap() + " <QQ号|艾特> ... [<次数>]"));
     }
 
     @AnyMessageHandler

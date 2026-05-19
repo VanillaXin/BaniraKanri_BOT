@@ -31,18 +31,6 @@ public class ExamplePlugin extends BasePlugin {
     private IMessageRecordManager messageRecordManager;
 
     /**
-     * 获取帮助信息
-     *
-     * @param groupId 群组ID
-     * @param types   帮助类型
-     */
-    @Nonnull
-    @Override
-    public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
-        return List.of();
-    }
-
-    /**
      * 发送 /hello 触发回复 Hello Excel!
      *
      * @param bot   机器人实例

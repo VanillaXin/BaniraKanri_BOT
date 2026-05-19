@@ -9,11 +9,11 @@ import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.service.IMessageRecordManager;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -32,29 +32,13 @@ public class RecallCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("群管 - 撤回消息：\n\n" +
-                    "用法1：(回复要撤回的消息)\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + "\n\n" +
-                    "用法2：(撤回当前消息前的第n条消息)\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    "<n> ..." + "\n\n" +
-                    "用法3：(撤回当前消息前的第n~m条消息)\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    "<n:m> ..." + "\n\n" +
-                    "用法4：(撤回当前消息前的第n条及后面的共m消息)\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    "<n+m> ..."
-            );
-        }
-        return result;
+    public HelpTopic getHelpSubTopic() {
+        String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
+        String detail = "用法1：(回复要撤回的消息)\n" + prefix + getAction() + "\n\n"
+                + "用法2：(撤回当前消息前的第n条消息)\n" + prefix + getAction() + " <n> ...\n\n"
+                + "用法3：(撤回当前消息前的第n~m条消息)\n" + prefix + getAction() + " <n:m> ...\n\n"
+                + "用法4：(撤回当前消息前的第n条及后面的共m消息)\n" + prefix + getAction() + " <n+m> ...";
+        return HelpTopics.of("撤回消息", "撤回群内消息。", 13, getAction()).detail(detail);
     }
 
     @Override

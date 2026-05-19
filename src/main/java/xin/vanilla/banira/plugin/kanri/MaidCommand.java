@@ -8,9 +8,10 @@ import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.PermissionConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
+import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,24 +32,12 @@ public class MaidCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("群管 - 增删女仆：\n\n" +
-                    "增加：\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace()
-                    + this.getAction() + " "
-                    + insConfig.get().base().add() + " "
-                    + "<QQ号|艾特> ..." + "\n\n" +
-                    "删除：\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace()
-                    + this.getAction() + " "
-                    + insConfig.get().base().del() + " "
-                    + "<QQ号|艾特> ..."
-            );
-        }
-        return result;
+    public HelpTopic getHelpSubTopic() {
+        String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
+        BaseInstructionsConfig base = insConfig.get().base();
+        return HelpTopics.of("增删女仆", "增加或移除女仆。", 22, getAction())
+                .child(HelpTopics.opAdd(base, "用法：\n" + prefix + getAction() + " " + base.add() + " <QQ号|艾特> ..."))
+                .child(HelpTopics.opDel(base, "用法：\n" + prefix + getAction() + " " + base.del() + " <QQ号|艾特> ..."));
     }
 
     @Override

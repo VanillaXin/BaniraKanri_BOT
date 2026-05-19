@@ -7,9 +7,9 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
-import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,16 +27,9 @@ public class AtAllCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("群管 - AT全体成员：\n\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace()
-                    + this.getAction()
-            );
-        }
-        return result;
+    public HelpTopic getHelpSubTopic() {
+        String detail = "用法：\n" + BaniraUtils.getKanriInsPrefixWithSpace() + getAction();
+        return HelpTopics.of("艾特全体", "艾特全体成员。", 17, getAction()).detail(detail);
     }
 
     @Override

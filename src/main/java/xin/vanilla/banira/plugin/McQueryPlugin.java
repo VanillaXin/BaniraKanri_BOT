@@ -29,6 +29,8 @@ import xin.vanilla.banira.domain.PageResult;
 import xin.vanilla.banira.mapper.param.MinecraftRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.service.IMinecraftRecordManager;
 import xin.vanilla.banira.util.*;
 import xin.vanilla.banira.util.html.HtmlScreenshotConfig;
@@ -55,63 +57,25 @@ public class McQueryPlugin extends BasePlugin {
     private static final File HTML_FILE = new File("config/mc_query_plugin/index.html");
     private static final File CONFIG_FILE = new File("config/mc_query_plugin/config.js");
 
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(@Nullable Long groupId, @Nonnull String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (insConfig.get().mcQuery().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            BaseInstructionsConfig baseIns = BaniraUtils.getBaseIns();
-
-            result.add("MC服务器配置 - 增加：\n" +
-                    "增加MC服务器配置信息，下次可直接使用名称查询。" + "\n\n" +
-                    "用法1：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    "mc" + " " +
-                    baseIns.add() + " " +
-                    "[<服务器名称>]" + " " +
-                    "<查询地址>" + " " +
-                    "<查询端口>" + "\n\n" +
-                    "用法2：\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    "mc" + " " +
-                    baseIns.add() + " " +
-                    "[<服务器名称>]" + " " +
-                    "<查询地址:查询端口>"
-            );
-            result.add("MC服务器配置 - 删除：\n" +
-                    "删除MC服务器配置信息。" + "\n\n" +
-                    "用法1：(根据MC服务器编号删除)\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    "mc" + " " +
-                    baseIns.del() + " " +
-                    "<MC服务器编号> ..." + "\n\n" +
-                    "用法2：(回复添加成功的响应消息)\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    "mc" + " " +
-                    baseIns.del()
-            );
-            result.add("MC服务器配置 - 查询：\n\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    "mc" + " " +
-                    baseIns.list() + " " +
-                    "[<页数>]" + " " +
-                    "<MC服务器名称>"
-            );
-            result.add("MC服务器查询：\n" +
-                    "直接通过地址查询服务器信息。" + "\n\n" +
-                    "用法1：\n" +
-                    querys + " " +
-                    "[<服务器名称>]" + " " +
-                    "<查询地址>" + " " +
-                    "<查询端口>" + "\n\n" +
-                    "用法2：\n" +
-                    querys + " " +
-                    "[<服务器名称>]" + " " +
-                    "<查询地址:查询端口>"
-            );
-        }
-        return result;
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
+        BaseInstructionsConfig base = BaniraUtils.getBaseIns();
+        String prefix = BaniraUtils.getInsPrefixWithSpace();
+        List<String> mcQuery = insConfig.get().mcQuery();
+        HelpTopic topic = HelpTopics.of("MC服务器", "查询 Minecraft 服务器状态。", 99, mcQuery);
+        topic.child(HelpTopics.opAdd(base,
+                "增加 MC 服务器配置，下次可直接使用名称查询。\n\n"
+                        + "用法1：\n" + prefix + "mc " + base.add() + " [<服务器名称>] <查询地址> <查询端口>\n\n"
+                        + "用法2：\n" + prefix + "mc " + base.add() + " [<服务器名称>] <查询地址:查询端口>"));
+        topic.child(HelpTopics.opDel(base,
+                "用法1：(根据编号删除)\n" + prefix + "mc " + base.del() + " <MC服务器编号> ...\n\n"
+                        + "用法2：(回复添加成功的响应消息)\n" + prefix + "mc " + base.del()));
+        topic.child(HelpTopics.opList(base,
+                "用法：\n" + prefix + "mc " + base.list() + " [<页数>] <MC服务器名称>"));
+        topic.child(HelpTopics.sub("直接查询", "不保存配置，直接通过地址查询。", 4, querys,
+                "用法1：\n" + querys + " [<服务器名称>] <查询地址> <查询端口>\n\n"
+                        + "用法2：\n" + querys + " [<服务器名称>] <查询地址:查询端口>"));
+        topics.add(topic);
     }
 
     private static final Set<String> querys = BaniraUtils.mutableSetOf(

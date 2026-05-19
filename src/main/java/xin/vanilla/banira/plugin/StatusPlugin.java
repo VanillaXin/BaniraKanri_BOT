@@ -19,6 +19,7 @@ import com.mikuac.shiro.dto.action.response.LoginInfoResp;
 import com.mikuac.shiro.dto.action.response.VersionInfoResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationContext;
@@ -34,6 +35,8 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.*;
 import xin.vanilla.banira.util.html.HtmlScreenshotConfig;
@@ -77,25 +80,10 @@ public class StatusPlugin extends BasePlugin {
     private static final File CONFIG_FILE = new File("config/status_plugin/config.js");
     private static final File TEMP_BG_FILE = new File("config/status_plugin/temp.png");
 
-    /**
-     * 获取帮助信息
-     *
-     * @param groupId 群组ID
-     * @param types   帮助类型
-     */
-    @Nonnull
     @Override
-    public List<String> getHelpInfo(Long groupId, @Nonnull String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (insConfig.get().base().status().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("框架状态：\n" +
-                    "获取框架及系统状态信息总览。\n\n" +
-                    BaniraUtils.getInsPrefixWithSpace() +
-                    insConfig.get().base().status()
-            );
-        }
-        return result;
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
+        topics.add(HelpTopics.of("框架状态", "获取框架及系统状态信息总览。", 2, insConfig.get().base().status())
+                .detail(BaniraUtils.getInsPrefixWithSpace() + insConfig.get().base().status()));
     }
 
     @AnyMessageHandler

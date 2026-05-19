@@ -6,6 +6,8 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumPermission;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
@@ -27,26 +29,12 @@ public class MuteCommand implements KanriHandler {
 
     @Nonnull
     @Override
-    public List<String> getHelpInfo(String... types) {
-        List<String> result = new ArrayList<>();
-        String type = CollectionUtils.getFirst(types);
-        if (this.getAction().stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
-            result.add("群管 - 禁言群成员或全员：\n\n" +
-                    "用法1：\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    "<QQ号|艾特> ... " + "<禁言秒数>" + "\n\n" +
-                    "用法2：(回复要禁言的成员)\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    "<禁言秒数>" + "\n\n" +
-                    "用法3：(全员禁言)\n" +
-                    BaniraUtils.getKanriInsPrefixWithSpace() +
-                    this.getAction() + " " +
-                    "@全体成员"
-            );
-        }
-        return result;
+    public HelpTopic getHelpSubTopic() {
+        String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
+        String detail = "用法1：\n" + prefix + getAction() + " <QQ号|艾特> ... <禁言秒数>\n\n"
+                + "用法2：(回复要禁言的成员)\n" + prefix + getAction() + " <禁言秒数>\n\n"
+                + "用法3：(全员禁言)\n" + prefix + getAction() + " @全体成员";
+        return HelpTopics.of("禁言", "禁言群成员或全员。", 10, getAction()).detail(detail);
     }
 
     @Override
