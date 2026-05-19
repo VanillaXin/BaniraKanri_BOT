@@ -318,13 +318,13 @@ public class SocialMediaPlugin extends BasePlugin {
     @MessageEmojiLikeNoticeHandler
     public void parse(BaniraBot bot, MessageEmojiLikeNoticeEvent event) {
         if (!isEnable(event.getGroupId())) return;
-        if (event.getSelfId().equals(event.getOperatorId())) return;
+        if (event.getSelfId().equals(event.getUserId())) return;
 
         SocialMediaGroupSettings settings = getGroupSettings(event.getGroupId());
         if (!settings.triggerEmojiLikeNotice()) {
             return;
         }
-        if (!Boolean.TRUE.equals(event.getIsAdd())) {
+        if (!event.isAdd()) {
             return;
         }
         if (!isEmojiMatched(event, settings)) {
