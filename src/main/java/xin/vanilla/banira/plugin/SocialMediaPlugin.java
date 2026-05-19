@@ -62,7 +62,7 @@ public class SocialMediaPlugin extends BasePlugin {
         List<String> socialMedia = insConfig.get().socialMedia();
         if (socialMedia.stream().anyMatch(s -> StringUtils.isNullOrEmptyEx(type) || s.equalsIgnoreCase(type))) {
             result.add("社交媒体解析：\n" +
-                    "自动解析设精媒体链接。\n\n" +
+                    "自动解析社交媒体链接。\n\n" +
                     "启用：\n" +
                     BaniraUtils.getInsPrefixWithSpace() +
                     socialMedia + " " +
@@ -90,28 +90,163 @@ public class SocialMediaPlugin extends BasePlugin {
             if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
 
             String operate = split[1];
+            SocialMediaGroupConfig groupConfig = BaniraUtils.getGroupConfigOrGlobal(SocialMediaGroupConfig.class, event.getGroupId());
+            SocialMediaGroupSettings settings = groupConfig.socialMediaSettings();
+            if (settings == null) {
+                settings = new SocialMediaGroupSettings();
+                groupConfig.socialMediaSettings(settings);
+            }
+
             // 启用
             if (insConfig.get().base().enable().contains(operate)) {
-                if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
+                if (!bot.isAdmin(event.getGroupId(), event.getUserId())) {
                     return bot.setMsgEmojiLikeNo(event.getMessageId());
-                BaniraUtils.getGroupConfigOrGlobal(SocialMediaGroupConfig.class, event.getGroupId()).socialMedia(true);
+                }
+                if (split.length <= 2) {
+                    groupConfig.socialMedia(true);
+                } else {
+                    if (!applyBooleanSetting(settings, split[2], true)) {
+                        return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                    }
+                }
                 BaniraUtils.saveGroupConfig();
                 return bot.setMsgEmojiLikeOk(event.getMessageId());
             }
             // 禁用
             else if (insConfig.get().base().disable().contains(operate)) {
-                if (!bot.isAdmin(event.getGroupId(), event.getUserId()))
+                if (!bot.isAdmin(event.getGroupId(), event.getUserId())) {
                     return bot.setMsgEmojiLikeNo(event.getMessageId());
-                BaniraUtils.getGroupConfigOrGlobal(SocialMediaGroupConfig.class, event.getGroupId()).socialMedia(false);
+                }
+                if (split.length <= 2) {
+                    groupConfig.socialMedia(false);
+                } else {
+                    if (!applyBooleanSetting(settings, split[2], false)) {
+                        return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                    }
+                }
                 BaniraUtils.saveGroupConfig();
                 return bot.setMsgEmojiLikeOk(event.getMessageId());
             }
-            // 未知
-            else {
+            // 添加
+            else if (insConfig.get().base().add().contains(operate)) {
+                if (!bot.isAdmin(event.getGroupId(), event.getUserId())) {
+                    return bot.setMsgEmojiLikeNo(event.getMessageId());
+                }
+                if (split.length < 4 || !"emoji".equalsIgnoreCase(split[2])) {
+                    return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                }
+                Long emojiId = StringUtils.toLong(split[3], -1L);
+                if (emojiId <= 0) {
+                    return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                }
+                if (CollectionUtils.isNullOrEmpty(settings.emojiIds())) {
+                    settings.emojiIds(BaniraUtils.mutableListOf());
+                }
+                if (!settings.emojiIds().contains(emojiId)) {
+                    settings.emojiIds().add(emojiId);
+                }
+                BaniraUtils.saveGroupConfig();
+                return bot.setMsgEmojiLikeOk(event.getMessageId());
+            }
+            // 删除
+            else if (insConfig.get().base().del().contains(operate)) {
+                if (!bot.isAdmin(event.getGroupId(), event.getUserId())) {
+                    return bot.setMsgEmojiLikeNo(event.getMessageId());
+                }
+                if (split.length < 4 || !"emoji".equalsIgnoreCase(split[2])) {
+                    return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                }
+                Long emojiId = StringUtils.toLong(split[3], -1L);
+                if (emojiId <= 0 || CollectionUtils.isNullOrEmpty(settings.emojiIds())) {
+                    return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                }
+                settings.emojiIds().removeIf(id -> Objects.equals(id, emojiId));
+                BaniraUtils.saveGroupConfig();
+                return bot.setMsgEmojiLikeOk(event.getMessageId());
+            }
+            // 查询
+            else if (insConfig.get().base().list().contains(operate) || insConfig.get().base().status().contains(operate)) {
+                ActionData<MsgId> msgId = bot.sendMsg(event, buildSettingsText(groupConfig), false);
+                return bot.isActionDataMsgIdNotEmpty(msgId);
+            }
+            // 设置回复方式
+            else if ("mode".equalsIgnoreCase(operate)) {
+                if (!bot.isAdmin(event.getGroupId(), event.getUserId())) {
+                    return bot.setMsgEmojiLikeNo(event.getMessageId());
+                }
+                if (split.length < 3) {
+                    return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+                }
+                String mode = normalizeReplyMode(split[2]);
+                settings.replyMode(mode);
+                BaniraUtils.saveGroupConfig();
+                return bot.setMsgEmojiLikeOk(event.getMessageId());
+            } else {
                 return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
             }
         }
         return false;
+    }
+
+    /**
+     * 应用布尔类型的群组设置项。
+     */
+    private boolean applyBooleanSetting(SocialMediaGroupSettings settings, String key, boolean value) {
+        String normalized = normalizeSettingKey(key);
+        switch (normalized) {
+            case "direct" -> settings.triggerDirect(value);
+            case "reply" -> settings.triggerReplyInvoke(value);
+            case "likeNotice" -> settings.triggerEmojiLikeNotice(value);
+            case "recognizeEmoji" -> settings.replyEmojiOnRecognize(value);
+            default -> {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 归一化设置项别名。
+     */
+    private String normalizeSettingKey(String key) {
+        if (StringUtils.isNullOrEmptyEx(key)) {
+            return "";
+        }
+        String k = key.trim().toLowerCase();
+        return switch (k) {
+            case "direct", "直接触发", "1" -> "direct";
+            case "reply", "replyinvoke", "回复触发", "2" -> "reply";
+            case "likenotice", "emoji", "emojinotice", "表情触发", "3" -> "likeNotice";
+            case "recognizeemoji", "promptemoji", "识别提示", "提示表情" -> "recognizeEmoji";
+            default -> "";
+        };
+    }
+
+    /**
+     * 构建当前群社交媒体配置文本。
+     */
+    private String buildSettingsText(SocialMediaGroupConfig config) {
+        SocialMediaGroupSettings settings = config.socialMediaSettings();
+        if (settings == null) {
+            settings = new SocialMediaGroupSettings();
+        }
+        return MsgUtils.builder()
+                .text("社交媒体配置\n")
+                .text("启用：" + config.socialMedia()).text("\n")
+                .text("direct触发：" + settings.triggerDirect()).text("\n")
+                .text("reply触发：" + settings.triggerReplyInvoke()).text("\n")
+                .text("emojiNotice触发：" + settings.triggerEmojiLikeNotice()).text("\n")
+                .text("识别提示表情：" + settings.replyEmojiOnRecognize()).text("\n")
+                .text("emojiIds：" + settings.emojiIds()).text("\n")
+                .text("回复方式：" + normalizeReplyMode(settings.replyMode())).text("\n\n")
+                .text("示例：\n")
+                .text("enable direct / disable direct\n")
+                .text("enable reply / disable reply\n")
+                .text("enable likeNotice / disable likeNotice\n")
+                .text("enable recognizeEmoji / disable recognizeEmoji\n")
+                .text("add emoji 10068 / del emoji 10068\n")
+                .text("mode forward|detail|video")
+                .build();
     }
 
     /**

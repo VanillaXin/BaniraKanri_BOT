@@ -56,7 +56,10 @@ public class HelpPlugin extends BasePlugin {
         BaniraCodeContext context = new BaniraCodeContext(bot, event);
         if (super.isCommand(context)
                 && insConfig.get().base().help() != null
-                && insConfig.get().base().help().stream().anyMatch(ins -> super.deleteCommandPrefix(context).startsWith(ins + " "))
+                && insConfig.get().base().help().stream().anyMatch(ins -> {
+            String s = super.deleteCommandPrefix(context);
+            return s.startsWith(ins + " ") || s.equals(ins);
+        })
         ) {
             try {
 
