@@ -69,7 +69,7 @@ public class AIChatPlugin extends BasePlugin {
 
             String operate = split[1];
             if (baseIns.enable().contains(operate)) {
-                AIChatGroupConfig config = BaniraUtils.getGroupConfigOrGlobal(AIChatGroupConfig.class, event.getGroupId());
+                AIChatGroupConfig config = BaniraUtils.getGroupConfigForEdit(AIChatGroupConfig.class, event.getGroupId());
                 if (config.chatConfig() == null) {
                     config.chatConfig(new ChatConfig());
                 }
@@ -80,7 +80,7 @@ public class AIChatPlugin extends BasePlugin {
                     return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
                 }
             } else if (baseIns.disable().contains(operate)) {
-                AIChatGroupConfig config = BaniraUtils.getGroupConfigOrGlobal(AIChatGroupConfig.class, event.getGroupId());
+                AIChatGroupConfig config = BaniraUtils.getGroupConfigForEdit(AIChatGroupConfig.class, event.getGroupId());
                 if (config.chatConfig() == null) {
                     config.chatConfig(new ChatConfig());
                 }

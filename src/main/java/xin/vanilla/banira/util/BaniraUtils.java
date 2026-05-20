@@ -165,6 +165,15 @@ public final class BaniraUtils {
     }
 
     /**
+     * 获取群配置用于写入修改。
+     * 若指定群尚无独立配置，则基于群0配置深拷贝后返回。
+     */
+    public static <T extends xin.vanilla.banira.config.contract.GroupConfig> T getGroupConfigForEdit(Class<T> clazz, Long groupId) {
+        OtherConfigRegistry registry = getOtherConfigRegistry();
+        return registry.getGroupOrCreateFromGlobal(clazz, isGroupIdValid(groupId) ? groupId : 0L);
+    }
+
+    /**
      * 判断指定群是否存在独立配置。
      */
     public static <T extends xin.vanilla.banira.config.contract.GroupConfig> boolean hasGroupConfig(Class<T> clazz, Long groupId) {

@@ -25,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class GroupedYamlConfigManager<T> {
     private final Path configPath;
+    private final String configName;
     private final Class<T> clazz;
     private final T defaultInstance;
     private final ObjectMapper mapper;
@@ -38,6 +39,7 @@ public class GroupedYamlConfigManager<T> {
                                     YamlConfigWatcherService watcherService
     ) throws IOException {
         this.configPath = configPath.toAbsolutePath();
+        this.configName = clazz.getSimpleName();
         this.clazz = clazz;
         this.defaultInstance = defaultInstance;
         this.mapper = new ObjectMapper(new YAMLFactory().disable(YAMLGenerator.Feature.WRITE_DOC_START_MARKER))
@@ -54,15 +56,17 @@ public class GroupedYamlConfigManager<T> {
                     return;
                 }
                 if (Files.notExists(path)) {
+                    LOGGER.info("检测到群配置文件缺失，触发重新加载: name={}, path={}", configName, configPath);
                     reload();
                     return;
                 }
                 long currentModified = Files.getLastModifiedTime(path).toMillis();
                 if (currentModified != lastModifiedOnWrite) {
+                    LOGGER.info("检测到群配置文件变更，触发重新加载: name={}, path={}", configName, configPath);
                     reload();
                 }
             } catch (Exception e) {
-                LOGGER.error("Error reloading grouped other config: {}", this.configPath, e);
+                LOGGER.error("群配置重新加载失败: name={}, path={}", configName, configPath, e);
             }
         });
     }
@@ -94,6 +98,7 @@ public class GroupedYamlConfigManager<T> {
             }
             currentMap = loaded;
             writeMap(currentMap);
+            LOGGER.info("群配置重新加载完成: name={}, path={}, groups={}", configName, configPath, currentMap.size());
         } finally {
             isProcessing.set(false);
         }
@@ -123,6 +128,18 @@ public class GroupedYamlConfigManager<T> {
     }
 
     /**
+     * 获取指定群配置用于写入。
+     * 若指定群尚无独立配置，则基于群0配置深拷贝并注册到该群。
+     */
+    public synchronized T getOrCreateFromGlobal(Long groupId) {
+        Long normalized = normalizeGroupId(groupId);
+        if (normalized == 0L) {
+            return get(0L);
+        }
+        return currentMap.computeIfAbsent(normalized, key -> deepCopy(getOrGlobal(normalized)));
+    }
+
+    /**
      * 指定群配置是否存在。
      */
     public synchronized boolean contains(Long groupId) {
@@ -134,6 +151,7 @@ public class GroupedYamlConfigManager<T> {
      */
     public synchronized void save() throws IOException {
         writeMap(currentMap);
+        LOGGER.info("群配置已保存: name={}, path={}, groups={}", configName, configPath, currentMap.size());
     }
 
     /**

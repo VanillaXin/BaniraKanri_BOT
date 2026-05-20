@@ -64,7 +64,7 @@ public final class McModUtils {
         ReentrantLock lock = getGroupLock(groupId);
         lock.lock();
         try {
-            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
+            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigForEdit(McModGroupConfig.class, groupId);
             if (otherConfig == null) {
                 LOGGER.error("Failed to get config, groupId: {}", groupId);
                 return null;

@@ -718,12 +718,14 @@ public class McModPlugin extends BasePlugin {
         }
         // 启用
         else if (baseIns.enable().contains(operate)) {
-            BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId).mcModCommentConfig().enable(true);
+            BaniraUtils.getGroupConfigForEdit(McModGroupConfig.class, groupId).mcModCommentConfig().enable(true);
+            BaniraUtils.saveGroupConfig();
             return bot.setMsgEmojiLikeHeart(msgId);
         }
         // 禁用
         else if (baseIns.disable().contains(operate)) {
-            BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId).mcModCommentConfig().enable(false);
+            BaniraUtils.getGroupConfigForEdit(McModGroupConfig.class, groupId).mcModCommentConfig().enable(false);
+            BaniraUtils.saveGroupConfig();
             return bot.setMsgEmojiLikeHeart(msgId);
         }
         // 未知操作
@@ -767,7 +769,7 @@ public class McModPlugin extends BasePlugin {
         }
 
         try {
-            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
+            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigForEdit(McModGroupConfig.class, groupId);
             McModCommentConfig config = otherConfig.mcModCommentConfig();
             if (config == null) {
                 config = new McModCommentConfig();
@@ -816,7 +818,7 @@ public class McModPlugin extends BasePlugin {
         }
 
         try {
-            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
+            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigForEdit(McModGroupConfig.class, groupId);
             McModCommentConfig config = otherConfig.mcModCommentConfig();
             if (config == null || !config.isWatching(commentType, containerId, groupId)) {
                 return bot.setMsgEmojiLikeBrokenHeart(msgId);

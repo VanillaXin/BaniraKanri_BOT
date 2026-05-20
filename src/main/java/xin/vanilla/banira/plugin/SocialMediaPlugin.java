@@ -100,7 +100,7 @@ public class SocialMediaPlugin extends BasePlugin {
             if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
 
             String operate = split[1];
-            SocialMediaGroupConfig groupConfig = BaniraUtils.getGroupConfigOrGlobal(SocialMediaGroupConfig.class, event.getGroupId());
+            SocialMediaGroupConfig groupConfig = BaniraUtils.getGroupConfigForEdit(SocialMediaGroupConfig.class, event.getGroupId());
             SocialMediaGroupSettings settings = groupConfig.socialMediaSettings();
             if (settings == null) {
                 settings = new SocialMediaGroupSettings();

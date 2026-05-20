@@ -74,11 +74,13 @@ public class YamlConfigManager<T> {
                     return;
                 }
                 if (Files.notExists(path)) {
+                    LOGGER.info("检测到配置文件缺失，触发重新加载: name={}, path={}", configName, configPath);
                     reloadOnChange();
                     return;
                 }
                 long currentModified = Files.getLastModifiedTime(configPath).toMillis();
                 if (currentModified != lastModifiedOnWrite) {
+                    LOGGER.info("检测到配置文件变更，触发重新加载: name={}, path={}", configName, configPath);
                     reloadOnChange();
                 }
             } catch (Exception e) {
@@ -137,6 +139,7 @@ public class YamlConfigManager<T> {
                     }
                     this.currentInstance = merged;
                     publishEvent(merged);
+                    LOGGER.info("配置重新加载完成: name={}, path={}", configName, configPath);
                 } else {
                     handleValidationFailure(merged, violations);
                 }
@@ -191,6 +194,7 @@ public class YamlConfigManager<T> {
             writeConfig(fixed);
             this.currentInstance = fixed;
             publishEvent(fixed);
+            LOGGER.info("配置校验修复后重新加载完成: name={}, path={}", configName, configPath);
         } else {
             handleLoadFailure("fix-failure", "Failed to fix invalid config", null);
         }
@@ -257,6 +261,7 @@ public class YamlConfigManager<T> {
         writeConfig(defaultInstance);
         this.currentInstance = deepCopy(defaultInstance);
         publishEvent(currentInstance);
+        LOGGER.warn("配置加载失败，已回退默认配置: name={}, path={}, reason={}", configName, configPath, reason);
     }
 
     private void backupOriginal(String reason) throws IOException {
@@ -294,6 +299,7 @@ public class YamlConfigManager<T> {
 
     public void save() throws IOException {
         writeConfig(currentInstance);
+        LOGGER.info("配置已保存: name={}, path={}", configName, configPath);
     }
 
     private void publishEvent(T instance) {

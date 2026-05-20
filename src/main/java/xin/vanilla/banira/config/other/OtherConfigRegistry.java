@@ -84,6 +84,14 @@ public class OtherConfigRegistry {
         return clazz.cast(manager.getOrGlobal(groupId));
     }
 
+    /**
+     * 获取群配置用于写入（不存在时基于群0配置创建独立副本）。
+     */
+    public <T extends GroupConfig> T getGroupOrCreateFromGlobal(Class<T> clazz, Long groupId) {
+        GroupedYamlConfigManager<?> manager = requireGroupedManager(clazz);
+        return clazz.cast(manager.getOrCreateFromGlobal(groupId));
+    }
+
     public <T extends GroupConfig> T getGrouped(Class<T> clazz, Long groupId) {
         GroupedYamlConfigManager<?> manager = requireGroupedManager(clazz);
         return clazz.cast(manager.get(groupId));
