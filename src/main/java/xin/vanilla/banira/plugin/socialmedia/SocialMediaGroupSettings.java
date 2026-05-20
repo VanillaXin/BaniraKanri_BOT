@@ -30,6 +30,10 @@ public class SocialMediaGroupSettings {
      */
     private boolean triggerEmojiLikeNotice;
     /**
+     * 识别提示专用 emojiId
+     */
+    private Long recognizeEmojiId;
+    /**
      * 允许触发的 emojiId 列表
      */
     private List<Long> emojiIds;
@@ -46,6 +50,7 @@ public class SocialMediaGroupSettings {
         this.triggerDirect = false;
         this.triggerReplyInvoke = true;
         this.triggerEmojiLikeNotice = true;
+        this.recognizeEmojiId = 10068L;
         this.emojiIds = BaniraUtils.mutableListOf(10068L);
         this.replyMode = "forward";
         this.replyEmojiOnRecognize = true;

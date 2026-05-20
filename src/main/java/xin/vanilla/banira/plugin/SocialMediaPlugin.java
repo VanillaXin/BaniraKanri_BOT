@@ -269,11 +269,12 @@ public class SocialMediaPlugin extends BasePlugin {
         SocialMediaGroupSettings settings = getGroupSettings(event.getGroupId());
 
         // region 识别阶段
-        boolean directRecognized = hasAnyParseTarget(event.getMessage());
+        String detectableMsg = collectDetectableText(event.getMessage());
+        boolean directRecognized = hasAnyParseTarget(detectableMsg);
         boolean replyRecognized = false;
         String replyMsg = "";
         if (isReplyInvokeTrigger(bot, event)) {
-            replyMsg = BaniraUtils.getReplyContentString(bot, event.getMessage());
+            replyMsg = collectDetectableText(BaniraUtils.getReplyContentString(bot, event.getMessage()));
             replyRecognized = hasAnyParseTarget(replyMsg);
         }
         Integer recognizedMessageId = resolveRecognizedMessageId(event, directRecognized);
@@ -291,7 +292,7 @@ public class SocialMediaPlugin extends BasePlugin {
         Integer targetMessageId = directTrigger
                 ? event.getMessageId()
                 : Optional.ofNullable(BaniraUtils.getReplyId(event.getMessage())).map(Long::intValue).orElse(event.getMessageId());
-        String targetMsg = directTrigger ? event.getMessage() : replyMsg;
+        String targetMsg = directTrigger ? detectableMsg : replyMsg;
         if (targetMessageId == null || targetMessageId <= 0) {
             return false;
         }
@@ -318,7 +319,8 @@ public class SocialMediaPlugin extends BasePlugin {
     @MessageEmojiLikeNoticeHandler
     public void parse(BaniraBot bot, MessageEmojiLikeNoticeEvent event) {
         if (!isEnable(event.getGroupId())) return;
-        if (event.getSelfId().equals(event.getUserId())) return;
+        if (Objects.equals(bot.getSelfId(), event.getUserId())) return;
+        if (Objects.equals(bot.getSelfId(), event.getOperatorId())) return;
 
         SocialMediaGroupSettings settings = getGroupSettings(event.getGroupId());
         if (!settings.triggerEmojiLikeNotice()) {
@@ -333,7 +335,7 @@ public class SocialMediaPlugin extends BasePlugin {
         if (event.getMessageId() == null || event.getMessageId() <= 0) {
             return;
         }
-        String likedMsg = getMessageContentById(bot, event.getMessageId());
+        String likedMsg = collectDetectableText(getMessageContentById(bot, event.getMessageId()));
         if (StringUtils.isNullOrEmptyEx(likedMsg)) {
             return;
         }
@@ -384,6 +386,46 @@ public class SocialMediaPlugin extends BasePlugin {
             }
         }
         return false;
+    }
+
+    /**
+     * 汇总用于识别/解析的文本：合并转发内层、去掉图片/视频 CQ 中的 url 以降低误匹配
+     */
+    private String collectDetectableText(String msg) {
+        if (StringUtils.isNullOrEmptyEx(msg)) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder(stripMediaCqUrls(msg));
+        if (BaniraUtils.hasForward(msg)) {
+            for (List<MsgResp> block : BaniraUtils.getForwardContent(msg)) {
+                if (CollectionUtils.isNullOrEmpty(block)) {
+                    continue;
+                }
+                for (MsgResp resp : block) {
+                    if (resp == null) {
+                        continue;
+                    }
+                    String inner = resp.getMessage();
+                    if (StringUtils.isNullOrEmptyEx(inner)) {
+                        inner = Objects.toString(resp.getRawMessage(), "");
+                    }
+                    if (StringUtils.isNotNullOrEmpty(inner)) {
+                        sb.append('\n').append(collectDetectableText(inner));
+                    }
+                }
+            }
+        }
+        return sb.toString();
+    }
+
+    /**
+     * 识别阶段不扫描图片/视频 CQ 的 url 字段，避免 QQ 图床链接误命中 BV/av 等规则
+     */
+    private String stripMediaCqUrls(String msg) {
+        if (StringUtils.isNullOrEmptyEx(msg)) {
+            return "";
+        }
+        return msg.replaceAll("(?i)(\\[CQ:(?:image|video)[^\\]]*?),url=[^,\\]]+", "$1");
     }
 
     /**
@@ -629,7 +671,10 @@ public class SocialMediaPlugin extends BasePlugin {
         if (messageId == null || messageId <= 0 || CollectionUtils.isNullOrEmpty(settings.emojiIds())) {
             return;
         }
-        settings.emojiIds().stream().filter(Objects::nonNull).findFirst().ifPresent(emojiId -> bot.setMsgEmojiLike(messageId, emojiId));
+        Long emojiId = settings.recognizeEmojiId();
+        if (emojiId != null && emojiId > 0) {
+            bot.setMsgEmojiLike(messageId, emojiId);
+        }
     }
 
     /**

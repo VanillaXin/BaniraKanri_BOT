@@ -23,9 +23,9 @@ public class BilibiliParser implements SocialMediaParser {
                     // 短链接: https://b23.tv/xxxxxx
                     "(?:https?:\\\\?/\\\\?/)?b23\\.tv\\\\?/(?<shortId>[0-9A-Za-z]{6,20})(?:/|\\s|\\?|$)",
                     // 纯BV号: BVxxxxx
-                    "(?<pureBvId>BV[0-9A-Za-z]{10,})",
+                    "(?<![0-9A-Za-z])(?<pureBvId>BV[0-9A-Za-z]{10,})",
                     // 纯AV号: av123456
-                    "av(?<avId>\\d+)"
+                    "(?<![0-9A-Za-z])av(?<avId>\\d+)"
             )
             .compile();
 
