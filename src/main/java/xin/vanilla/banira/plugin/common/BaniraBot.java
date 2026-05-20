@@ -561,7 +561,7 @@ public class BaniraBot extends Bot {
      */
     @Override
     public ActionRaw uploadGroupFile(long groupId, String file, String name, String folder) {
-        return super.uploadGroupFile(groupId, file, BaniraUtils.replaceSensitiveContent(name), folder);
+        return super.uploadGroupFile(groupId, file, BaniraUtils.replaceSensitiveFileName(name), folder);
     }
 
     /**
@@ -576,7 +576,7 @@ public class BaniraBot extends Bot {
      */
     @Override
     public ActionRaw uploadGroupFile(long groupId, String file, String name) {
-        return super.uploadGroupFile(groupId, file, BaniraUtils.replaceSensitiveContent(name));
+        return super.uploadGroupFile(groupId, file, BaniraUtils.replaceSensitiveFileName(name));
     }
 
     // endregion override

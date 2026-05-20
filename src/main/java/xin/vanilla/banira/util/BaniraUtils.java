@@ -1,7 +1,7 @@
 package xin.vanilla.banira.util;
 
 import cn.hutool.core.io.FileUtil;
-import com.github.houbb.sensitive.word.core.SensitiveWordHelper;
+import xin.vanilla.banira.service.SensitiveContentService;
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.JsonUtils;
 import com.mikuac.shiro.common.utils.MessageConverser;
@@ -749,68 +749,19 @@ public final class BaniraUtils {
     // region 敏感内容处理
 
     public static String replaceSensitiveContent(String msg) {
-        if (StringUtils.isNotNullOrEmpty(msg)) {
-            List<String> sensitiveList = SensitiveWordHelper.findAll(msg);
-            if (CollectionUtils.isNotNullOrEmpty(sensitiveList)) {
-                for (String sensitive : sensitiveList) {
-                    msg = msg.replace(sensitive, PlantCipher.encode(sensitive));
-                }
-            }
-        }
-        return msg;
+        return SensitiveContentService.getInstance().replacePlainText(msg);
+    }
+
+    public static String replaceSensitiveFileName(String fileName) {
+        return SensitiveContentService.getInstance().replaceFileName(fileName);
     }
 
     public static List<ArrayMsg> replaceSensitiveContent(List<ArrayMsg> arrayMsgList) {
-        if (CollectionUtils.isNotNullOrEmpty(arrayMsgList)) {
-            arrayMsgList.forEach(arrayMsg -> {
-                if (arrayMsg.getType() == MsgTypeEnum.text) {
-                    arrayMsg.setData(
-                            mutableMapOf(
-                                    MsgTypeEnum.text.toString()
-                                    , replaceSensitiveContent(arrayMsg.getStringData(MsgTypeEnum.text.toString()))
-                            )
-                    );
-                    JsonNode node = arrayMsg.getData();
-                    if (node instanceof ObjectNode objectNode) {
-                        JsonNode jsonNode = node.get(MsgTypeEnum.text.toString());
-                        if (jsonNode.isNumber()) {
-                            objectNode.put(MsgTypeEnum.text.toString(), jsonNode.asText());
-                        }
-                    }
-                }
-            });
-        }
-        return arrayMsgList;
+        return SensitiveContentService.getInstance().replaceArrayMsg(arrayMsgList);
     }
 
     public static Object replaceSensitiveContent(Object obj) {
-        if (obj instanceof String str) {
-            return replaceSensitiveContent(str);
-        } else if (obj instanceof Collection<?> list) {
-            return list.stream()
-                    .map(BaniraUtils::replaceSensitiveContent)
-                    .collect(Collectors.toList());
-        } else if (obj instanceof Map<?, ?> map) {
-            return map.entrySet().stream()
-                    .map(e -> Map.entry(e.getKey(), replaceSensitiveContent(e.getValue())))
-                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-        } else if (obj instanceof ArrayMsg arrayMsg && arrayMsg.getType() == MsgTypeEnum.text) {
-            arrayMsg.setData(
-                    mutableMapOf(
-                            MsgTypeEnum.text.toString()
-                            , replaceSensitiveContent(arrayMsg.getStringData(MsgTypeEnum.text.toString()))
-                    )
-            );
-            JsonNode node = arrayMsg.getData();
-            if (node instanceof ObjectNode objectNode) {
-                JsonNode jsonNode = node.get(MsgTypeEnum.text.toString());
-                if (jsonNode.isNumber()) {
-                    objectNode.put(MsgTypeEnum.text.toString(), jsonNode.asText());
-                }
-            }
-            return arrayMsg;
-        }
-        return obj;
+        return SensitiveContentService.getInstance().replaceObject(obj);
     }
 
     // endregion 敏感内容处理
