@@ -8,6 +8,7 @@ import xin.vanilla.banira.config.contract.SharedConfig;
 import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 文件下载插件配置
@@ -44,6 +45,11 @@ public class FileDownloadSettings implements SharedConfig {
     private long selectionExpireSeconds;
 
     /**
+     * 下载页 URL 重写规则（按顺序依次尝试匹配并替换）
+     */
+    private List<FileDownloadUrlRewriteRule> urlRewriteRules;
+
+    /**
      * 下载页探测规则
      */
     private List<FileDownloadPageRule> pageRules;
@@ -58,15 +64,41 @@ public class FileDownloadSettings implements SharedConfig {
         this.maxFileSizeBytes = 52_428_800L;
         this.maxConcurrentTasks = 3;
         this.fileRetentionSeconds = 30L;
-        this.autoSuffixes = BaniraUtils.mutableListOf(".bin");
+        this.autoSuffixes = BaniraUtils.mutableListOf(".bk");
         this.selectionExpireSeconds = 300L;
         this.proxyUrl = "";
+        this.urlRewriteRules = BaniraUtils.mutableListOf(
+                new FileDownloadUrlRewriteRule()
+                        .name("github-repo-to-releases")
+                        .enabled(true)
+                        .matchPattern("https://github\\.com/([^/]+)/([^/#?]+?)(?:\\.git)?/?(?:[#?].*)?$")
+                        .replaceTemplate("https://github.com/$1/$2/releases")
+        );
         this.pageRules = BaniraUtils.mutableListOf(
                 new FileDownloadPageRule()
                         .name("github-release")
                         .enabled(true)
                         .pageUrlPattern("https://github\\.com/([^/]+)/([^/]+)/releases(?!/download)(?:/(?:tag/([^/#?]+)|latest))?/?(?:[?#].*)?")
-                        .mode("github-release")
+                        .mode("json-api")
+                        .apiUrlTemplate("https://api.github.com/repos/$1/$2/releases/tags/$3")
+                        .apiUrlTemplateFallback("https://api.github.com/repos/$1/$2/releases/latest")
+                        .fallbackWhenEmptyGroup(3)
+                        .headers(BaniraUtils.mutableMapOf(
+                                "Accept", "application/vnd.github+json",
+                                "User-Agent", "BaniraKanri-FileDownload"
+                        ))
+                        .itemsPath("assets")
+                        .urlPath("browser_download_url")
+                        .namePath("name")
+                        .sizePath("size")
+                        .extraItems(BaniraUtils.mutableListOf(
+                                new FileDownloadJsonItemMapping()
+                                        .name("Source code (zip)")
+                                        .urlPath("zipball_url"),
+                                new FileDownloadJsonItemMapping()
+                                        .name("Source code (tar.gz)")
+                                        .urlPath("tarball_url")
+                        ))
         );
     }
 

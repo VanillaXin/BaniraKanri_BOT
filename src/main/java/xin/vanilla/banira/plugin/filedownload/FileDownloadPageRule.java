@@ -6,6 +6,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.util.BaniraUtils;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,7 +34,7 @@ public class FileDownloadPageRule {
     private String pageUrlPattern;
 
     /**
-     * 解析模式：github-release | json-api | html-link
+     * 解析模式：json-api | html-link
      */
     private String mode;
 
@@ -41,6 +42,16 @@ public class FileDownloadPageRule {
      * json-api 模式下的 API 地址模板
      */
     private String apiUrlTemplate;
+
+    /**
+     * json-api 备用 API 地址模板
+     */
+    private String apiUrlTemplateFallback;
+
+    /**
+     * 当指定捕获组为空时使用备用 API 模板（0 表示不启用）
+     */
+    private int fallbackWhenEmptyGroup;
 
     /**
      * json-api 请求头
@@ -68,6 +79,11 @@ public class FileDownloadPageRule {
     private String sizePath;
 
     /**
+     * json-api：响应根对象上的额外下载项
+     */
+    private List<FileDownloadJsonItemMapping> extraItems;
+
+    /**
      * html-link：页面 HTML 中匹配下载链接的正则，第 1 组为 URL，第 2 组为名称
      */
     private String htmlLinkPattern;
@@ -78,11 +94,14 @@ public class FileDownloadPageRule {
         this.pageUrlPattern = "";
         this.mode = "json-api";
         this.apiUrlTemplate = "";
+        this.apiUrlTemplateFallback = "";
+        this.fallbackWhenEmptyGroup = 0;
         this.headers = BaniraUtils.mutableMapOf();
         this.itemsPath = "";
         this.urlPath = "";
         this.namePath = "";
         this.sizePath = "";
+        this.extraItems = BaniraUtils.mutableListOf();
         this.htmlLinkPattern = "";
     }
 

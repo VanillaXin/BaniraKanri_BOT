@@ -1,7 +1,6 @@
 package xin.vanilla.banira.plugin.filedownload;
 
 import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.MsgId;
@@ -31,13 +30,8 @@ import java.util.regex.Pattern;
 @Service
 public class FileDownloadPageProbeService {
 
-    private static final String MODE_GITHUB_RELEASE = "github-release";
     private static final String MODE_JSON_API = "json-api";
     private static final String MODE_HTML_LINK = "html-link";
-    private static final Pattern GITHUB_REPO_URL_PATTERN = Pattern.compile(
-            "https://github\\.com/([^/]+)/([^/#?]+?)(?:\\.git)?/?(?:[#?].*)?$",
-            Pattern.CASE_INSENSITIVE
-    );
 
     private final OtherConfigRegistry otherConfigRegistry;
     private final FileDownloadSelectionStore selectionStore;
@@ -62,23 +56,24 @@ public class FileDownloadPageProbeService {
     }
 
     /**
-     * 规范化下载页 URL（如 GitHub 项目地址自动补全为 releases 页）
+     * 按配置规则规范化下载页 URL
      */
     public String resolvePageUrl(String url) {
         if (StringUtils.isNullOrEmptyEx(url)) {
             return url;
         }
-        String trimmed = url.trim();
-        Matcher matcher = GITHUB_REPO_URL_PATTERN.matcher(trimmed);
-        if (matcher.matches()) {
-            String owner = matcher.group(1);
-            String repo = matcher.group(2);
-            if (repo.endsWith(".git")) {
-                repo = repo.substring(0, repo.length() - 4);
+        String current = url.trim();
+        for (FileDownloadUrlRewriteRule rule : settings().urlRewriteRules()) {
+            if (rule == null || !rule.enabled() || StringUtils.isNullOrEmptyEx(rule.matchPattern())) {
+                continue;
             }
-            return String.format("https://github.com/%s/%s/releases", owner, repo);
+            Matcher matcher = Pattern.compile(rule.matchPattern()).matcher(current);
+            if (!matcher.matches() || StringUtils.isNullOrEmptyEx(rule.replaceTemplate())) {
+                continue;
+            }
+            current = applyCaptureTemplate(rule.replaceTemplate(), matcher);
         }
-        return trimmed;
+        return current;
     }
 
     /**
@@ -118,108 +113,121 @@ public class FileDownloadPageProbeService {
         }
     }
 
-    private List<FileDownloadCandidate> probeCandidates(String pageUrl, FileDownloadPageRule rule, Matcher matcher) throws Exception {
+    private List<FileDownloadCandidate> probeCandidates(String pageUrl, FileDownloadPageRule rule, Matcher matcher) {
         String mode = normalizeMode(rule.mode());
-        return switch (mode) {
-            case MODE_GITHUB_RELEASE -> probeGithubRelease(matcher);
-            case MODE_HTML_LINK -> probeHtmlLinks(pageUrl, rule);
-            default -> probeJsonApi(pageUrl, rule, matcher);
-        };
+        if (MODE_HTML_LINK.equals(mode)) {
+            return probeHtmlLinks(pageUrl, rule);
+        }
+        return probeJsonApi(pageUrl, rule, matcher);
     }
 
     // endregion 探测流程
 
-    // region GitHub
-
-    private List<FileDownloadCandidate> probeGithubRelease(Matcher matcher) throws Exception {
-        String owner = matcher.group(1);
-        String repo = matcher.group(2);
-        String tag = matcher.groupCount() >= 3 ? matcher.group(3) : null;
-        String apiUrl = StringUtils.isNullOrEmptyEx(tag)
-                ? String.format("https://api.github.com/repos/%s/%s/releases/latest", owner, repo)
-                : String.format("https://api.github.com/repos/%s/%s/releases/tags/%s", owner, repo, tag);
-        String response = fileDownloadHttpSupport.getString(apiUrl,
-                new KeyValue<>("Accept", "application/vnd.github+json"),
-                new KeyValue<>("User-Agent", "BaniraKanri-FileDownload")
-        );
-        JsonObject release = JsonUtils.parseJsonObject(response);
-        if (release == null || release.isJsonNull()) {
-            return List.of();
-        }
-        List<FileDownloadCandidate> candidates = new ArrayList<>();
-        JsonElement assetsElement = release.get("assets");
-        if (assetsElement != null && assetsElement.isJsonArray()) {
-            for (JsonElement element : assetsElement.getAsJsonArray()) {
-                if (!element.isJsonObject()) {
-                    continue;
-                }
-                JsonObject asset = element.getAsJsonObject();
-                String name = JsonUtils.getString(asset, "name", "");
-                String url = JsonUtils.getString(asset, "browser_download_url", "");
-                long size = JsonUtils.getLong(asset, "size", -1L);
-                if (StringUtils.isNotNullOrEmpty(url)) {
-                    candidates.add(new FileDownloadCandidate()
-                            .name(StringUtils.isNotNullOrEmpty(name) ? name : fileDownloadService.extractDisplayNameFromUrl(url))
-                            .url(url)
-                            .size(size));
-                }
-            }
-        }
-        appendGithubArchiveCandidate(candidates, release, "zipball_url", "Source code (zip)");
-        appendGithubArchiveCandidate(candidates, release, "tarball_url", "Source code (tar.gz)");
-        return candidates;
-    }
-
-    private void appendGithubArchiveCandidate(List<FileDownloadCandidate> candidates, JsonObject release, String field, String label) {
-        String url = JsonUtils.getString(release, field, "");
-        if (StringUtils.isNullOrEmptyEx(url)) {
-            return;
-        }
-        candidates.add(new FileDownloadCandidate()
-                .name(label)
-                .url(url)
-                .size(-1L));
-    }
-
-    // endregion GitHub
-
     // region JSON API
 
     private List<FileDownloadCandidate> probeJsonApi(String pageUrl, FileDownloadPageRule rule, Matcher matcher) {
-        if (StringUtils.isNullOrEmptyEx(rule.apiUrlTemplate())) {
+        String apiUrl = resolveApiUrl(rule, matcher);
+        if (StringUtils.isNullOrEmptyEx(apiUrl)) {
             return List.of();
         }
-        String apiUrl = applyCaptureTemplate(rule.apiUrlTemplate(), matcher);
         KeyValue<String, String>[] headers = toHeaderArray(rule.headers());
         String response = fileDownloadHttpSupport.getString(apiUrl, headers);
         JsonElement json = JsonUtils.parseJson(response);
         if (json == null || json.isJsonNull()) {
             return List.of();
         }
-        JsonElement itemsElement = JsonUtils.getJsonElement(json, rule.itemsPath());
-        if (itemsElement == null || !itemsElement.isJsonArray()) {
-            return List.of();
-        }
         List<FileDownloadCandidate> candidates = new ArrayList<>();
-        for (JsonElement itemElement : itemsElement.getAsJsonArray()) {
+        if (StringUtils.isNotNullOrEmpty(rule.itemsPath())) {
+            JsonElement itemsElement = JsonUtils.getJsonElement(json, rule.itemsPath());
+            if (itemsElement != null && itemsElement.isJsonArray()) {
+                candidates.addAll(parseJsonItemArray(pageUrl, rule, itemsElement.getAsJsonArray()));
+            }
+        }
+        if (CollectionUtils.isNotNullOrEmpty(rule.extraItems())) {
+            for (FileDownloadJsonItemMapping extraItem : rule.extraItems()) {
+                FileDownloadCandidate candidate = parseJsonExtraItem(pageUrl, json, extraItem);
+                if (candidate != null) {
+                    candidates.add(candidate);
+                }
+            }
+        }
+        return candidates;
+    }
+
+    private List<FileDownloadCandidate> parseJsonItemArray(String pageUrl, FileDownloadPageRule rule,
+                                                           com.google.gson.JsonArray items) {
+        List<FileDownloadCandidate> candidates = new ArrayList<>();
+        for (JsonElement itemElement : items) {
             if (itemElement == null || itemElement.isJsonNull()) {
                 continue;
             }
-            String url = JsonUtils.getString(itemElement, rule.urlPath(), "");
-            if (StringUtils.isNullOrEmptyEx(url)) {
-                continue;
+            FileDownloadCandidate candidate = parseJsonItem(pageUrl, rule.urlPath(), rule.namePath(),
+                    rule.sizePath(), itemElement);
+            if (candidate != null) {
+                candidates.add(candidate);
             }
-            url = resolveAbsoluteUrl(pageUrl, url);
-            String name = JsonUtils.getString(itemElement, rule.namePath(), "");
-            long size = StringUtils.isNullOrEmptyEx(rule.sizePath())
-                    ? -1L
-                    : JsonUtils.getLong(itemElement, rule.sizePath(), -1L);
-            candidates.add(new FileDownloadCandidate()
-                    .name(StringUtils.isNotNullOrEmpty(name) ? name : fileDownloadService.extractDisplayNameFromUrl(url))
-                    .url(url)
-                    .size(size));
         }
         return candidates;
+    }
+
+    private FileDownloadCandidate parseJsonExtraItem(String pageUrl, JsonElement json, FileDownloadJsonItemMapping mapping) {
+        if (mapping == null || StringUtils.isNullOrEmptyEx(mapping.urlPath())) {
+            return null;
+        }
+        String url = JsonUtils.getString(json, mapping.urlPath(), "");
+        if (StringUtils.isNullOrEmptyEx(url)) {
+            return null;
+        }
+        url = resolveAbsoluteUrl(pageUrl, url);
+        String name = mapping.name();
+        if (StringUtils.isNullOrEmptyEx(name)) {
+            name = fileDownloadService.extractDisplayNameFromUrl(url);
+        }
+        long size = StringUtils.isNullOrEmptyEx(mapping.sizePath())
+                ? -1L
+                : JsonUtils.getLong(json, mapping.sizePath(), -1L);
+        return new FileDownloadCandidate()
+                .name(name)
+                .url(url)
+                .size(size);
+    }
+
+    private FileDownloadCandidate parseJsonItem(String pageUrl, String urlPath, String namePath, String sizePath,
+                                                JsonElement itemElement) {
+        String url = JsonUtils.getString(itemElement, urlPath, "");
+        if (StringUtils.isNullOrEmptyEx(url)) {
+            return null;
+        }
+        url = resolveAbsoluteUrl(pageUrl, url);
+        String name = JsonUtils.getString(itemElement, namePath, "");
+        if (StringUtils.isNullOrEmptyEx(name)) {
+            name = fileDownloadService.extractDisplayNameFromUrl(url);
+        }
+        long size = StringUtils.isNullOrEmptyEx(sizePath)
+                ? -1L
+                : JsonUtils.getLong(itemElement, sizePath, -1L);
+        return new FileDownloadCandidate()
+                .name(name)
+                .url(url)
+                .size(size);
+    }
+
+    private String resolveApiUrl(FileDownloadPageRule rule, Matcher matcher) {
+        if (shouldUseFallbackApi(rule, matcher)) {
+            return applyCaptureTemplate(rule.apiUrlTemplateFallback(), matcher);
+        }
+        return applyCaptureTemplate(rule.apiUrlTemplate(), matcher);
+    }
+
+    private boolean shouldUseFallbackApi(FileDownloadPageRule rule, Matcher matcher) {
+        if (StringUtils.isNullOrEmptyEx(rule.apiUrlTemplateFallback())) {
+            return false;
+        }
+        int groupIndex = rule.fallbackWhenEmptyGroup();
+        if (groupIndex <= 0 || groupIndex > matcher.groupCount()) {
+            return false;
+        }
+        return StringUtils.isNullOrEmptyEx(matcher.group(groupIndex));
     }
 
     // endregion JSON API
