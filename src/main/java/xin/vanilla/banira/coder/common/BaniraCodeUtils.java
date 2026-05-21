@@ -19,6 +19,25 @@ public final class BaniraCodeUtils {
     private BaniraCodeUtils() {
     }
 
+    /**
+     * 判断 pos 处是否为当前 bk 码块的结束符（与 blockStart 处的 `[` 匹配的 `]`）
+     */
+    private static boolean isBlockEnd(@NonNull String msg, int pos, int blockStart) {
+        if (pos >= msg.length() || msg.charAt(pos) != MessageCoder.CODE_END.charAt(0)) {
+            return false;
+        }
+        int depth = 0;
+        for (int j = blockStart; j <= pos; j++) {
+            char c = msg.charAt(j);
+            if (c == '[') {
+                depth++;
+            } else if (c == ']') {
+                depth--;
+            }
+        }
+        return depth == 0;
+    }
+
     @Nonnull
     public static List<BaniraCode> getAllBaniraCode(@NonNull String msg) {
         if (StringUtils.isNullOrEmpty(msg)) {
@@ -47,7 +66,7 @@ public final class BaniraCodeUtils {
                 // 解析 bk 码类型
                 StringBuilder typeBuilder = new StringBuilder();
                 while (i < len && msg.charAt(i) != MessageCoder.ARG_SEPARATOR && msg.charAt(i) != MessageCoder.VAL_SEPARATOR
-                        && !msg.startsWith(MessageCoder.CODE_END, i)
+                        && !isBlockEnd(msg, i, start)
                 ) {
                     typeBuilder.append(msg.charAt(i));
                     i++;
@@ -68,12 +87,12 @@ public final class BaniraCodeUtils {
                 if (msg.charAt(i) == MessageCoder.ARG_SEPARATOR || flag) {
                     i++; // 跳过 ARG_SEPARATOR || VAL_SEPARATOR
                     while (i < len
-                            && !msg.startsWith(MessageCoder.CODE_END, i)
+                            && !isBlockEnd(msg, i, start)
                     ) {
                         // 解析键
                         StringBuilder keyBuilder = new StringBuilder();
                         while (i < len && (flag || msg.charAt(i) != MessageCoder.VAL_SEPARATOR)
-                                && !msg.startsWith(MessageCoder.CODE_END, i)
+                                && !isBlockEnd(msg, i, start)
                         ) {
                             keyBuilder.append(msg.charAt(i));
                             i++;
@@ -84,7 +103,7 @@ public final class BaniraCodeUtils {
                         if (msg.charAt(i) == MessageCoder.VAL_SEPARATOR) {
                             i++; // 跳过 VAL_SEPARATOR
                             while (i < len && msg.charAt(i) != MessageCoder.ARG_SEPARATOR
-                                    && !msg.startsWith(MessageCoder.CODE_END, i)
+                                    && !isBlockEnd(msg, i, start)
                             ) {
                                 valueBuilder.append(msg.charAt(i));
                                 i++;
@@ -106,7 +125,7 @@ public final class BaniraCodeUtils {
                     }
                 }
 
-                if (msg.startsWith(MessageCoder.CODE_END, i)) {
+                if (isBlockEnd(msg, i, start)) {
                     i++; // 跳过 CODE_END
                     // 创建 BaniraCode
                     BaniraCode item = new BaniraCode();
