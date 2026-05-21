@@ -7,6 +7,7 @@ import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.MsgId;
+import com.mikuac.shiro.dto.action.response.GetForwardMsgResp;
 import com.mikuac.shiro.dto.action.response.MsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.dto.event.notice.MessageEmojiLikeNoticeEvent;
@@ -269,12 +270,21 @@ public class SocialMediaPlugin extends BasePlugin {
         SocialMediaGroupSettings settings = getGroupSettings(event.getGroupId());
 
         // region 识别阶段
-        String detectableMsg = collectDetectableText(event.getMessage());
+        String detectableMsg = collectDetectableText(bot, event.getGroupId(), event.getUserId(), event.getMessageId(), event.getMessage());
         boolean directRecognized = hasAnyParseTarget(detectableMsg);
         boolean replyRecognized = false;
         String replyMsg = "";
         if (isReplyInvokeTrigger(bot, event)) {
-            replyMsg = collectDetectableText(BaniraUtils.getReplyContentString(bot, event.getMessage()));
+            Long replyId = BaniraUtils.getReplyId(event.getMessage());
+            long replySender = BaniraUtils.getReplyUserId(bot, event.getGroupId(), event.getMessage());
+            Integer replyMsgId = replyId == null ? null : replyId.intValue();
+            replyMsg = collectDetectableText(
+                    bot,
+                    event.getGroupId(),
+                    replySender,
+                    replyMsgId,
+                    BaniraUtils.getReplyContentString(bot, event.getMessage())
+            );
             replyRecognized = hasAnyParseTarget(replyMsg);
         }
         Integer recognizedMessageId = resolveRecognizedMessageId(event, directRecognized);
@@ -335,7 +345,13 @@ public class SocialMediaPlugin extends BasePlugin {
         if (event.getMessageId() == null || event.getMessageId() <= 0) {
             return;
         }
-        String likedMsg = collectDetectableText(getMessageContentById(bot, event.getMessageId()));
+        String likedMsg = collectDetectableText(
+                bot,
+                event.getGroupId(),
+                event.getUserId(),
+                event.getMessageId(),
+                getMessageContentById(bot, event.getMessageId())
+        );
         if (StringUtils.isNullOrEmptyEx(likedMsg)) {
             return;
         }
@@ -391,31 +407,64 @@ public class SocialMediaPlugin extends BasePlugin {
     /**
      * 汇总用于识别/解析的文本：合并转发内层、去掉图片/视频 CQ 中的 url 以降低误匹配
      */
-    private String collectDetectableText(String msg) {
+    private String collectDetectableText(BaniraBot bot, Long groupId, Long senderId, Integer messageId, String msg) {
         if (StringUtils.isNullOrEmptyEx(msg)) {
             return "";
         }
         StringBuilder sb = new StringBuilder(stripMediaCqUrls(msg));
         if (BaniraUtils.hasForward(msg)) {
-            for (List<MsgResp> block : BaniraUtils.getForwardContent(msg)) {
-                if (CollectionUtils.isNullOrEmpty(block)) {
-                    continue;
-                }
-                for (MsgResp resp : block) {
-                    if (resp == null) {
-                        continue;
-                    }
-                    String inner = resp.getMessage();
-                    if (StringUtils.isNullOrEmptyEx(inner)) {
-                        inner = Objects.toString(resp.getRawMessage(), "");
-                    }
-                    if (StringUtils.isNotNullOrEmpty(inner)) {
-                        sb.append('\n').append(collectDetectableText(inner));
-                    }
-                }
-            }
+            appendForwardDetectableText(sb, bot, groupId, senderId, messageId, msg);
         }
         return sb.toString();
+    }
+
+    /**
+     * 展开合并转发节点；仅含 id 时通过 API 拉取完整内容
+     */
+    private void appendForwardDetectableText(
+            StringBuilder sb,
+            BaniraBot bot,
+            Long groupId,
+            Long senderId,
+            Integer messageId,
+            String msg
+    ) {
+        List<MsgResp> nodes = BaniraUtils.getForwardContentFirst(msg);
+        if (CollectionUtils.isNullOrEmpty(nodes) && bot != null && messageId != null && messageId > 0) {
+            ActionData<GetForwardMsgResp> forwardResp = fetchForwardMsgByApi(bot, groupId, senderId, messageId);
+            if (bot.isActionDataNotEmpty(forwardResp) && forwardResp.getData() != null) {
+                nodes = forwardResp.getData().getMessages();
+            }
+        }
+        if (CollectionUtils.isNullOrEmpty(nodes)) {
+            return;
+        }
+        for (MsgResp resp : nodes) {
+            if (resp == null) {
+                continue;
+            }
+            String inner = resp.getMessage();
+            if (StringUtils.isNullOrEmptyEx(inner)) {
+                inner = Objects.toString(resp.getRawMessage(), "");
+            }
+            if (StringUtils.isNullOrEmptyEx(inner)) {
+                continue;
+            }
+            Long innerSender = resp.getSender() == null
+                    ? senderId
+                    : StringUtils.toLong(resp.getSender().getUserId(), senderId == null ? 0L : senderId);
+            sb.append('\n').append(collectDetectableText(bot, groupId, innerSender, null, inner));
+        }
+    }
+
+    /**
+     * 按群聊/私聊上下文拉取合并转发详情
+     */
+    private ActionData<GetForwardMsgResp> fetchForwardMsgByApi(BaniraBot bot, Long groupId, Long senderId, int messageId) {
+        if (BaniraUtils.isGroupIdValid(groupId) && senderId != null && senderId > 0) {
+            return bot.getForwardMsg(groupId, senderId, messageId);
+        }
+        return bot.getForwardMsg(messageId);
     }
 
     /**

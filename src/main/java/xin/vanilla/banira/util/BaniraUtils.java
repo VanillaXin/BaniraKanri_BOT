@@ -595,14 +595,27 @@ public final class BaniraUtils {
 
     public static List<MsgResp> getForwardContentFirst(ArrayMsg... arrayMsg) {
         List<MsgResp> result = new ArrayList<>();
-        if (CollectionUtils.isNotNullOrEmpty(arrayMsg)) {
-            if (arrayMsg[0].getType() == MsgTypeEnum.forward) {
-                String content = arrayMsg[0].getStringData("content");
-                if (JsonUtils.isValid(content)) {
-                    result = JsonUtils.readValue(content, new TypeReference<>() {
-                    });
-                }
+        if (CollectionUtils.isNotNullOrEmpty(arrayMsg) && arrayMsg[0].getType() == MsgTypeEnum.forward) {
+            result = parseForwardContentJson(arrayMsg[0].getStringData("content"));
+        }
+        return result;
+    }
+
+    /**
+     * 解析合并转发 CQ 内嵌的 content JSON，空串或非法 JSON 时返回空列表
+     */
+    private static List<MsgResp> parseForwardContentJson(String content) {
+        List<MsgResp> result = new ArrayList<>();
+        if (StringUtils.isNullOrEmptyEx(content) || !JsonUtils.isValid(content)) {
+            return result;
+        }
+        try {
+            List<MsgResp> parsed = JsonUtils.readValue(content, new TypeReference<>() {
+            });
+            if (CollectionUtils.isNotNullOrEmpty(parsed)) {
+                result = parsed;
             }
+        } catch (Exception ignored) {
         }
         return result;
     }
