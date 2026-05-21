@@ -48,7 +48,7 @@ public final class McModUtils {
     /**
      * 获取指定群号的锁
      */
-    private static ReentrantLock getGroupLock(Long groupId) {
+    private static ReentrantLock getGroupLock(@Nullable Long groupId) {
         locksMapLock.lock();
         try {
             return groupLocks.computeIfAbsent(groupId, k -> new ReentrantLock());
@@ -57,35 +57,69 @@ public final class McModUtils {
         }
     }
 
+    private static long normalizeRequestGroupId(@Nullable Long groupId) {
+        return BaniraUtils.isGroupIdValid(groupId) ? groupId : 0L;
+    }
+
     /**
-     * 获取 Cookie，支持两种方式
+     * 解析 Cookie 实际持久化的群号：当前群无独立配置时回退全局（0）。
+     */
+    private static long resolveStorageGroupId(@Nullable Long groupId) {
+        long requestGroupId = normalizeRequestGroupId(groupId);
+        if (requestGroupId != 0L && BaniraUtils.hasGroupConfig(McModGroupConfig.class, requestGroupId)) {
+            return requestGroupId;
+        }
+        return 0L;
+    }
+
+    @Nonnull
+    private static McModCookieConfig ensureCookieConfig(@Nonnull McModGroupConfig groupConfig) {
+        McModCookieConfig cookieConfig = groupConfig.mcModCookieConfig();
+        if (cookieConfig == null) {
+            cookieConfig = new McModCookieConfig();
+            groupConfig.mcModCookieConfig(cookieConfig);
+        }
+        return cookieConfig;
+    }
+
+    /**
+     * 读取 Cookie 配置（群优先，缺失回退全局）。
+     */
+    @Nonnull
+    private static McModCookieConfig readCookieConfig(@Nullable Long groupId) {
+        McModGroupConfig groupConfig = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
+        return ensureCookieConfig(groupConfig);
+    }
+
+    /**
+     * 写入 Cookie 配置（无独立群配置时写入全局）。
+     */
+    @Nonnull
+    private static McModCookieConfig writeCookieConfig(@Nullable Long groupId) {
+        long storageGroupId = resolveStorageGroupId(groupId);
+        McModGroupConfig groupConfig = BaniraUtils.getGroupConfigForEdit(McModGroupConfig.class, storageGroupId);
+        return ensureCookieConfig(groupConfig);
+    }
+
+    /**
+     * 获取 Cookie，支持缓存、全局配置回退，以及用户名密码自动登录刷新。
      *
      * @param groupId 群号
      */
-    private static @Nullable String getCookie(Long groupId) {
-        ReentrantLock lock = getGroupLock(groupId);
+    private static @Nullable String getCookie(@Nullable Long groupId) {
+        long storageGroupId = resolveStorageGroupId(groupId);
+        ReentrantLock lock = getGroupLock(storageGroupId);
         lock.lock();
         try {
-            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigForEdit(McModGroupConfig.class, groupId);
-            if (otherConfig == null) {
-                LOGGER.error("Failed to get config, groupId: {}", groupId);
-                return null;
-            }
-
-            McModCookieConfig cookieConfig = otherConfig.mcModCookieConfig();
-            if (cookieConfig == null) {
-                cookieConfig = new McModCookieConfig();
-                otherConfig.mcModCookieConfig(cookieConfig);
-            }
+            McModCookieConfig cookieConfig = readCookieConfig(groupId);
 
             // 若配置中有 Cookie 且未过期，直接使用
             if (StringUtils.isNotNullOrEmpty(cookieConfig.cookie()) && !cookieConfig.isExpired()) {
-                LOGGER.debug("Using cookie from config, groupId: {}", groupId);
-                // 如果用户ID未缓存，尝试获取
+                LOGGER.debug("Using cookie from config, groupId: {}, storageGroupId: {}", groupId, storageGroupId);
                 if (StringUtils.isNullOrEmpty(cookieConfig.userId())) {
                     String userId = getLoginUserId(cookieConfig.cookie());
                     if (userId != null) {
-                        cookieConfig.userId(userId);
+                        writeCookieConfig(groupId).userId(userId);
                         BaniraUtils.saveGroupConfig();
                     }
                 }
@@ -97,26 +131,28 @@ public final class McModUtils {
             String password = cookieConfig.password();
 
             if (StringUtils.isNullOrEmpty(username) || StringUtils.isNullOrEmpty(password)) {
-                LOGGER.error("Username or password not set in config, cannot login, groupId: {}", groupId);
+                LOGGER.debug("Username or password not set in config, cannot login, groupId: {}, storageGroupId: {}",
+                        groupId, storageGroupId);
                 return null;
             }
 
-            LOGGER.info("Cookie expired or not found, logging in with username and password, groupId: {}", groupId);
+            LOGGER.info("Cookie expired or not found, logging in with username and password, groupId: {}, storageGroupId: {}",
+                    groupId, storageGroupId);
             KeyValue<String, String> cookie = login(username, password);
 
             if (cookie != null && cookie.getKey() != null) {
-                // 登录成功，写回配置（默认25天过期）
-                cookieConfig.setCookieWithExpire(cookie.getKey());
-                // 获取并缓存当前登录用户ID
+                McModCookieConfig writable = writeCookieConfig(groupId);
+                writable.setCookieWithExpire(cookie.getKey());
                 String userId = getLoginUserId(cookie.getKey());
                 if (userId != null) {
-                    cookieConfig.userId(userId);
+                    writable.userId(userId);
                 }
                 BaniraUtils.saveGroupConfig();
-                LOGGER.info("Login successful, cookie saved to config, groupId: {}", groupId);
+                LOGGER.info("Login successful, cookie saved to config, groupId: {}, storageGroupId: {}",
+                        groupId, storageGroupId);
                 return cookie.getKey();
             } else {
-                LOGGER.error("Login failed, cannot get cookie, groupId: {}", groupId);
+                LOGGER.error("Login failed, cannot get cookie, groupId: {}, storageGroupId: {}", groupId, storageGroupId);
                 clearCookieCache(groupId);
                 return null;
             }
@@ -835,36 +871,20 @@ public final class McModUtils {
      * @param groupId 群号
      */
     public static @Nullable String getLoginUserId(@Nullable Long groupId) {
-        ReentrantLock lock = getGroupLock(groupId);
-        lock.lock();
-        try {
-            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
-            if (otherConfig == null || otherConfig.mcModCookieConfig() == null) {
-                return null;
-            }
-
-            McModCookieConfig cookieConfig = otherConfig.mcModCookieConfig();
-            if (StringUtils.isNotNullOrEmpty(cookieConfig.userId())
-                    && StringUtils.isNotNullOrEmpty(cookieConfig.cookie())
-                    && !cookieConfig.isExpired()) {
-                return cookieConfig.userId();
-            }
-
-            // 尝试从cookie获取
-            String cookie = cookieConfig.cookie();
-            if (StringUtils.isNotNullOrEmpty(cookie) && !cookieConfig.isExpired()) {
-                String userId = getLoginUserId(cookie);
-                if (userId != null) {
-                    cookieConfig.userId(userId);
-                    BaniraUtils.saveGroupConfig();
-                    return userId;
-                }
-            }
-
+        String cookie = getCookie(groupId);
+        if (StringUtils.isNullOrEmpty(cookie)) {
             return null;
-        } finally {
-            lock.unlock();
         }
+        McModCookieConfig cookieConfig = readCookieConfig(groupId);
+        if (StringUtils.isNotNullOrEmpty(cookieConfig.userId())) {
+            return cookieConfig.userId();
+        }
+        String userId = getLoginUserId(cookie);
+        if (userId != null) {
+            writeCookieConfig(groupId).userId(userId);
+            BaniraUtils.saveGroupConfig();
+        }
+        return userId;
     }
 
     /**
@@ -1455,14 +1475,15 @@ public final class McModUtils {
      * @param groupId 群号
      */
     public static void clearCookieCache(@Nullable Long groupId) {
-        ReentrantLock lock = getGroupLock(groupId);
+        long storageGroupId = resolveStorageGroupId(groupId);
+        ReentrantLock lock = getGroupLock(storageGroupId);
         lock.lock();
         try {
-            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
-            if (otherConfig != null && otherConfig.mcModCookieConfig() != null) {
+            McModGroupConfig otherConfig = BaniraUtils.getGroupConfigForEdit(McModGroupConfig.class, storageGroupId);
+            if (otherConfig.mcModCookieConfig() != null) {
                 otherConfig.mcModCookieConfig().cookie(null).expireTime(null).userId(null);
                 BaniraUtils.saveGroupConfig();
-                LOGGER.info("Cookie cache cleared, groupId: {}", groupId);
+                LOGGER.info("Cookie cache cleared, groupId: {}, storageGroupId: {}", groupId, storageGroupId);
             }
             clearVoteCache(groupId);
         } finally {
@@ -1676,7 +1697,7 @@ public final class McModUtils {
      * 确保整合包未投指定类型票。
      */
     public static @Nullable McModCardVoteEnsureResult ensureModpackUnvote(@Nullable Long groupId, @Nonnull String modpackId,
-                                                                         @Nonnull EnumCardVoteType type) {
+                                                                          @Nonnull EnumCardVoteType type) {
         return ensureVoteState(groupId, modpackId, false, type, false);
     }
 
@@ -1979,27 +2000,11 @@ public final class McModUtils {
     }
 
     /**
-     * 读取已配置且未过期的 Cookie，不触发登录
+     * 获取可用 Cookie：优先使用未过期缓存，否则在配置了账号密码时自动登录并写回配置。
+     * 群无独立配置时回退并使用全局（group=0）配置。
      */
-    private static @Nullable String resolveOptionalCookie(@Nullable Long groupId) {
-        if (groupId == null) {
-            return null;
-        }
-        ReentrantLock lock = getGroupLock(groupId);
-        lock.lock();
-        try {
-            McModGroupConfig config = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
-            if (config == null || config.mcModCookieConfig() == null) {
-                return null;
-            }
-            McModCookieConfig cookieConfig = config.mcModCookieConfig();
-            if (StringUtils.isNotNullOrEmpty(cookieConfig.cookie()) && !cookieConfig.isExpired()) {
-                return cookieConfig.cookie();
-            }
-            return null;
-        } finally {
-            lock.unlock();
-        }
+    public static @Nullable String resolveOptionalCookie(@Nullable Long groupId) {
+        return getCookie(groupId);
     }
 
     private static @Nullable Long parsePositiveId(@Nonnull String id, @Nonnull String fieldName) {
@@ -2112,7 +2117,7 @@ public final class McModUtils {
 
     @Nonnull
     private static String buildVoteCacheKey(@Nullable Long groupId, boolean isMod, @Nonnull String targetId,
-                                          @Nonnull EnumCardVoteType type) {
+                                            @Nonnull EnumCardVoteType type) {
         return resolveVoteAccountKey(groupId) + ":" + (isMod ? "mod" : "modpack") + ":" + targetId + ":" + type.value();
     }
 
@@ -2203,7 +2208,7 @@ public final class McModUtils {
     }
 
     private static @Nullable McModCardVoteResponse postDoModpackVoteAction(@Nonnull JsonObject requestData, @Nonnull String referer,
-                                                                         @Nullable String cookie) {
+                                                                           @Nullable String cookie) {
         JsonObject json = postMcModAction(DO_MODPACK_URL, requestData, referer, cookie);
         if (json == null) {
             return null;

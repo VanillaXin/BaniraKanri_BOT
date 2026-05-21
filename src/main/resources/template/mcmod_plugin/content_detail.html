@@ -37,12 +37,16 @@
         }
 
         .hero {
-            display: grid;
-            grid-template-columns: 88px 1fr 188px;
-            gap: 16px;
-            padding: 20px 22px 16px;
+            padding: 20px 22px 14px;
             background: linear-gradient(180deg, #f8fbf8 0%, #ffffff 100%);
             border-bottom: 1px solid var(--line);
+        }
+
+        .hero-top {
+            display: grid;
+            grid-template-columns: 88px 1fr;
+            gap: 16px;
+            align-items: start;
         }
 
         .icon-wrap {
@@ -131,43 +135,61 @@
         }
 
         .stats-panel {
+            margin-top: 12px;
+            width: 100%;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+            gap: 8px;
+            align-content: start;
             background: #f7faf8;
             border: 1px solid #dbe8dc;
-            color: var(--text);
-            border-radius: 14px;
-            padding: 14px 14px 12px;
-            align-self: start;
+            border-radius: 12px;
+            padding: 10px 12px;
         }
 
-        .score-main {
-            font-size: 28px;
+        .stat-chip {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-width: 0;
+            padding: 6px 10px;
+            border-radius: 10px;
+            background: #fff;
+            border: 1px solid var(--line);
+        }
+
+        .stat-chip.score-chip {
+            min-width: 88px;
+            background: linear-gradient(180deg, #ffffff 0%, #f3faf4 100%);
+            border-color: rgba(61, 139, 64, 0.18);
+        }
+
+        .stat-chip .chip-label {
+            font-size: 10px;
+            color: var(--muted);
+            line-height: 1.2;
+        }
+
+        .stat-chip .chip-value {
+            margin-top: 2px;
+            font-size: 14px;
             font-weight: 800;
-            line-height: 1;
+            color: var(--text);
+            line-height: 1.2;
+            word-break: break-word;
+        }
+
+        .stat-chip.score-chip .chip-value {
+            font-size: 22px;
             color: var(--accent);
         }
 
-        .score-comment {
-            margin-top: 4px;
-            font-size: 11px;
+        .stat-chip .chip-sub {
+            margin-top: 2px;
+            font-size: 10px;
             color: var(--muted);
+            line-height: 1.2;
         }
-
-        .stats-list {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid var(--line);
-        }
-
-        .stats-item {
-            display: flex;
-            justify-content: space-between;
-            gap: 8px;
-            font-size: 11px;
-            margin-bottom: 5px;
-        }
-
-        .stats-item .label { color: var(--muted); }
-        .stats-item .value { font-weight: 700; color: var(--text); }
 
         .info-panel {
             padding: 14px 22px 8px;
@@ -205,12 +227,60 @@
             word-break: break-word;
         }
 
-        .vote-bar {
+        .interaction-panel {
             margin: 0 22px 12px;
-            padding: 10px 12px;
+            padding: 12px 14px;
             border: 1px solid var(--line);
             border-radius: 12px;
-            background: #fafbfc;
+            background: #f8fbf8;
+        }
+
+        .interaction-title {
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 8px;
+            font-weight: 700;
+        }
+
+        .user-action-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .user-action-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--muted);
+        }
+
+        .user-action-pill.on {
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-color: rgba(61, 139, 64, 0.25);
+        }
+
+        .user-action-pill.off {
+            opacity: 0.72;
+        }
+
+        .vote-section {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--line);
+        }
+
+        .vote-section.only-vote {
+            margin-top: 0;
+            padding-top: 0;
+            border-top: none;
         }
 
         .vote-track {
@@ -423,35 +493,39 @@
 <body>
 <div class="card">
     <div class="hero">
-        <div class="icon-wrap" id="iconWrap">
-            <div class="icon-fallback" id="iconFallback">MC</div>
-        </div>
-        <div class="hero-main">
-            <div class="badge-row" id="badgeRow">
-                <span class="pill pill-type" id="typeBadge">模组</span>
+        <div class="hero-top">
+            <div class="icon-wrap" id="iconWrap">
+                <div class="icon-fallback" id="iconFallback">MC</div>
             </div>
-            <div class="title-line">
-                <span class="short-badge" id="shortBadge" style="display:none;"></span>
-                <div class="title" id="title">加载中...</div>
+            <div class="hero-main">
+                <div class="badge-row" id="badgeRow">
+                    <span class="pill pill-type" id="typeBadge">模组</span>
+                </div>
+                <div class="title-line">
+                    <span class="short-badge" id="shortBadge" style="display:none;"></span>
+                    <div class="title" id="title">加载中...</div>
+                </div>
+                <div class="subtitle" id="subtitle"></div>
             </div>
-            <div class="subtitle" id="subtitle"></div>
         </div>
-        <div class="stats-panel" id="statsPanel" style="display:none;">
-            <div class="score-main" id="scoreMain">-</div>
-            <div class="score-comment" id="scoreComment"></div>
-            <div class="stats-list" id="statsList"></div>
-        </div>
+        <div class="stats-panel" id="statsPanel" style="display:none;"></div>
     </div>
 
     <div class="info-panel">
         <div class="info-grid" id="infoGrid"></div>
     </div>
 
-    <div class="vote-bar" id="voteBar" style="display:none;">
-        <div class="vote-track" id="voteTrack"></div>
-        <div class="vote-text">
-            <span id="redVoteText"></span>
-            <span id="blackVoteText"></span>
+    <div class="interaction-panel" id="interactionPanel" style="display:none;">
+        <div id="userActionsBlock" style="display:none;">
+            <div class="interaction-title">我的互动</div>
+            <div class="user-action-row" id="userActionRow"></div>
+        </div>
+        <div class="vote-section" id="voteSection" style="display:none;">
+            <div class="vote-track" id="voteTrack"></div>
+            <div class="vote-text">
+                <span id="redVoteText"></span>
+                <span id="blackVoteText"></span>
+            </div>
         </div>
     </div>
 
@@ -584,22 +658,42 @@
     }
 
     function renderStatsPanel() {
+        const contentType = (configData.contentType || "").toLowerCase();
+        const isAuthor = contentType === "author" || (configData.typeName || "").includes("作者");
+        const isModpack = contentType === "modpack" || (configData.typeName || "").includes("整合包");
+        const isMod = !isAuthor && !isModpack;
+
         const stats = [];
         if (configData.yIndex) stats.push({ l: "昨日指数", v: configData.yIndex });
         if (configData.yIndexAvg) stats.push({ l: "昨日平均", v: configData.yIndexAvg });
         if (configData.viewNum) stats.push({ l: "总浏览", v: configData.viewNum });
         if (configData.fillRate && configData.fillRate !== "--") stats.push({ l: "资料填充率", v: configData.fillRate });
+        if (configData.pushNum && configData.pushNum !== "0") stats.push({ l: "推荐", v: configData.pushNum });
+        if (configData.favNum && configData.favNum !== "0") stats.push({ l: "收藏", v: configData.favNum });
+        if (isMod && configData.subscribeNum) stats.push({ l: "关注", v: configData.subscribeNum });
 
         if (!configData.score && !stats.length) return;
-        document.getElementById("statsPanel").style.display = "block";
-        setText("scoreMain", configData.score || "-");
-        setText("scoreComment", configData.scoreComment || "");
-        const list = document.getElementById("statsList");
+
+        const panel = document.getElementById("statsPanel");
+        panel.style.display = "grid";
+        panel.innerHTML = "";
+
+        if (configData.score) {
+            const scoreChip = document.createElement("div");
+            scoreChip.className = "stat-chip score-chip";
+            let scoreHtml = '<div class="chip-label">评分</div><div class="chip-value">' + (configData.score || "-") + '</div>';
+            if (configData.scoreComment) {
+                scoreHtml += '<div class="chip-sub">' + configData.scoreComment + '</div>';
+            }
+            scoreChip.innerHTML = scoreHtml;
+            panel.appendChild(scoreChip);
+        }
+
         stats.forEach(item => {
             const el = document.createElement("div");
-            el.className = "stats-item";
-            el.innerHTML = '<span class="label">' + item.l + '</span><span class="value">' + item.v + '</span>';
-            list.appendChild(el);
+            el.className = "stat-chip";
+            el.innerHTML = '<div class="chip-label">' + item.l + '</div><div class="chip-value">' + item.v + '</div>';
+            panel.appendChild(el);
         });
     }
 
@@ -608,25 +702,78 @@
         return match ? parseInt(match[1], 10) : 0;
     }
 
-    function renderVoteBar() {
-        if (!configData.redVote && !configData.blackVote) return;
-        document.getElementById("voteBar").style.display = "block";
-        setText("redVoteText", configData.redVote || "");
-        setText("blackVoteText", configData.blackVote || "");
-        const track = document.getElementById("voteTrack");
-        const red = parseVotePercent(configData.redVote);
-        const black = parseVotePercent(configData.blackVote);
-        if (red > 0) {
-            const redEl = document.createElement("div");
-            redEl.className = "vote-red";
-            redEl.style.width = red + "%";
-            track.appendChild(redEl);
+    function renderInteractionPanel() {
+        const hasUser = !!configData.loggedIn;
+        const hasVote = !!(configData.redVote || configData.blackVote);
+        if (!hasUser && !hasVote) return;
+
+        document.getElementById("interactionPanel").style.display = "block";
+
+        if (hasUser) {
+            const contentType = (configData.contentType || "").toLowerCase();
+            const isAuthor = contentType === "author" || (configData.typeName || "").includes("作者");
+            const isModpack = contentType === "modpack" || (configData.typeName || "").includes("整合包");
+            const actions = [];
+            if (!isAuthor) {
+                let pushText = configData.userPushed ? "已推荐" : "未推荐";
+                if (configData.userPushCooldown) {
+                    pushText = "推荐 · 冷却中";
+                }
+                actions.push({ text: pushText, active: !!configData.userPushed || !!configData.userPushCooldown });
+            }
+            actions.push({
+                text: configData.userFavorited ? "已收藏" : "未收藏",
+                active: !!configData.userFavorited
+            });
+            if (!isAuthor && !isModpack) {
+                actions.push({
+                    text: configData.userSubscribed ? "已关注" : "未关注",
+                    active: !!configData.userSubscribed
+                });
+            }
+            if (!isAuthor) {
+                actions.push({
+                    text: configData.userRedVoted ? "已投红票" : "未投红票",
+                    active: !!configData.userRedVoted
+                });
+                actions.push({
+                    text: configData.userBlackVoted ? "已投黑票" : "未投黑票",
+                    active: !!configData.userBlackVoted
+                });
+            }
+            document.getElementById("userActionsBlock").style.display = "block";
+            const row = document.getElementById("userActionRow");
+            actions.forEach(item => {
+                const el = document.createElement("span");
+                el.className = "user-action-pill " + (item.active ? "on" : "off");
+                el.textContent = item.text;
+                row.appendChild(el);
+            });
         }
-        if (black > 0) {
-            const blackEl = document.createElement("div");
-            blackEl.className = "vote-black";
-            blackEl.style.width = black + "%";
-            track.appendChild(blackEl);
+
+        if (hasVote) {
+            const voteSection = document.getElementById("voteSection");
+            voteSection.style.display = "block";
+            if (!hasUser) {
+                voteSection.classList.add("only-vote");
+            }
+            setText("redVoteText", configData.redVote || "");
+            setText("blackVoteText", configData.blackVote || "");
+            const track = document.getElementById("voteTrack");
+            const red = parseVotePercent(configData.redVote);
+            const black = parseVotePercent(configData.blackVote);
+            if (red > 0) {
+                const redEl = document.createElement("div");
+                redEl.className = "vote-red";
+                redEl.style.width = red + "%";
+                track.appendChild(redEl);
+            }
+            if (black > 0) {
+                const blackEl = document.createElement("div");
+                blackEl.className = "vote-black";
+                blackEl.style.width = black + "%";
+                track.appendChild(blackEl);
+            }
         }
     }
 
@@ -797,7 +944,7 @@
             renderHeader();
             renderInfoGrid();
             renderStatsPanel();
-            renderVoteBar();
+            renderInteractionPanel();
             renderTags();
             renderVersions();
             renderRelatedMods();

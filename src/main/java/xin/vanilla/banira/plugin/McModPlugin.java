@@ -678,7 +678,7 @@ public class McModPlugin extends BasePlugin {
 
     private static void sendSearchDetail(BaniraBot bot, AnyMessageEvent event, Long groupId,
                                          String typeName, McModSearchResult result) {
-        String imageMsg = McModRenderHelper.renderSearchResult(result, typeName);
+        String imageMsg = McModRenderHelper.renderSearchResult(result, typeName, groupId);
         if (StringUtils.isNotNullOrEmpty(imageMsg)) {
             String message = McModRenderHelper.shouldPrefixCardLink(typeName)
                     ? McModRenderHelper.wrapCardMessage(result.getLink(), imageMsg)
@@ -691,7 +691,7 @@ public class McModPlugin extends BasePlugin {
 
     private static void sendContentDetail(BaniraBot bot, AnyMessageEvent event, Long groupId,
                                           String typeName, McModContent content) {
-        String imageMsg = McModRenderHelper.renderContent(content, typeName);
+        String imageMsg = McModRenderHelper.renderContent(content, typeName, groupId);
         if (StringUtils.isNotNullOrEmpty(imageMsg)) {
             String message = McModRenderHelper.shouldPrefixCardLink(typeName)
                     ? McModRenderHelper.wrapCardMessage(content.getDetailUrl(), imageMsg)

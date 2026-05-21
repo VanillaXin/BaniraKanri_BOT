@@ -31,6 +31,7 @@ public class McModPageDetail {
     private String fillRate;
     private String pushNum;
     private String favNum;
+    private String subscribeNum;
     private String redVote;
     private String blackVote;
     private String bio;
@@ -44,6 +45,7 @@ public class McModPageDetail {
     private List<String> relatedMods = new ArrayList<>();
     private List<String> links = new ArrayList<>();
     private boolean pageFetched;
+    private McModUserInteractionState userInteraction;
 
     public boolean isRich() {
         if (contentType == EnumContentType.AUTHOR) {

@@ -65,7 +65,12 @@ public final class McModRenderHelper {
 
     @Nullable
     public static String renderContent(@Nonnull McModContent content, @Nonnull String typeName) {
-        McModPageDetail detail = McModPageParser.fetchDetail(content, typeName);
+        return renderContent(content, typeName, null);
+    }
+
+    @Nullable
+    public static String renderContent(@Nonnull McModContent content, @Nonnull String typeName, @Nullable Long groupId) {
+        McModPageDetail detail = McModPageParser.fetchDetail(content, typeName, groupId);
         if (detail != null && detail.pageFetched()) {
             String imageMsg = renderDetail(detail);
             if (StringUtils.isNotNullOrEmpty(imageMsg)) {
@@ -81,6 +86,12 @@ public final class McModRenderHelper {
 
     @Nullable
     public static String renderSearchResult(@Nonnull McModSearchResult result, @Nonnull String typeName) {
+        return renderSearchResult(result, typeName, null);
+    }
+
+    @Nullable
+    public static String renderSearchResult(@Nonnull McModSearchResult result, @Nonnull String typeName,
+                                            @Nullable Long groupId) {
         if (isUserCenterType(typeName, result.getLink())) {
             McModUserPageDetail userDetail = McModUserPageParser.fetchDetail(result, typeName);
             if (userDetail != null) {
@@ -96,7 +107,7 @@ public final class McModRenderHelper {
             return renderSimpleSearchResult(result, typeName);
         }
 
-        McModPageDetail detail = McModPageParser.fetchDetail(result, typeName);
+        McModPageDetail detail = McModPageParser.fetchDetail(result, typeName, groupId);
         if (detail != null && detail.pageFetched()) {
             String imageMsg = renderDetail(detail);
             if (StringUtils.isNotNullOrEmpty(imageMsg)) {
@@ -284,6 +295,7 @@ public final class McModRenderHelper {
         JsonUtils.setString(data, "fillRate", StringUtils.nullToEmpty(detail.fillRate()));
         JsonUtils.setString(data, "pushNum", StringUtils.nullToEmpty(detail.pushNum()));
         JsonUtils.setString(data, "favNum", StringUtils.nullToEmpty(detail.favNum()));
+        JsonUtils.setString(data, "subscribeNum", StringUtils.nullToEmpty(detail.subscribeNum()));
         JsonUtils.setString(data, "redVote", StringUtils.nullToEmpty(detail.redVote()));
         JsonUtils.setString(data, "blackVote", StringUtils.nullToEmpty(detail.blackVote()));
 
@@ -353,7 +365,23 @@ public final class McModRenderHelper {
         JsonArray links = new JsonArray();
         detail.links().forEach(links::add);
         data.add("links", links);
+        appendUserInteractionData(data, detail);
         return data;
+    }
+
+    private static void appendUserInteractionData(@Nonnull JsonObject data, @Nonnull McModPageDetail detail) {
+        McModUserInteractionState interaction = detail.userInteraction();
+        if (interaction == null || !interaction.loggedIn()) {
+            JsonUtils.setBoolean(data, "loggedIn", false);
+            return;
+        }
+        JsonUtils.setBoolean(data, "loggedIn", true);
+        JsonUtils.setBoolean(data, "userPushed", interaction.pushed());
+        JsonUtils.setBoolean(data, "userPushCooldown", interaction.pushCooldown());
+        JsonUtils.setBoolean(data, "userFavorited", interaction.favorited());
+        JsonUtils.setBoolean(data, "userSubscribed", interaction.subscribed());
+        JsonUtils.setBoolean(data, "userRedVoted", interaction.redVoted());
+        JsonUtils.setBoolean(data, "userBlackVoted", interaction.blackVoted());
     }
 
     @Nonnull
@@ -454,6 +482,9 @@ public final class McModRenderHelper {
         height += detail.authorDetails().isEmpty() ? 0 : (int) Math.ceil(detail.authorDetails().size() / 3.0) * 52;
         height += detail.relatedMods().isEmpty() ? 0 : (int) Math.ceil(Math.min(detail.relatedMods().size() + 1, 21) / 4.0) * 28;
         height += StringUtils.isNotNullOrEmpty(detail.redVote()) || StringUtils.isNotNullOrEmpty(detail.blackVote()) ? 28 : 0;
+        if (detail.userInteraction() != null && detail.userInteraction().loggedIn()) {
+            height += 56;
+        }
         return Math.min(1100, Math.max(460, height));
     }
 

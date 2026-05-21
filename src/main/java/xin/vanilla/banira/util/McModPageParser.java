@@ -50,7 +50,13 @@ public final class McModPageParser {
 
     @Nullable
     public static McModPageDetail fetchDetail(@Nonnull McModContent content, @Nonnull String typeName) {
-        McModPageDetail detail = fetchDetail(content.getDetailUrl(), content.getType(), typeName);
+        return fetchDetail(content, typeName, null);
+    }
+
+    @Nullable
+    public static McModPageDetail fetchDetail(@Nonnull McModContent content, @Nonnull String typeName,
+                                              @Nullable Long groupId) {
+        McModPageDetail detail = fetchDetail(content.getDetailUrl(), content.getType(), typeName, groupId);
         if (detail == null) {
             return null;
         }
@@ -77,12 +83,18 @@ public final class McModPageParser {
 
     @Nullable
     public static McModPageDetail fetchDetail(@Nonnull McModSearchResult result, @Nonnull String typeName) {
+        return fetchDetail(result, typeName, null);
+    }
+
+    @Nullable
+    public static McModPageDetail fetchDetail(@Nonnull McModSearchResult result, @Nonnull String typeName,
+                                              @Nullable Long groupId) {
         String link = result.getLink();
         if (StringUtils.isNullOrEmpty(link)) {
             return null;
         }
         EnumContentType type = resolveContentType(link, typeName);
-        McModPageDetail detail = fetchDetail(link, type, typeName);
+        McModPageDetail detail = fetchDetail(link, type, typeName, groupId);
         if (detail == null) {
             return null;
         }
@@ -105,8 +117,15 @@ public final class McModPageParser {
     }
 
     @Nullable
-    public static McModPageDetail fetchDetail(@Nonnull String url, @Nullable EnumContentType type, @Nonnull String typeName) {
-        String html = fetchPageHtml(url);
+    public static McModPageDetail fetchDetail(@Nonnull String url, @Nullable EnumContentType type,
+                                              @Nonnull String typeName) {
+        return fetchDetail(url, type, typeName, null);
+    }
+
+    @Nullable
+    public static McModPageDetail fetchDetail(@Nonnull String url, @Nullable EnumContentType type,
+                                              @Nonnull String typeName, @Nullable Long groupId) {
+        String html = fetchPageHtml(url, groupId);
         if (StringUtils.isNullOrEmpty(html)) {
             return null;
         }
@@ -149,6 +168,7 @@ public final class McModPageParser {
         parseLegacyMeta(document, detail);
         parseClassStats(document, detail);
         parseVoteInfo(document, detail);
+        parseUserInteractionState(document, detail);
         parseAuthorDetails(document, detail);
         parseVersions(document, detail);
         parseRelatedMods(document, detail);
@@ -314,6 +334,58 @@ public final class McModPageParser {
         });
     }
 
+    private static void parseUserInteractionState(@Nonnull Document document, @Nonnull McModPageDetail detail) {
+        Element group = document.selectFirst(".common-fuc-group");
+        if (group == null) {
+            return;
+        }
+        McModUserInteractionState state = new McModUserInteractionState().loggedIn(true);
+        parseFucActionState(document, "push", state);
+        parseFucActionState(document, "like", state);
+        parseFucActionState(document, "subscribe", state);
+        if (StringUtils.isNotNullOrEmpty(detail.redVote()) && detail.redVote().contains("已投红票")) {
+            state.redVoted(true);
+        }
+        if (StringUtils.isNotNullOrEmpty(detail.blackVote()) && detail.blackVote().contains("已投黑票")) {
+            state.blackVoted(true);
+        }
+        detail.userInteraction(state);
+    }
+
+    private static void parseFucActionState(@Nonnull Document document, @Nonnull String className,
+                                            @Nonnull McModUserInteractionState state) {
+        Element item = document.selectFirst(".common-fuc-group li." + className);
+        if (item == null) {
+            return;
+        }
+        Element icon = item.selectFirst(".action i");
+        Element label = item.selectFirst(".action span");
+        String iconClass = icon != null ? icon.className() : "";
+        String actionText = label != null ? cleanText(label.text()) : "";
+        boolean active = iconClass.contains("fas");
+        switch (className) {
+            case "push" -> {
+                if (actionText.contains("冷却")) {
+                    state.pushCooldown(true).pushed(true);
+                } else if (active || actionText.contains("已")) {
+                    state.pushed(true);
+                }
+            }
+            case "like" -> {
+                if (active || actionText.contains("已")) {
+                    state.favorited(true);
+                }
+            }
+            case "subscribe" -> {
+                if (active || actionText.contains("已")) {
+                    state.subscribed(true);
+                }
+            }
+            default -> {
+            }
+        }
+    }
+
     private static void parseRelatedMods(@Nonnull Document document, @Nonnull McModPageDetail detail) {
         document.select("fieldset ul li a[href*='/class/'], fieldset ul li a[href*='/modpack/']").forEach(element -> {
             String name = cleanText(element.text());
@@ -381,6 +453,7 @@ public final class McModPageParser {
                 detail.links().add(name);
             }
         });
+        parseUserInteractionState(document, detail);
     }
 
     private static void parseOfficialTags(@Nonnull Document document, @Nonnull McModPageDetail detail) {
@@ -464,6 +537,7 @@ public final class McModPageParser {
 
         detail.pushNum(getSocialNum(document, "push"));
         detail.favNum(getSocialNum(document, "like"));
+        detail.subscribeNum(getSocialNum(document, "subscribe"));
         parseLabelTags(document, detail);
     }
 
@@ -624,7 +698,22 @@ public final class McModPageParser {
 
     @Nullable
     private static String fetchPageHtml(@Nonnull String url) {
+        return fetchPageHtml(url, null);
+    }
+
+    @Nullable
+    private static String fetchPageHtml(@Nonnull String url, @Nullable Long groupId) {
         try {
+            String userCookie = McModUtils.resolveOptionalCookie(groupId);
+            if (StringUtils.isNotNullOrEmpty(userCookie)) {
+                String loggedInHtml = fetchPageHtmlViaHttp(url, userCookie);
+                if (isDetailHtml(loggedInHtml)) {
+                    LOGGER.info("Mcmod page fetched via HTTP (logged in), url={}, length={}",
+                            url, loggedInHtml.length());
+                    return loggedInHtml;
+                }
+            }
+
             String html = HtmlScreenshotUtils.fetchRemoteHtml(
                     url, ".class-title, .class-info, .author-name, .class-meta-list");
             if (isDetailHtml(html)) {
@@ -632,7 +721,7 @@ public final class McModPageParser {
                 return html;
             }
 
-            html = fetchPageHtmlViaHttp(url);
+            html = fetchPageHtmlViaHttp(url, null);
             if (isDetailHtml(html)) {
                 LOGGER.info("Mcmod page fetched via HTTP, url={}, length={}", url, html.length());
                 return html;
@@ -649,22 +738,27 @@ public final class McModPageParser {
 
     @Nullable
     private static String fetchPageHtmlViaHttp(@Nonnull String url) {
+        return fetchPageHtmlViaHttp(url, null);
+    }
+
+    @Nullable
+    private static String fetchPageHtmlViaHttp(@Nonnull String url, @Nullable String userCookie) {
         try {
-            String html = requestPage(url, cachedYxdToken);
+            String html = requestPage(url, cachedYxdToken, userCookie);
             if (isDetailHtml(html)) {
                 return html;
             }
 
             String token = extractYxdToken(html);
             if (StringUtils.isNullOrEmpty(token)) {
-                token = bootstrapYxdToken();
+                token = bootstrapYxdToken(userCookie);
             }
             if (StringUtils.isNullOrEmpty(token)) {
                 return null;
             }
             cachedYxdToken = token;
 
-            html = requestPage(url, token);
+            html = requestPage(url, token, userCookie);
             return isDetailHtml(html) ? html : null;
         } catch (Exception e) {
             LOGGER.warn("Failed to fetch mcmod page via HTTP: {}", url, e);
@@ -673,7 +767,7 @@ public final class McModPageParser {
     }
 
     @Nullable
-    private static String bootstrapYxdToken() {
+    private static String bootstrapYxdToken(@Nullable String userCookie) {
         if (StringUtils.isNotNullOrEmpty(cachedYxdToken)) {
             return cachedYxdToken;
         }
@@ -682,7 +776,7 @@ public final class McModPageParser {
                 "https://www.mcmod.cn/class/1.html"
         };
         for (String bootstrapUrl : bootstrapUrls) {
-            String html = requestPage(bootstrapUrl, null);
+            String html = requestPage(bootstrapUrl, null, userCookie);
             String token = extractYxdToken(html);
             if (StringUtils.isNotNullOrEmpty(token)) {
                 cachedYxdToken = token;
@@ -694,14 +788,20 @@ public final class McModPageParser {
 
     @Nullable
     private static String requestPage(@Nonnull String url, @Nullable String yxdToken) {
+        return requestPage(url, yxdToken, null);
+    }
+
+    @Nullable
+    private static String requestPage(@Nonnull String url, @Nullable String yxdToken, @Nullable String userCookie) {
         HttpResponse response;
-        if (StringUtils.isNotNullOrEmpty(yxdToken)) {
+        String cookieHeader = buildRequestCookie(yxdToken, userCookie);
+        if (StringUtils.isNotNullOrEmpty(cookieHeader)) {
             response = HttpUtils.get(url,
                     new KeyValue<>("User-Agent", USER_AGENT),
                     new KeyValue<>("Referer", "https://www.mcmod.cn"),
                     new KeyValue<>("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"),
                     new KeyValue<>("Accept-Language", "zh-CN,zh;q=0.9"),
-                    new KeyValue<>("Cookie", "yxd_token=" + yxdToken));
+                    new KeyValue<>("Cookie", cookieHeader));
         } else {
             response = HttpUtils.get(url,
                     new KeyValue<>("User-Agent", USER_AGENT),
@@ -713,6 +813,21 @@ public final class McModPageParser {
             return null;
         }
         return response.getBodyAsString();
+    }
+
+    @Nullable
+    private static String buildRequestCookie(@Nullable String yxdToken, @Nullable String userCookie) {
+        StringBuilder builder = new StringBuilder();
+        if (StringUtils.isNotNullOrEmpty(userCookie)) {
+            builder.append(userCookie.trim());
+        }
+        if (StringUtils.isNotNullOrEmpty(yxdToken)) {
+            if (!builder.isEmpty()) {
+                builder.append("; ");
+            }
+            builder.append("yxd_token=").append(yxdToken);
+        }
+        return builder.isEmpty() ? null : builder.toString();
     }
 
     private static boolean isDetailHtml(@Nullable String html) {
