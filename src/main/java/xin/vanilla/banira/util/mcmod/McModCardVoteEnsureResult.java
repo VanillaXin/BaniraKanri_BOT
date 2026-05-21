@@ -43,6 +43,10 @@ public class McModCardVoteEnsureResult {
     private Integer errorState;
 
     public static final int STATE_LOGIN_REQUIRED = 234;
+    /**
+     * 操作过于频繁（连续 cardvote 间隔过短时常见）
+     */
+    public static final int STATE_TOO_FREQUENT = 109;
 
     public boolean isSuccess() {
         if (cooldownBlocked) {
@@ -59,6 +63,10 @@ public class McModCardVoteEnsureResult {
 
     public boolean isLoginRequired() {
         return errorState != null && errorState == STATE_LOGIN_REQUIRED;
+    }
+
+    public boolean isTooFrequent() {
+        return errorState != null && errorState == STATE_TOO_FREQUENT;
     }
 
     /**

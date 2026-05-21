@@ -440,6 +440,10 @@ public class McModPlugin extends BasePlugin {
             sendMessage(bot, event, groupId, "投票失败，未登录");
             return bot.setMsgEmojiLikeBrokenHeart(msgId);
         }
+        if (result != null && result.isTooFrequent()) {
+            sendMessage(bot, event, groupId, "投票操作过于频繁，请稍后再试");
+            return bot.setMsgEmojiLikeBrokenHeart(msgId);
+        }
         if (result != null && result.isSuccess()) {
             if (result.isUnchanged() && !result.isFromCache()) {
                 sendMessage(bot, event, groupId, "请勿重复投票");

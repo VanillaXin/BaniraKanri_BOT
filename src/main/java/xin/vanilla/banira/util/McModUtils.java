@@ -1507,6 +1507,10 @@ public final class McModUtils {
     private static final String DO_MODPACK_URL = "https://www.mcmod.cn/action/doModpack/";
     private static final String MCMOD_ACTION_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
     private static final long VOTE_COOLDOWN_MS = 60_000;
+    /**
+     * 连续 cardvote 之间的最小间隔
+     */
+    private static final long VOTE_ACTION_INTERVAL_MS = 1_000;
 
     /**
      * 投票状态缓存：account:target:type -> 状态
@@ -2076,7 +2080,7 @@ public final class McModUtils {
 
         String cookie = resolveOptionalCookie(groupId);
         McModCardVoteResponse first = invokeVote(groupId, targetId, isMod, type, cookie);
-        McModCardVoteResponse second = invokeVote(groupId, targetId, isMod, type, cookie);
+        McModCardVoteResponse second = invokeVoteWithRateLimitRetry(groupId, targetId, isMod, type, cookie);
         if (!isVoteResponseValid(first) || !isVoteResponseValid(second)) {
             LOGGER.warn("Vote probe failed, target={} id={}, type={}, firstState={}, secondState={}",
                     isMod ? "mod" : "modpack", targetId, type,
@@ -2094,7 +2098,7 @@ public final class McModUtils {
                     .setResponse(second)
                     .setApiCalls(2);
         } else {
-            McModCardVoteResponse third = invokeVote(groupId, targetId, isMod, type, cookie);
+            McModCardVoteResponse third = invokeVoteWithRateLimitRetry(groupId, targetId, isMod, type, cookie);
             if (!isVoteResponseValid(third)) {
                 LOGGER.warn("Vote toggle failed, target={} id={}, type={}, thirdState={}",
                         isMod ? "mod" : "modpack", targetId, type,
@@ -2150,6 +2154,39 @@ public final class McModUtils {
         return isMod
                 ? voteMod(groupId, targetId, type, cookie)
                 : voteModpack(groupId, targetId, type, cookie);
+    }
+
+    /**
+     * 与上一次 cardvote 保持间隔，并在返回 109 时再等待并重试一次。
+     */
+    @Nullable
+    private static McModCardVoteResponse invokeVoteWithRateLimitRetry(@Nullable Long groupId, @Nonnull String targetId,
+                                                                      boolean isMod, @Nonnull EnumCardVoteType type,
+                                                                      @Nullable String cookie) {
+        sleepVoteInterval();
+        McModCardVoteResponse response = invokeVote(groupId, targetId, isMod, type, cookie);
+        if (isVoteResponseTooFrequent(response)) {
+            LOGGER.debug("Vote request too frequent (109), retry after interval, target={} id={}, type={}",
+                    isMod ? "mod" : "modpack", targetId, type);
+            sleepVoteInterval();
+            response = invokeVote(groupId, targetId, isMod, type, cookie);
+        }
+        return response;
+    }
+
+    private static void sleepVoteInterval() {
+        try {
+            Thread.sleep(VOTE_ACTION_INTERVAL_MS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            LOGGER.warn("Vote interval sleep interrupted");
+        }
+    }
+
+    private static boolean isVoteResponseTooFrequent(@Nullable McModCardVoteResponse response) {
+        return response != null
+                && response.getState() != null
+                && response.getState() == McModCardVoteEnsureResult.STATE_TOO_FREQUENT;
     }
 
     private static boolean isVoteResponseValid(@Nullable McModCardVoteResponse response) {
