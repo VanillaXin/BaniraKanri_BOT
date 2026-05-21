@@ -102,18 +102,19 @@ CREATE INDEX IF NOT EXISTS bot_id_group_id_enable_index ON "timer_record" (`bot_
 -- MC服务器记录
 CREATE TABLE IF NOT EXISTS "minecraft_record"
 (
-    `id`         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-    `bot_id`     INTEGER NOT NULL,
-    `group_id`   INTEGER NOT NULL DEFAULT 0,
-    `creator_id` INTEGER NOT NULL,
-    `time`       INTEGER NOT NULL,
-    `name`       TEXT    NOT NULL,
-    `query_ip`   TEXT    NOT NULL,
-    `query_port` INTEGER NOT NULL,
-    `rcon_ip`    TEXT    NOT NULL,
-    `rcon_port`  INTEGER NOT NULL,
-    `rcon_psw`   TEXT    NOT NULL,
-    `enable`     BOOLEAN NOT NULL DEFAULT TRUE
+    `id`             INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    `bot_id`         INTEGER NOT NULL,
+    `group_id`       INTEGER NOT NULL DEFAULT 0,
+    `creator_id`     INTEGER NOT NULL,
+    `time`           INTEGER NOT NULL,
+    `name`           TEXT    NOT NULL,
+    `query_ip`       TEXT    NOT NULL,
+    `query_port`     INTEGER NOT NULL,
+    `rcon_ip`        TEXT    NOT NULL,
+    `rcon_port`      INTEGER NOT NULL,
+    `rcon_psw`       TEXT    NOT NULL,
+    `rcon_operators` TEXT    NOT NULL DEFAULT '',
+    `enable`         BOOLEAN NOT NULL DEFAULT TRUE
 );
 CREATE INDEX IF NOT EXISTS id_index ON "minecraft_record" (`id`);
 CREATE INDEX IF NOT EXISTS bot_id_index ON "minecraft_record" (`bot_id`);

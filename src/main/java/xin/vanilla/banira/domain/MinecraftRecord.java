@@ -57,6 +57,10 @@ public class MinecraftRecord {
      */
     private String rconPsw = "";
     /**
+     * RCON 授权执行者（逗号分隔 QQ）
+     */
+    private String rconOperators = "";
+    /**
      * 启用状态
      */
     private Boolean enable = true;

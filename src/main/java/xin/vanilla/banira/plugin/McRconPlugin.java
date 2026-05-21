@@ -37,6 +37,7 @@ import xin.vanilla.rcon.Rcon;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * MC 服务器 RCON 远程控制
@@ -60,27 +61,34 @@ public class McRconPlugin extends BasePlugin {
         String rconCmd = prefix + mcRcon.getFirst();
         String slashCmd = "/" + mcRcon.getFirst();
         String pswCmd = prefix + mcRcon.getFirst() + " " + ins.mcRconPsw().getFirst();
+        String grantCmd = HelpTopics.formatAliasChoices(ins.mcRconGrant());
+        String revokeCmd = HelpTopics.formatAliasChoices(ins.mcRconRevoke());
 
         HelpTopic topic = HelpTopics.of("MC远程", "通过 RCON 远程执行 Minecraft 服务器命令。", 99, mcRcon);
         topic.child(HelpTopics.opAdd(base,
-                "绑定 RCON 地址到已保存或新建的服务器记录。\n\n"
+                "绑定 RCON 到服务器记录（仅创建者可绑定/修改）。\n\n"
                         + "用法1：\n" + rconCmd + " " + base.add().getFirst() + " [<名称>] <RCON地址> <RCON端口>\n\n"
                         + "用法2：\n" + rconCmd + " " + base.add().getFirst() + " [<名称>] <RCON地址:RCON端口>\n\n"
-                        + "未指定名称时自动生成；RCON 密码请私聊设置。"));
+                        + "RCON 密码请私聊设置；执行权限默认仅创建者，可通过授权指令开放。"));
         topic.child(HelpTopics.opDel(base,
-                "用法1（按编号）：\n" + rconCmd + " " + base.del().getFirst() + " <编号> ...\n\n"
-                        + "用法2（回复绑定消息）：\n" + rconCmd + " " + base.del().getFirst() + "\n\n"
-                        + "清除对应记录的 RCON 配置。"));
+                "清除 RCON 配置。\n\n"
+                        + "创建者、机器人主人、主管可删除。\n\n"
+                        + "用法1：\n" + rconCmd + " " + base.del().getFirst() + " <编号> ...\n\n"
+                        + "用法2：\n" + rconCmd + " " + base.del().getFirst()));
         topic.child(HelpTopics.opList(base,
-                "查看已配置 RCON 的服务器。\n\n"
+                "查看 RCON 配置。\n\n"
+                        + "创建者可见自己的记录；群主、管理员、女仆、主管可见本群全部。\n\n"
                         + "用法：\n" + rconCmd + " " + base.list().getFirst() + " [<页数>] [<名称>]"));
-        topic.child(HelpTopics.sub("执行命令", "向服务器发送 RCON 指令。", 4, mcRcon,
+        topic.child(HelpTopics.sub("执行命令", "向服务器发送 RCON 指令（创建者或被授权用户）。", 4, mcRcon,
                 "用法：\n" + slashCmd + " <编号|名称> <命令...>\n\n"
                         + "示例：\n" + slashCmd + " 1 list\n"
                         + slashCmd + " 我的服务器 say Hello"));
-        topic.child(HelpTopics.sub("设置密码", "私聊设置 RCON 密码（不在群内发送）。", 5, ins.mcRconPsw(),
-                "用法（仅私聊）：\n" + pswCmd + " <编号> <密码>\n\n"
-                        + "需要为服务器记录的添加者或群管理员。"));
+        topic.child(HelpTopics.sub("设置密码", "私聊设置 RCON 密码（仅创建者）。", 5, ins.mcRconPsw(),
+                "用法（仅私聊）：\n" + pswCmd + " <编号> <密码>"));
+        topic.child(HelpTopics.sub("授权执行", "允许指定用户使用 RCON（仅创建者）。", 6, ins.mcRconGrant(),
+                "用法：\n" + rconCmd + " " + grantCmd + " <编号> <QQ|艾特> ..."));
+        topic.child(HelpTopics.sub("撤销执行", "撤销用户的 RCON 执行权限（仅创建者）。", 7, ins.mcRconRevoke(),
+                "用法：\n" + rconCmd + " " + revokeCmd + " <编号> <QQ|艾特> ..."));
         topics.add(topic);
     }
 
@@ -100,8 +108,7 @@ public class McRconPlugin extends BasePlugin {
 
         MinecraftRecord record = resolveRecord(tokens[0], event);
         if (record == null) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
-        if (!hasRconOp(bot, event.getGroupId(), event.getUserId(), record))
-            return bot.setMsgEmojiLikeNo(event.getMessageId());
+        if (!canExecute(event.getUserId(), record)) return bot.setMsgEmojiLikeNo(event.getMessageId());
 
         bot.setMsgEmojiLikeOk(event.getMessageId());
         String result = executeRcon(record, tokens[1]);
@@ -113,8 +120,9 @@ public class McRconPlugin extends BasePlugin {
         BaniraCodeContext context = new BaniraCodeContext(bot, event);
         if (!super.isCommand(context)) return false;
         String cmdBody = super.deleteCommandPrefix(context);
-        List<String> mcRcon = insConfig.get().mcRcon();
-        if (mcRcon.stream().noneMatch(ins -> cmdBody.startsWith(ins + " "))) return false;
+        InstructionsConfig ins = insConfig.get();
+        List<String> mcRcon = ins.mcRcon();
+        if (mcRcon.stream().noneMatch(alias -> cmdBody.startsWith(alias + " "))) return false;
 
         String[] split = cmdBody.split("\\s+");
         if (split.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
@@ -132,6 +140,10 @@ public class McRconPlugin extends BasePlugin {
             return handleDel(bot, event, args, loginInfoEx, forwardMsg);
         } else if (baseIns.list().contains(operate)) {
             return handleList(bot, event, args, loginInfoEx, forwardMsg);
+        } else if (ins.mcRconGrant().contains(operate)) {
+            return handleGrant(bot, event, args, loginInfoEx, forwardMsg);
+        } else if (ins.mcRconRevoke().contains(operate)) {
+            return handleRevoke(bot, event, args, loginInfoEx, forwardMsg);
         }
         return false;
     }
@@ -161,8 +173,8 @@ public class McRconPlugin extends BasePlugin {
             bot.sendPrivateMsg(event.getUserId(), "未找到编号为 " + id + " 的服务器记录。", false);
             return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
         }
-        if (!hasRconOp(bot, 0L, event.getUserId(), record)) {
-            bot.sendPrivateMsg(event.getUserId(), "权限不足，无法设置该服务器的 RCON 密码。", false);
+        if (!canSetPassword(event.getUserId(), record)) {
+            bot.sendPrivateMsg(event.getUserId(), "权限不足，仅创建者可设置 RCON 密码。", false);
             return bot.setMsgEmojiLikeNo(event.getMessageId());
         }
 
@@ -194,6 +206,12 @@ public class McRconPlugin extends BasePlugin {
 
         MinecraftRecord record = findRecordByName(name, event.getSelfId(), event.getGroupId());
         boolean isNew = record == null;
+        if (!isNew && !canBind(event.getUserId(), record)) {
+            forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                    , formatRconRecord(record, "RCON 绑定失败：权限不足，仅创建者可修改")));
+            ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, forwardMsg);
+            return bot.isActionDataMsgIdNotEmpty(msgIdData);
+        }
         if (isNew) {
             record = new MinecraftRecord()
                     .setBotId(event.getSelfId())
@@ -202,7 +220,8 @@ public class McRconPlugin extends BasePlugin {
                     .setTime(event.getTime())
                     .setName(name)
                     .setQueryIp(addr.host())
-                    .setQueryPort(25565);
+                    .setQueryPort(25565)
+                    .setRconOperators("");
         }
         record.setRconIp(addr.host()).setRconPort(addr.port());
 
@@ -294,15 +313,87 @@ public class McRconPlugin extends BasePlugin {
         );
         List<MinecraftRecord> rconRecords = pageList.getRecords().stream()
                 .filter(this::hasRconConfig)
+                .filter(record -> canViewRecord(bot, event.getGroupId(), event.getUserId(), record))
                 .toList();
         if (rconRecords.isEmpty()) {
-            forwardMsg.add(ShiroUtils.generateSingleMsg(loginInfoEx.getUserId(), loginInfoEx.getNickname(), "未查询到已配置 RCON 的服务器"));
+            forwardMsg.add(ShiroUtils.generateSingleMsg(loginInfoEx.getUserId(), loginInfoEx.getNickname(), "未查询到可见的 RCON 配置"));
         } else {
             forwardMsg.add(ShiroUtils.generateSingleMsg(loginInfoEx.getUserId(), loginInfoEx.getNickname()
-                    , "RCON 服务器总数：" + rconRecords.size() + "\n当前页：" + pageList.getPage()));
+                    , "RCON 可见数量：" + rconRecords.size() + "\n当前页：" + pageList.getPage()));
             for (MinecraftRecord record : rconRecords) {
                 forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname(), formatRconRecord(record, null)));
             }
+        }
+        ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, forwardMsg);
+        return bot.isActionDataMsgIdNotEmpty(msgIdData);
+    }
+
+    private boolean handleGrant(BaniraBot bot, AnyMessageEvent event, String[] args
+            , LoginInfoResp loginInfoEx, List<Map<String, Object>> forwardMsg
+    ) {
+        if (args.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+        long id = StringUtils.toLong(args[0], 0);
+        if (id <= 0) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+
+        MinecraftRecord record = minecraftRecordManager.getMinecraftRecord(id);
+        if (record == null || !record.getEnable() || !Objects.equals(record.getBotId(), event.getSelfId())) {
+            forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname(), "未查询到MC服务器"));
+            ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, forwardMsg);
+            return bot.isActionDataMsgIdNotEmpty(msgIdData);
+        }
+        if (!canManageOperators(event.getUserId(), record)) {
+            return bot.setMsgEmojiLikeNo(event.getMessageId());
+        }
+
+        Set<Long> targets = resolveTargetUserIds(bot, event, Arrays.copyOfRange(args, 1, args.length));
+        if (targets.isEmpty()) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+
+        Set<Long> operators = parseOperators(record);
+        operators.addAll(targets);
+        operators.remove(record.getCreatorId());
+        record.setRconOperators(formatOperators(operators));
+        try {
+            minecraftRecordManager.modifyMinecraftRecord(record);
+            forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                    , formatRconRecord(record, "已授权执行：" + joinUserIds(targets))));
+        } catch (Exception e) {
+            forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                    , formatRconRecord(record, "授权失败：" + e.getMessage())));
+        }
+        ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, forwardMsg);
+        return bot.isActionDataMsgIdNotEmpty(msgIdData);
+    }
+
+    private boolean handleRevoke(BaniraBot bot, AnyMessageEvent event, String[] args
+            , LoginInfoResp loginInfoEx, List<Map<String, Object>> forwardMsg
+    ) {
+        if (args.length < 2) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+        long id = StringUtils.toLong(args[0], 0);
+        if (id <= 0) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+
+        MinecraftRecord record = minecraftRecordManager.getMinecraftRecord(id);
+        if (record == null || !record.getEnable() || !Objects.equals(record.getBotId(), event.getSelfId())) {
+            forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname(), "未查询到MC服务器"));
+            ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, forwardMsg);
+            return bot.isActionDataMsgIdNotEmpty(msgIdData);
+        }
+        if (!canManageOperators(event.getUserId(), record)) {
+            return bot.setMsgEmojiLikeNo(event.getMessageId());
+        }
+
+        Set<Long> targets = resolveTargetUserIds(bot, event, Arrays.copyOfRange(args, 1, args.length));
+        if (targets.isEmpty()) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+
+        Set<Long> operators = parseOperators(record);
+        operators.removeAll(targets);
+        record.setRconOperators(formatOperators(operators));
+        try {
+            minecraftRecordManager.modifyMinecraftRecord(record);
+            forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                    , formatRconRecord(record, "已撤销执行：" + joinUserIds(targets))));
+        } catch (Exception e) {
+            forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
+                    , formatRconRecord(record, "撤销失败：" + e.getMessage())));
         }
         ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, forwardMsg);
         return bot.isActionDataMsgIdNotEmpty(msgIdData);
@@ -360,6 +451,45 @@ public class McRconPlugin extends BasePlugin {
 
     // endregion RCON 执行
 
+    // region 权限
+
+    private boolean isCreator(Long userId, MinecraftRecord record) {
+        return Objects.equals(userId, record.getCreatorId());
+    }
+
+    private boolean canExecute(Long userId, MinecraftRecord record) {
+        if (isCreator(userId, record)) return true;
+        return parseOperators(record).contains(userId);
+    }
+
+    private boolean canSetPassword(Long userId, MinecraftRecord record) {
+        return isCreator(userId, record);
+    }
+
+    private boolean canBind(Long userId, MinecraftRecord record) {
+        return isCreator(userId, record);
+    }
+
+    private boolean canDeleteRcon(Long userId, MinecraftRecord record) {
+        return isCreator(userId, record)
+                || BaniraUtils.isOwner(userId)
+                || BaniraUtils.isButler(userId);
+    }
+
+    private boolean canManageOperators(Long userId, MinecraftRecord record) {
+        return isCreator(userId, record);
+    }
+
+    private boolean canViewRecord(BaniraBot bot, Long groupId, Long userId, MinecraftRecord record) {
+        if (isCreator(userId, record)) return true;
+        return BaniraUtils.isGroupAdmin(bot, groupId, userId)
+                || BaniraUtils.isGroupOwner(bot, groupId, userId)
+                || BaniraUtils.isMaid(groupId, userId)
+                || BaniraUtils.isButler(userId);
+    }
+
+    // endregion 权限
+
     // region 工具方法
 
     private String matchSlashRcon(String message) {
@@ -409,6 +539,34 @@ public class McRconPlugin extends BasePlugin {
         return records.isEmpty() ? null : records.getFirst();
     }
 
+    private Set<Long> resolveTargetUserIds(BaniraBot bot, AnyMessageEvent event, String[] args) {
+        Set<Long> targets = BaniraUtils.getUserIdsWithReply(bot, event.getGroupId(), event.getArrayMsg(), args);
+        return targets.stream()
+                .filter(id -> id > 0 && !Objects.equals(id, 233L))
+                .collect(Collectors.toCollection(BaniraUtils::mutableSetOf));
+    }
+
+    private Set<Long> parseOperators(MinecraftRecord record) {
+        if (StringUtils.isNullOrEmptyEx(record.getRconOperators())) return BaniraUtils.mutableSetOf();
+        Set<Long> result = BaniraUtils.mutableSetOf();
+        for (String part : record.getRconOperators().split(",")) {
+            long id = StringUtils.toLong(part.trim(), 0);
+            if (id > 0) result.add(id);
+        }
+        return result;
+    }
+
+    private String formatOperators(Set<Long> operators) {
+        return operators.stream()
+                .sorted()
+                .map(String::valueOf)
+                .collect(Collectors.joining(","));
+    }
+
+    private String joinUserIds(Set<Long> userIds) {
+        return userIds.stream().map(String::valueOf).collect(Collectors.joining(", "));
+    }
+
     private boolean hasRconConfig(MinecraftRecord record) {
         return StringUtils.isNotNullOrEmpty(resolveRconHost(record)) && resolveRconPort(record) > 0;
     }
@@ -423,23 +581,15 @@ public class McRconPlugin extends BasePlugin {
         return DEFAULT_RCON_PORT;
     }
 
-    private boolean hasRconOp(BaniraBot bot, Long groupId, Long userId, MinecraftRecord record) {
-        Long effectiveGroupId = BaniraUtils.isGroupIdValid(record.getGroupId())
-                ? record.getGroupId()
-                : BaniraUtils.isGroupIdValid(groupId) ? groupId : null;
-        return Objects.equals(userId, record.getCreatorId())
-                || bot.isUpper(effectiveGroupId, userId, record.getCreatorId());
-    }
-
     private void clearRconConfig(BaniraBot bot, AnyMessageEvent event, MinecraftRecord record
             , LoginInfoResp loginInfoEx, List<Map<String, Object>> forwardMsg
     ) {
         if (record == null) return;
         String reason;
-        if (!hasRconOp(bot, event.getGroupId(), event.getUserId(), record)) {
+        if (!canDeleteRcon(event.getUserId(), record)) {
             reason = "RCON 清除失败：权限不足";
         } else {
-            record.setRconIp("").setRconPort(0).setRconPsw("");
+            record.setRconIp("").setRconPort(0).setRconPsw("").setRconOperators("");
             try {
                 minecraftRecordManager.modifyMinecraftRecord(record);
                 reason = "RCON 配置已清除";
@@ -457,9 +607,12 @@ public class McRconPlugin extends BasePlugin {
             sb.append("MC服务器编号：").append(record.getId()).append('\n');
         }
         sb.append("MC服务器名称：").append(record.getName()).append('\n');
+        sb.append("创建者：").append(record.getCreatorId()).append('\n');
         sb.append("RCON地址：").append(resolveRconHost(record)).append('\n');
         sb.append("RCON端口：").append(resolveRconPort(record)).append('\n');
-        sb.append("密码状态：").append(StringUtils.isNotNullOrEmpty(record.getRconPsw()) ? "已设置" : "未设置");
+        sb.append("密码状态：").append(StringUtils.isNotNullOrEmpty(record.getRconPsw()) ? "已设置" : "未设置").append('\n');
+        Set<Long> operators = parseOperators(record);
+        sb.append("授权执行：").append(operators.isEmpty() ? "无" : joinUserIds(operators));
         if (!StringUtils.isNullOrEmptyEx(reason)) {
             sb.append('\n').append(reason);
         }

@@ -84,6 +84,16 @@ public class InstructionsConfig {
     private List<String> mcRconPsw;
 
     /**
+     * MC RCON 授权执行
+     */
+    private List<String> mcRconGrant;
+
+    /**
+     * MC RCON 撤销执行
+     */
+    private List<String> mcRconRevoke;
+
+    /**
      * 戳一戳
      */
     private List<String> tap;
@@ -128,6 +138,8 @@ public class InstructionsConfig {
         this.mcQueryImg = BaniraUtils.mutableListOf("-i", "img", "pic", "图片");
         this.mcRcon = BaniraUtils.mutableListOf("rcon", "远程", "mc远程");
         this.mcRconPsw = BaniraUtils.mutableListOf("密码", "psw", "password");
+        this.mcRconGrant = BaniraUtils.mutableListOf("授权", "grant");
+        this.mcRconRevoke = BaniraUtils.mutableListOf("撤销", "revoke");
         this.tap = BaniraUtils.mutableListOf("戳一戳", "戳", "tap", "poke");
         this.alive = BaniraUtils.mutableListOf("存活", "活着", "在线", "活着?", "活着？", "online", "alive", "survival");
         this.plant = BaniraUtils.mutableListOf("plant", "tea", "花言草语", "胡言乱语", "喝茶", "品茶");

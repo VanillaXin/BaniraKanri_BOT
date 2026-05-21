@@ -11,6 +11,7 @@ import xin.vanilla.banira.event.DatabaseInitializedEvent;
 import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.Statement;
 
 /**
@@ -37,7 +38,16 @@ public class SQLiteSchemaInitializer implements ApplicationRunner {
                     stmt.execute(trimmed);
                 }
             }
+            migrate(stmt);
         }
         applicationContext.publishEvent(new DatabaseInitializedEvent(this));
+    }
+
+    private void migrate(Statement stmt) {
+        try {
+            stmt.execute("ALTER TABLE minecraft_record ADD COLUMN rcon_operators TEXT NOT NULL DEFAULT ''");
+        } catch (SQLException ignored) {
+            // 列已存在
+        }
     }
 }
