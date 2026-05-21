@@ -75,7 +75,9 @@ public class HelpTopicRegistry {
         return capability != null && capability > 0;
     }
 
-    /** 解析 Spring 代理后的真实插件类名，与 PluginConfig.capability 键一致 */
+    /**
+     * 解析 Spring 代理后的真实插件类名，与 PluginConfig.capability 键一致
+     */
     @Nonnull
     private static String resolvePluginClassName(@Nonnull BasePlugin plugin) {
         return AopUtils.getTargetClass(plugin).getName();

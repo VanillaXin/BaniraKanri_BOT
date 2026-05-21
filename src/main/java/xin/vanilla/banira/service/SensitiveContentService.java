@@ -44,7 +44,7 @@ public class SensitiveContentService {
         instance = this;
     }
 
-  // region 对外 API
+    // region 对外 API
 
     /**
      * 纯文本脱敏（保护 URL / CQ / Plant 密文后再扫描）。

@@ -24,6 +24,7 @@ public class GroupConfig {
      * 女仆： group -> maid，0为管家
      */
     private Map<Long, List<PermissionConfig>> maid;
+
     {
         this.maid = new LinkedHashMap<>();
         this.maid.put(0L, new ArrayList<>());

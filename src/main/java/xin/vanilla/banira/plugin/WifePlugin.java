@@ -26,8 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.extended.WifeConfig;
-import xin.vanilla.banira.plugin.help.HelpTopic;
-import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.config.entity.group.WifeGroupConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.WifeRecord;
@@ -35,6 +33,8 @@ import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.mapper.param.WifeRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
+import xin.vanilla.banira.plugin.help.HelpTopic;
+import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.service.IWifeRecordManager;
 import xin.vanilla.banira.util.*;
 

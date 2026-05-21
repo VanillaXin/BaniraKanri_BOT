@@ -1,7 +1,6 @@
 package xin.vanilla.banira.util;
 
 import cn.hutool.core.io.FileUtil;
-import xin.vanilla.banira.service.SensitiveContentService;
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.JsonUtils;
 import com.mikuac.shiro.common.utils.MessageConverser;
@@ -24,7 +23,6 @@ import org.springframework.core.ResolvableType;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.node.JsonNodeType;
-import tools.jackson.databind.node.ObjectNode;
 import xin.vanilla.banira.coder.message.FileCode;
 import xin.vanilla.banira.coder.message.ImageCode;
 import xin.vanilla.banira.coder.message.VideoCode;
@@ -34,12 +32,7 @@ import xin.vanilla.banira.config.entity.GlobalConfig;
 import xin.vanilla.banira.config.entity.GroupConfig;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.*;
-import xin.vanilla.banira.config.entity.group.AIChatGroupConfig;
-import xin.vanilla.banira.config.entity.group.McModGroupConfig;
-import xin.vanilla.banira.config.entity.group.McQueryGroupConfig;
-import xin.vanilla.banira.config.entity.group.SocialMediaGroupConfig;
-import xin.vanilla.banira.config.entity.group.StatusGroupConfig;
-import xin.vanilla.banira.config.entity.group.WifeGroupConfig;
+import xin.vanilla.banira.config.entity.group.*;
 import xin.vanilla.banira.config.other.OtherConfigRegistry;
 import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.domain.MessageRecord;
@@ -47,8 +40,10 @@ import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.plugin.common.BaniraBot;
+import xin.vanilla.banira.plugin.filedownload.FileDownloadSettings;
 import xin.vanilla.banira.plugin.socialmedia.SocialMediaSettings;
 import xin.vanilla.banira.service.IMessageRecordManager;
+import xin.vanilla.banira.service.SensitiveContentService;
 import xin.vanilla.banira.start.SpringContextHolder;
 
 import java.io.File;
@@ -59,7 +54,6 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import java.util.stream.Collectors;
 
 @Slf4j
 public final class BaniraUtils {
@@ -144,6 +138,7 @@ public final class BaniraUtils {
         try {
             getOtherConfigRegistry().saveShared(PluginConfig.class);
             getOtherConfigRegistry().saveShared(SocialMediaSettings.class);
+            getOtherConfigRegistry().saveShared(FileDownloadSettings.class);
         } catch (Exception e) {
             LOGGER.error("Failed to save shared other config", e);
             return false;

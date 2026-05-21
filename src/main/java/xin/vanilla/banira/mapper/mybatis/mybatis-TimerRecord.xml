@@ -15,11 +15,17 @@
     </resultMap>
 
     <sql id="allColumn">
-        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.cron, t.reply_msg, t.enable
+        t
+        .
+        id
+        , t.bot_id, t.group_id, t.creator_id, t.time, t.cron, t.reply_msg, t.enable
     </sql>
 
     <sql id="baseColumn">
-        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.cron, t.reply_msg, t.enable
+        t
+        .
+        id
+        , t.bot_id, t.group_id, t.creator_id, t.time, t.cron, t.reply_msg, t.enable
     </sql>
 
     <sql id="whereSql">

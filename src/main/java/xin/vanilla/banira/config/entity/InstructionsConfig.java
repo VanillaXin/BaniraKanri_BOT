@@ -123,6 +123,11 @@ public class InstructionsConfig {
      */
     private List<String> mcMod;
 
+    /**
+     * 文件下载并发送至对话
+     */
+    private List<String> fileDownload;
+
 
     {
         this.prefix = BaniraUtils.mutableListOf("/bk", AtBotCode.DEFAULT_CODE);
@@ -146,6 +151,7 @@ public class InstructionsConfig {
         this.aiChat = BaniraUtils.mutableListOf("aichat", "chat");
         this.socialMedia = BaniraUtils.mutableListOf("social", "socialmedia", "社交媒体解析", "媒体解析");
         this.mcMod = BaniraUtils.mutableListOf("mcmod", "mcmod百科检测", "mc百科检测", "mcmod检测");
+        this.fileDownload = BaniraUtils.mutableListOf("下载链接", "下载文件", "转存文件", "filedownload", "dlfile");
     }
 
 }

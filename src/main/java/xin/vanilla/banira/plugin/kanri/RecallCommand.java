@@ -8,9 +8,9 @@ import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
-import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
+import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
 

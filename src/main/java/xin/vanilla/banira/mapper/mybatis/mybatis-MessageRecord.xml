@@ -17,11 +17,17 @@
     </resultMap>
 
     <sql id="allColumn">
-        t.id, t.msg_id, t.bot_id, t.sender_id, t.target_id, t.group_id, t.time, t.msg_raw, t.msg_type, t.msg_recode
+        t
+        .
+        id
+        , t.msg_id, t.bot_id, t.sender_id, t.target_id, t.group_id, t.time, t.msg_raw, t.msg_type, t.msg_recode
     </sql>
 
     <sql id="baseColumn">
-        t.id, t.msg_id, t.bot_id, t.sender_id, t.target_id, t.group_id, t.time, t.msg_raw, t.msg_type
+        t
+        .
+        id
+        , t.msg_id, t.bot_id, t.sender_id, t.target_id, t.group_id, t.time, t.msg_raw, t.msg_type
     </sql>
 
     <sql id="whereSql">

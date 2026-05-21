@@ -2,7 +2,6 @@ package xin.vanilla.banira.plugin.kanri;
 
 import com.mikuac.shiro.common.utils.MsgUtils;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nonnull;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.util.BaniraUtils;

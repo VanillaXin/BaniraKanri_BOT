@@ -18,11 +18,17 @@
     </resultMap>
 
     <sql id="allColumn">
-        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.keyword_type, t.keyword, t.reply_msg, t.enable, t.audited, t.priority
+        t
+        .
+        id
+        , t.bot_id, t.group_id, t.creator_id, t.time, t.keyword_type, t.keyword, t.reply_msg, t.enable, t.audited, t.priority
     </sql>
 
     <sql id="baseColumn">
-        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.keyword_type, t.keyword, t.reply_msg, t.enable, t.audited, t.priority
+        t
+        .
+        id
+        , t.bot_id, t.group_id, t.creator_id, t.time, t.keyword_type, t.keyword, t.reply_msg, t.enable, t.audited, t.priority
     </sql>
 
     <sql id="whereSql">

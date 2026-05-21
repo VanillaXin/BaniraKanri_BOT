@@ -15,11 +15,17 @@
     </resultMap>
 
     <sql id="allColumn">
-        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.name, t.query_ip, t.query_port, t.rcon_ip, t.rcon_port, t.rcon_psw, t.rcon_operators, t.enable
+        t
+        .
+        id
+        , t.bot_id, t.group_id, t.creator_id, t.time, t.name, t.query_ip, t.query_port, t.rcon_ip, t.rcon_port, t.rcon_psw, t.rcon_operators, t.enable
     </sql>
 
     <sql id="baseColumn">
-        t.id, t.bot_id, t.group_id, t.creator_id, t.time, t.name, t.query_ip, t.query_port, t.rcon_ip, t.rcon_port, t.rcon_psw, t.rcon_operators, t.enable
+        t
+        .
+        id
+        , t.bot_id, t.group_id, t.creator_id, t.time, t.name, t.query_ip, t.query_port, t.rcon_ip, t.rcon_port, t.rcon_psw, t.rcon_operators, t.enable
     </sql>
 
     <sql id="whereSql">

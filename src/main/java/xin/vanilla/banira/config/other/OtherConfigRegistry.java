@@ -2,9 +2,9 @@ package xin.vanilla.banira.config.other;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import org.springframework.core.type.filter.AssignableTypeFilter;
 import org.springframework.stereotype.Component;
-import org.springframework.context.annotation.ClassPathScanningCandidateComponentProvider;
 import xin.vanilla.banira.config.YamlConfigManager;
 import xin.vanilla.banira.config.YamlConfigWatcherService;
 import xin.vanilla.banira.config.contract.GroupConfig;
@@ -32,8 +32,8 @@ public class OtherConfigRegistry {
     private final Map<Class<?>, GroupedYamlConfigManager<?>> groupedManagers = new HashMap<>();
 
     public OtherConfigRegistry(
-                               YamlConfigWatcherService watcherService,
-                               ApplicationEventPublisher publisher
+            YamlConfigWatcherService watcherService,
+            ApplicationEventPublisher publisher
     ) throws Exception {
         for (Class<? extends SharedConfig> sharedType : scanManagedTypes(SharedConfig.class)) {
             sharedManagers.put(sharedType, buildSharedManager(sharedType, watcherService, publisher));
@@ -45,8 +45,8 @@ public class OtherConfigRegistry {
     }
 
     private <T extends SharedConfig> YamlConfigManager<T> buildSharedManager(Class<T> type,
-                                                                              YamlConfigWatcherService watcherService,
-                                                                              ApplicationEventPublisher publisher
+                                                                             YamlConfigWatcherService watcherService,
+                                                                             ApplicationEventPublisher publisher
     ) throws Exception {
         Path path = Paths.get("./config/shared/" + toKebabFileName(type) + ".yml");
         return new YamlConfigManager<>(
@@ -60,7 +60,7 @@ public class OtherConfigRegistry {
     }
 
     private <T extends GroupConfig> GroupedYamlConfigManager<T> buildGroupedManager(Class<T> type,
-                                                                                     YamlConfigWatcherService watcherService
+                                                                                    YamlConfigWatcherService watcherService
     ) throws Exception {
         Path path = Paths.get("./config/group/" + toKebabFileName(type) + ".yml");
         return new GroupedYamlConfigManager<>(

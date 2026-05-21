@@ -17,7 +17,6 @@ import com.mikuac.shiro.dto.event.notice.GroupMsgDeleteNoticeEvent;
 import com.mikuac.shiro.dto.event.notice.MessageEmojiLikeNoticeEvent;
 import com.mikuac.shiro.dto.event.notice.PrivateMsgDeleteNoticeEvent;
 import com.mikuac.shiro.model.ArrayMsg;
-import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;

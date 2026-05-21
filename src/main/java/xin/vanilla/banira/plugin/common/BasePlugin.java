@@ -12,11 +12,10 @@ import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.KeyInstructionsConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.event.GlobalConfigReloadedEvent;
+import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.RegexpHelper;
-
-import xin.vanilla.banira.plugin.help.HelpTopic;
 
 import java.util.List;
 import java.util.Set;

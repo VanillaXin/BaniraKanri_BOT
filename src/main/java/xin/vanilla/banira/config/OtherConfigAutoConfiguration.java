@@ -4,6 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import xin.vanilla.banira.config.entity.basic.PluginConfig;
 import xin.vanilla.banira.config.other.OtherConfigRegistry;
+import xin.vanilla.banira.plugin.filedownload.FileDownloadSettings;
 import xin.vanilla.banira.plugin.socialmedia.SocialMediaSettings;
 
 import java.util.function.Supplier;
@@ -29,5 +30,13 @@ public class OtherConfigAutoConfiguration {
     @Bean
     public Supplier<SocialMediaSettings> socialMediaConfig(OtherConfigRegistry otherConfigRegistry) {
         return otherConfigRegistry.sharedSupplier(SocialMediaSettings.class);
+    }
+
+    /**
+     * 文件下载插件配置 Supplier。
+     */
+    @Bean
+    public Supplier<FileDownloadSettings> fileDownloadConfig(OtherConfigRegistry otherConfigRegistry) {
+        return otherConfigRegistry.sharedSupplier(FileDownloadSettings.class);
     }
 }

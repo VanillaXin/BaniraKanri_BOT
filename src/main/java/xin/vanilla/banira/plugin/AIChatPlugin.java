@@ -5,7 +5,6 @@ import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -17,9 +16,9 @@ import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.plugin.chat.AIChatService;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
-import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
+import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.List;
