@@ -38,9 +38,6 @@ import xin.vanilla.banira.util.html.HtmlScreenshotResult;
 import xin.vanilla.banira.util.html.HtmlScreenshotUtils;
 
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 
 /**
@@ -55,7 +52,7 @@ public class McQueryPlugin extends BasePlugin {
     private IMinecraftRecordManager minecraftRecordManager;
 
     private static final File HTML_FILE = new File("config/mc_query_plugin/index.html");
-    private static final File CONFIG_FILE = new File("config/mc_query_plugin/config.js");
+    private static final String CLIP_SELECTOR = ".card";
 
     private enum QueryOutputMode {
         AUTO, TEXT, IMAGE
@@ -465,26 +462,20 @@ public class McQueryPlugin extends BasePlugin {
             return null;
         }
 
+        JsonObject status = this.generateStatus(record);
+        File renderFile = null;
         try {
-            JsonObject status = this.generateStatus(record);
-            FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE);
-            OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream, StandardCharsets.UTF_8);
-            outputStreamWriter.write("const configData = " + JsonUtils.PRETTY_GSON.toJson(status));
-            outputStreamWriter.close();
-        } catch (Exception e) {
-            LOGGER.error("Failed to write config.json", e);
-            return null;
-        }
-
-        try {
+            renderFile = HtmlScreenshotConfig.buildInlineConfigRenderFile(
+                    HTML_FILE, JsonUtils.PRETTY_GSON.toJson(status));
             HtmlScreenshotResult render = HtmlScreenshotUtils.render(
-                    new HtmlScreenshotConfig(new File("config/mc_query_plugin/index.html"))
+                    new HtmlScreenshotConfig(renderFile)
                             .setContextOptions(new Browser.NewContextOptions()
                                     .setViewportSize(800, 380)
                             )
                             .setScreenshotOptions(new Page.ScreenshotOptions()
-                                    .setFullPage(true)
+                                    .setFullPage(false)
                             )
+                            .setClipSelector(CLIP_SELECTOR)
                             .setReadyExpression("window.__mcQueryReady === true")
                             .setReadyTimeout(10000)
             );
@@ -494,6 +485,8 @@ public class McQueryPlugin extends BasePlugin {
         } catch (Exception e) {
             LOGGER.error("Failed to render html", e);
             return null;
+        } finally {
+            HtmlScreenshotConfig.deleteQuietly(renderFile);
         }
     }
 

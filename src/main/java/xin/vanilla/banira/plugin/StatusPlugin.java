@@ -43,9 +43,7 @@ import xin.vanilla.banira.util.html.HtmlScreenshotResult;
 import xin.vanilla.banira.util.html.HtmlScreenshotUtils;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.charset.StandardCharsets;
@@ -76,8 +74,8 @@ public class StatusPlugin extends BasePlugin {
     private static final Random RANDOM = new Random();
 
     private static final File HTML_FILE = new File("config/status_plugin/index.html");
-    private static final File CONFIG_FILE = new File("config/status_plugin/config.js");
     private static final File TEMP_BG_FILE = new File("config/status_plugin/temp.png");
+    private static final String CLIP_SELECTOR = ".container";
 
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
@@ -119,28 +117,22 @@ public class StatusPlugin extends BasePlugin {
             }
 
             JsonObject status = this.generateStatus(bot);
+            File renderFile = null;
 
             try {
-                FileOutputStream fileOutputStream = new FileOutputStream(CONFIG_FILE);
-                OutputStreamWriter outputStreamWriter = new OutputStreamWriter(fileOutputStream, StandardCharsets.UTF_8);
-                outputStreamWriter.write("const configData = " + JsonUtils.PRETTY_GSON.toJson(status));
-                outputStreamWriter.close();
-            } catch (Exception e) {
-                LOGGER.error("Failed to write config.json", e);
-                return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
-            }
-
-            try {
+                renderFile = HtmlScreenshotConfig.buildInlineConfigRenderFile(
+                        HTML_FILE, JsonUtils.PRETTY_GSON.toJson(status));
                 this.lastRenderTime = System.currentTimeMillis();
                 HtmlScreenshotResult render = HtmlScreenshotUtils.render(
-                        new HtmlScreenshotConfig(new File("config/status_plugin/index.html"))
+                        new HtmlScreenshotConfig(renderFile)
                                 .setContextOptions(new Browser.NewContextOptions()
                                         .setViewportSize(1000, 800)
                                         .setIsMobile(true)
                                 )
                                 .setScreenshotOptions(new Page.ScreenshotOptions()
-                                        .setFullPage(true)
+                                        .setFullPage(false)
                                 )
+                                .setClipSelector(CLIP_SELECTOR)
                                 .setInterval(RANDOM.nextInt(450, 1750))
                 );
                 String msg = MsgUtils.builder()
@@ -152,6 +144,8 @@ public class StatusPlugin extends BasePlugin {
                 this.lastRenderTime = 0;
                 LOGGER.error("Failed to render html", e);
                 return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+            } finally {
+                HtmlScreenshotConfig.deleteQuietly(renderFile);
             }
         }
         return false;

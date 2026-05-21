@@ -7,8 +7,12 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.util.BaniraUtils;
 
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
+
 import java.io.File;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -50,6 +54,8 @@ public class HtmlScreenshotConfig {
      * 仅截取指定元素（如 .card），避免 viewport 留白
      */
     private String clipSelector;
+
+    private static final String CONFIG_SCRIPT_TAG = "<script src=\"config.js\"></script>";
 
     public HtmlScreenshotConfig(String content) {
         if (BaniraUtils.isValidUri(content)) {
@@ -100,7 +106,30 @@ public class HtmlScreenshotConfig {
 
     private static Path createTempHtmlFile(String html) throws IOException {
         Path tempHtml = Paths.get(TEMP_DIR, "html-" + UUID.randomUUID() + ".html");
-        Files.write(tempHtml, html.getBytes());
+        Files.writeString(tempHtml, html, StandardCharsets.UTF_8);
         return tempHtml;
+    }
+
+    /**
+     * 基于模板生成独立渲染文件（内联 configData），避免多线程共享 config.js 产生竞态
+     */
+    @Nonnull
+    public static File buildInlineConfigRenderFile(@Nonnull File templateFile, @Nonnull String configJson) throws IOException {
+        String template = Files.readString(templateFile.toPath(), StandardCharsets.UTF_8);
+        String inlineConfig = "<script>\nconst configData = " + configJson + ";\n</script>";
+        String html = template.replace(CONFIG_SCRIPT_TAG, inlineConfig);
+        Path renderPath = templateFile.toPath().getParent().resolve("render-" + UUID.randomUUID() + ".html");
+        Files.writeString(renderPath, html, StandardCharsets.UTF_8);
+        return renderPath.toFile();
+    }
+
+    public static void deleteQuietly(@Nullable File file) {
+        if (file == null) {
+            return;
+        }
+        try {
+            Files.deleteIfExists(file.toPath());
+        } catch (IOException ignored) {
+        }
     }
 }

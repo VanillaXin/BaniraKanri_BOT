@@ -16,8 +16,6 @@ import xin.vanilla.banira.util.html.HtmlScreenshotUtils;
 import xin.vanilla.banira.util.mcmod.*;
 
 import java.io.File;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.LinkedHashSet;
@@ -35,7 +33,6 @@ public final class McModRenderHelper {
     }
 
     private static final File TEMPLATE_DIR = new File("config/mcmod_plugin");
-    private static final File RENDER_FILE = new File(TEMPLATE_DIR, "_render.html");
     private static final String READY_EXPRESSION = "window.__mcModReady === true";
     private static final String CLIP_SELECTOR = ".card";
     private static final Pattern SHORT_NAME_PATTERN = Pattern.compile("\\[([^\\]]+)]");
@@ -549,8 +546,9 @@ public final class McModRenderHelper {
             return null;
         }
 
+        File renderFile = null;
         try {
-            File renderFile = buildRenderFile(templateName, data);
+            renderFile = buildRenderFile(templateName, data);
             HtmlScreenshotResult render = HtmlScreenshotUtils.render(
                     new HtmlScreenshotConfig(renderFile)
                             .setContextOptions(new Browser.NewContextOptions()
@@ -568,6 +566,8 @@ public final class McModRenderHelper {
         } catch (Exception e) {
             LOGGER.error("Failed to render mcmod html: {}", templateName, e);
             return null;
+        } finally {
+            HtmlScreenshotConfig.deleteQuietly(renderFile);
         }
     }
 
@@ -575,14 +575,8 @@ public final class McModRenderHelper {
     private static File buildRenderFile(@Nonnull String templateName, @Nonnull JsonObject data) throws Exception {
         ensureTemplate(templateName);
         File templateFile = new File(TEMPLATE_DIR, templateName);
-        String template = Files.readString(templateFile.toPath(), StandardCharsets.UTF_8);
-        String inlineConfig = "<script>\nconst configData = " + JsonUtils.PRETTY_GSON.toJson(data) + ";\n</script>";
-        String html = template.replace("<script src=\"config.js\"></script>", inlineConfig);
-        if (!TEMPLATE_DIR.exists()) {
-            TEMPLATE_DIR.mkdirs();
-        }
-        Files.writeString(RENDER_FILE.toPath(), html, StandardCharsets.UTF_8);
-        return RENDER_FILE;
+        return HtmlScreenshotConfig.buildInlineConfigRenderFile(
+                templateFile, JsonUtils.PRETTY_GSON.toJson(data));
     }
 
     private static void ensureTemplate(@Nonnull String templateName) throws Exception {

@@ -15,15 +15,19 @@ import java.io.File;
 @Slf4j
 public class HtmlScreenshotUtils {
 
-    private static Playwright playwrightInstance;
+    private static final ThreadLocal<Playwright> PLAYWRIGHT = ThreadLocal.withInitial(Playwright::create);
 
     // region private
 
-    private static synchronized Playwright getPlaywright() {
-        if (playwrightInstance == null) {
-            playwrightInstance = Playwright.create();
+    private static Playwright getPlaywright() {
+        return PLAYWRIGHT.get();
+    }
+
+    private static byte[] takeScreenshot(Page page, HtmlScreenshotConfig config) {
+        if (config.getClipSelector() != null && !config.getClipSelector().isBlank()) {
+            return page.locator(config.getClipSelector()).screenshot();
         }
-        return playwrightInstance;
+        return page.screenshot(config.getScreenshotOptions());
     }
 
     // endregion private
@@ -51,11 +55,7 @@ public class HtmlScreenshotUtils {
                     if (config.getDuration() == null || config.getInterval() == null) {
                         if (config.getInterval() != null) page.waitForTimeout(config.getInterval());
 
-                        if (config.getClipSelector() != null && !config.getClipSelector().isBlank()) {
-                            result.getBytes().add(page.locator(config.getClipSelector()).screenshot());
-                        } else {
-                            result.getBytes().add(page.screenshot(config.getScreenshotOptions()));
-                        }
+                        result.getBytes().add(takeScreenshot(page, config));
                     } else {
                         // 录制指定时长的截图
                         int duration = config.getDuration();
@@ -64,7 +64,7 @@ public class HtmlScreenshotUtils {
 
                         while (elapsed < duration) {
                             // 截取当前画面
-                            result.getBytes().add(page.screenshot(config.getScreenshotOptions()));
+                            result.getBytes().add(takeScreenshot(page, config));
 
                             // 等待指定间隔
                             page.waitForTimeout(interval);
@@ -88,10 +88,11 @@ public class HtmlScreenshotUtils {
         }
     }
 
-    public static synchronized void close() {
-        if (playwrightInstance != null) {
-            playwrightInstance.close();
-            playwrightInstance = null;
+    public static void close() {
+        Playwright playwright = PLAYWRIGHT.get();
+        if (playwright != null) {
+            playwright.close();
+            PLAYWRIGHT.remove();
         }
     }
 
