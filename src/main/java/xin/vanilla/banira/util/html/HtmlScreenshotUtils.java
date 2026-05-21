@@ -2,6 +2,9 @@ package xin.vanilla.banira.util.html;
 
 
 import com.microsoft.playwright.*;
+import com.microsoft.playwright.options.WaitUntilState;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
@@ -48,7 +51,11 @@ public class HtmlScreenshotUtils {
                     if (config.getDuration() == null || config.getInterval() == null) {
                         if (config.getInterval() != null) page.waitForTimeout(config.getInterval());
 
-                        result.getBytes().add(page.screenshot(config.getScreenshotOptions()));
+                        if (config.getClipSelector() != null && !config.getClipSelector().isBlank()) {
+                            result.getBytes().add(page.locator(config.getClipSelector()).screenshot());
+                        } else {
+                            result.getBytes().add(page.screenshot(config.getScreenshotOptions()));
+                        }
                     } else {
                         // 录制指定时长的截图
                         int duration = config.getDuration();
@@ -85,6 +92,62 @@ public class HtmlScreenshotUtils {
         if (playwrightInstance != null) {
             playwrightInstance.close();
             playwrightInstance = null;
+        }
+    }
+
+    /**
+     * 使用 Playwright 抓取远程页面（可执行 JS 挑战）
+     */
+    @Nullable
+    public static String fetchRemoteHtml(@Nonnull String url, @Nonnull String readySelector) {
+        try (Browser browser = getPlaywright().chromium().launch(
+                new BrowserType.LaunchOptions().setHeadless(true)
+        )) {
+            try (BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                    .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .setLocale("zh-CN"))) {
+                try (Page page = context.newPage()) {
+                    page.navigate(url, new Page.NavigateOptions()
+                            .setTimeout(45000)
+                            .setWaitUntil(WaitUntilState.DOMCONTENTLOADED));
+                    try {
+                        page.waitForSelector(readySelector, new Page.WaitForSelectorOptions().setTimeout(25000));
+                    } catch (PlaywrightException e) {
+                        LOGGER.warn("Remote page selector wait timeout: {}", url);
+                    }
+                    return page.content();
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Failed to fetch remote html: {}", url, e);
+            return null;
+        }
+    }
+
+    /**
+     * 宽松抓取远程页面（不依赖特定选择器，等待页面加载后返回 HTML）
+     */
+    @Nullable
+    public static String fetchRemoteHtmlLoose(@Nonnull String url, int waitMs) {
+        try (Browser browser = getPlaywright().chromium().launch(
+                new BrowserType.LaunchOptions().setHeadless(true)
+        )) {
+            try (BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                    .setUserAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                    .setLocale("zh-CN"))) {
+                try (Page page = context.newPage()) {
+                    page.navigate(url, new Page.NavigateOptions()
+                            .setTimeout(45000)
+                            .setWaitUntil(WaitUntilState.LOAD));
+                    if (waitMs > 0) {
+                        page.waitForTimeout(waitMs);
+                    }
+                    return page.content();
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.warn("Failed to fetch remote html loosely: {}", url, e);
+            return null;
         }
     }
 }

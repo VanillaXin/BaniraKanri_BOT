@@ -35,4 +35,8 @@ public class McModSearchResult {
      * 快照时间
      */
     private Date snapshotTime;
+    /**
+     * 封面图片URL
+     */
+    private String imageUrl;
 }

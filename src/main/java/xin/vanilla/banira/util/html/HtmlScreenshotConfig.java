@@ -46,6 +46,10 @@ public class HtmlScreenshotConfig {
      * 网页地址
      */
     private String url;
+    /**
+     * 仅截取指定元素（如 .card），避免 viewport 留白
+     */
+    private String clipSelector;
 
     public HtmlScreenshotConfig(String content) {
         if (BaniraUtils.isValidUri(content)) {

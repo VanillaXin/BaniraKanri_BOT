@@ -6,23 +6,23 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
- * MCMod 用户卡片经验信息
+ * MCMod 推荐操作响应
  */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Accessors(chain = true)
-public class McModUserCardExp {
+public class McModPushResponse {
     /**
-     * 总经验值（字符串，可能包含逗号）
+     * 状态码：0 表示成功
      */
-    private String total;
+    private Integer state;
     /**
-     * 当前等级经验
+     * 推荐结果
      */
-    private String yet;
-    /**
-     * 升级进度（百分比）
-     */
-    private Integer rate;
+    private Integer todo;
+
+    public boolean isSuccess() {
+        return state != null && state == 0;
+    }
 }

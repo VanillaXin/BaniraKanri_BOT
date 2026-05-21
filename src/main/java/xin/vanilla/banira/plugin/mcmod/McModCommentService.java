@@ -3,7 +3,9 @@ package xin.vanilla.banira.plugin.mcmod;
 import cn.hutool.core.io.FileUtil;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.mikuac.shiro.common.utils.MsgUtils;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,11 @@ public class McModCommentService {
     public static final Map<String, Set<McModCommentRow>> COMMENT_CACHE = new ConcurrentHashMap<>();
 
     private static final String CACHE_DIR = "data/mcmod/comment";
+
+    /**
+     * 评论元数据标记，用于回复/删除指令解析
+     */
+    public static final Pattern COMMENT_METADATA_PATTERN = Pattern.compile("#MCMOD:([^:\\s]+):([^:\\s]+):(\\d+)");
 
     /**
      * 生成缓存key
@@ -327,65 +334,48 @@ public class McModCommentService {
     }
 
     /**
-     * 格式化评论消息
-     *
-     * @param commentType 评论类型
-     * @param containerId 容器ID
-     * @param comment     评论信息
-     * @return 格式化后的消息
+     * 格式化评论元数据（供回复/删除指令解析）
+     */
+    @Nonnull
+    public static String formatCommentMetadata(@Nonnull EnumContentType commentType, @Nonnull String containerId,
+                                               @Nonnull McModCommentRow comment) {
+        return String.format("#MCMOD:%s:%s:%s", commentType.name(), containerId, comment.getId());
+    }
+
+    /**
+     * 格式化评论消息（文本兜底）
      */
     public static String formatCommentMessage(EnumContentType commentType, String containerId, McModCommentRow comment) {
-        String result = "类型: " + commentType.name() + "\n" +
-                "容器: " + containerId + "\n" +
-                "编号: " + comment.getId() + "\n";
+        String containerLabel = resolveContainerLabel(commentType, containerId);
+        boolean isReply = comment.getParentComment() != null;
+        String header = isReply ? "新回复" : "新评论";
+        String user = comment.getUser() != null ? comment.getUser().getName() : "未知用户";
+        String content = getPlainCommentText(comment);
 
-        // 根据类型添加链接和名称
-        if (commentType == EnumContentType.MOD) {
-            result += "链接: " + McModUtils.getUrl(commentType, containerId) + "\n";
-            McModContent modName = McModUtils.getModName(containerId);
-            if (modName != null) {
-                result += "名称: " + modName.getFormattedName() + "\n";
-            }
-        } else if (commentType == EnumContentType.MODPACK) {
-            result += "链接: " + McModUtils.getUrl(commentType, containerId) + "\n";
-            McModContent modpackName = McModUtils.getModpackName(containerId);
-            if (modpackName != null) {
-                result += "名称: " + modpackName.getFormattedName() + "\n";
-            }
-        } else if (commentType == EnumContentType.AUTHOR) {
-            result += "链接: " + McModUtils.getUrl(commentType, containerId) + "\n";
-            McModContent authorName = McModUtils.getAuthorName(containerId);
-            if (authorName != null) {
-                result += "名称: " + authorName.getFormattedName() + "\n";
-            }
-        } else if (commentType == EnumContentType.USER_CENTER) {
-            result += "链接: " + McModUtils.getUrl(commentType, containerId) + "\n";
+        StringBuilder sb = new StringBuilder();
+        sb.append("【MC百科·").append(header).append("】")
+                .append(getCommentTypeName(commentType)).append(" · ").append(containerLabel).append('\n')
+                .append(user);
+        if (!isReply && StringUtils.isNotNullOrEmpty(comment.getFloor())) {
+            sb.append(" · #").append(comment.getFloor());
         }
+        if (comment.getTime() != null && StringUtils.isNotNullOrEmpty(comment.getTime().getSource())) {
+            sb.append(" · ").append(comment.getTime().getSource());
+        }
+        sb.append('\n').append(content);
 
-        // 如果是回复，显示原评论摘要
-        if (comment.getParentComment() != null) {
-            result = "【MC百科新回复提醒】\n" + result;
-            result += "原文编号: " + comment.getParentId() + "\n" +
-                    "原文用户: " + comment.getParentComment().getUser().getName() + "\n" +
-                    "原文摘要: " + getCommentSummary(comment.getParentComment().getFormattedContent()) + "\n" +
-                    "用户: " + comment.getUser().getName() + " (" + comment.getUser().getId() + ")\n" +
-                    "时间: " + comment.getTime().getSource() + "\n" +
-                    "内容: " + comment.getFormattedContent();
-        } else {
-            result = "【MC百科新评论提醒】\n" + result;
-            // 普通评论
-            result += "楼层: " + comment.getFloor() + "\n" +
-                    "用户: " + comment.getUser().getName() + " (" + comment.getUser().getId() + ")\n" +
-                    "时间: " + comment.getTime().getSource() + "\n" +
-                    "内容: " + comment.getFormattedContent();
+        if (isReply && comment.getParentComment() != null && comment.getParentComment().getUser() != null) {
+            sb.append("\n↩ @").append(comment.getParentComment().getUser().getName());
         }
-        return result;
+        sb.append('\n').append(formatCommentMetadata(commentType, containerId, comment));
+        return sb.toString();
     }
 
     /**
      * 获取评论类型名称
      */
-    private static String getCommentTypeName(EnumContentType commentType) {
+    @Nonnull
+    public static String getCommentTypeName(@Nonnull EnumContentType commentType) {
         return switch (commentType) {
             case MOD -> "模组";
             case MODPACK -> "整合包";
@@ -395,19 +385,46 @@ public class McModCommentService {
     }
 
     /**
+     * 获取纯文本评论内容
+     */
+    @Nonnull
+    public static String getPlainCommentText(@Nullable McModCommentRow comment) {
+        if (comment == null) {
+            return "";
+        }
+        if (StringUtils.isNotNullOrEmpty(comment.getContent())) {
+            return getCommentSummary(org.jsoup.Jsoup.parse(comment.getContent()).text());
+        }
+        return getCommentSummary(comment.getFormattedContent());
+    }
+
+    /**
      * 获取评论内容摘要
      */
-    private static String getCommentSummary(String content) {
+    @Nonnull
+    public static String getCommentSummary(@Nullable String content) {
         if (content == null) {
             return "";
         }
-        // 简单的HTML标签去除
         String text = content.replaceAll("<[^>]+>", "").trim();
-        // 限制长度
-        if (text.length() > 50) {
-            return text.substring(0, 50) + "...";
+        if (text.length() > 120) {
+            return text.substring(0, 120) + "...";
         }
         return text;
+    }
+
+    @Nullable
+    private static String resolveContainerLabel(@Nonnull EnumContentType commentType, @Nonnull String containerId) {
+        McModContent content = switch (commentType) {
+            case MOD -> McModUtils.getModName(containerId);
+            case MODPACK -> McModUtils.getModpackName(containerId);
+            case AUTHOR -> McModUtils.getAuthorName(containerId);
+            case USER_CENTER -> null;
+        };
+        if (content != null) {
+            return content.getFormattedName();
+        }
+        return containerId;
     }
 
     /**
@@ -435,7 +452,12 @@ public class McModCommentService {
                 }
             }
 
-            String message = formatCommentMessage(commentType, containerId, comment);
+            String containerLabel = resolveContainerLabel(commentType, containerId);
+            String metadata = formatCommentMetadata(commentType, containerId, comment);
+            String imageMsg = McModRenderHelper.renderComment(commentType, containerId, comment, containerLabel);
+            String message = StringUtils.isNotNullOrEmpty(imageMsg)
+                    ? MsgUtils.builder().text(imageMsg).text("\n").text(metadata).build()
+                    : formatCommentMessage(commentType, containerId, comment);
             bot.sendGroupMsg(groupId, message, false);
         } catch (Exception e) {
             LOGGER.error("Error sending comment to group {} for type {} container {}", groupId, commentType, containerId, e);

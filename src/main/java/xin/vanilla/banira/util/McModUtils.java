@@ -13,6 +13,7 @@ import tools.jackson.core.type.TypeReference;
 import xin.vanilla.banira.config.entity.extended.McModCookieConfig;
 import xin.vanilla.banira.config.entity.group.McModGroupConfig;
 import xin.vanilla.banira.domain.KeyValue;
+import xin.vanilla.banira.util.http.HttpRequestBuilder;
 import xin.vanilla.banira.util.http.HttpResponse;
 import xin.vanilla.banira.util.mcmod.*;
 
@@ -23,6 +24,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -115,6 +117,7 @@ public final class McModUtils {
                 return cookie.getKey();
             } else {
                 LOGGER.error("Login failed, cannot get cookie, groupId: {}", groupId);
+                clearCookieCache(groupId);
                 return null;
             }
         } finally {
@@ -229,6 +232,8 @@ public final class McModUtils {
     }
 
     private static final Pattern USER_CENTER_URL_PATTERN = Pattern.compile("//center\\.mcmod\\.cn/(?<userId>\\d+)/");
+    private static final Pattern YXD_TOKEN_PATTERN = Pattern.compile("yxd_token=([a-f0-9]+)");
+    private static volatile String cachedSearchYxdToken;
 
     /**
      * 解析搜索HTML结果
@@ -1438,10 +1443,223 @@ public final class McModUtils {
                 BaniraUtils.saveGroupConfig();
                 LOGGER.info("Cookie cache cleared, groupId: {}", groupId);
             }
+            clearVoteCache(groupId);
         } finally {
             lock.unlock();
         }
     }
+
+    /**
+     * 清除投票内存缓存
+     */
+    public static void clearVoteCache(@Nullable Long groupId) {
+        String prefix = resolveVoteAccountKey(groupId) + ":";
+        VOTE_STATE_CACHE.keySet().removeIf(key -> key.startsWith(prefix));
+        VOTE_RESPONSE_CACHE.keySet().removeIf(key -> key.startsWith(prefix));
+        VOTE_COOLDOWN_CACHE.keySet().removeIf(key -> key.startsWith(prefix));
+    }
+
+    // region 模组/整合包互动
+
+    private static final String DO_CLASS_URL = "https://www.mcmod.cn/action/doClass/";
+    private static final String DO_MODPACK_URL = "https://www.mcmod.cn/action/doModpack/";
+    private static final long VOTE_COOLDOWN_MS = 60_000;
+
+    /**
+     * 投票状态缓存：account:target:type -> 状态
+     */
+    private static final Map<String, EnumVoteState> VOTE_STATE_CACHE = new ConcurrentHashMap<>();
+    /**
+     * 投票响应缓存，用于命中缓存时展示票数
+     */
+    private static final Map<String, McModCardVoteResponse> VOTE_RESPONSE_CACHE = new ConcurrentHashMap<>();
+    /**
+     * 投票冷却：account:target -> 上次实际请求时间
+     */
+    private static final Map<String, Long> VOTE_COOLDOWN_CACHE = new ConcurrentHashMap<>();
+
+    /**
+     * 给模组点推荐
+     *
+     * @param groupId 群号，用于读取已配置的 Cookie（可选）
+     * @param modId   模组 ID
+     */
+    public static @Nullable McModPushResponse pushMod(@Nullable Long groupId, @Nonnull String modId) {
+        return pushMod(groupId, modId, resolveOptionalCookie(groupId));
+    }
+
+    /**
+     * 给模组点推荐
+     *
+     * @param groupId 群号
+     * @param modId   模组 ID
+     * @param cookie  Cookie（可选）
+     */
+    public static @Nullable McModPushResponse pushMod(@Nullable Long groupId, @Nonnull String modId, @Nullable String cookie) {
+        Long cid = parsePositiveId(modId, "mod");
+        if (cid == null) {
+            return null;
+        }
+        JsonObject requestData = new JsonObject();
+        requestData.addProperty("todo", "push");
+        requestData.addProperty("cid", cid);
+        return postDoClassPushAction(requestData, getModUrl(modId), cookie);
+    }
+
+    /**
+     * 给模组投红票/黑票，重复请求会取消投票
+     *
+     * @param groupId 群号，用于读取已配置的 Cookie（可选）
+     * @param modId   模组 ID
+     * @param type    投票类型
+     */
+    public static @Nullable McModCardVoteResponse voteMod(@Nullable Long groupId, @Nonnull String modId, @Nonnull EnumCardVoteType type) {
+        return voteMod(groupId, modId, type, resolveOptionalCookie(groupId));
+    }
+
+    /**
+     * 给模组投红票
+     */
+    public static @Nullable McModCardVoteResponse voteModRed(@Nullable Long groupId, @Nonnull String modId) {
+        return voteMod(groupId, modId, EnumCardVoteType.RED);
+    }
+
+    /**
+     * 给模组投黑票
+     */
+    public static @Nullable McModCardVoteResponse voteModBlack(@Nullable Long groupId, @Nonnull String modId) {
+        return voteMod(groupId, modId, EnumCardVoteType.BLACK);
+    }
+
+    /**
+     * 给模组投红票/黑票，重复请求会取消投票
+     *
+     * @param groupId 群号
+     * @param modId   模组 ID
+     * @param type    投票类型
+     * @param cookie  Cookie（可选）
+     */
+    public static @Nullable McModCardVoteResponse voteMod(@Nullable Long groupId, @Nonnull String modId,
+                                                          @Nonnull EnumCardVoteType type, @Nullable String cookie) {
+        Long cid = parsePositiveId(modId, "mod");
+        if (cid == null) {
+            return null;
+        }
+        JsonObject requestData = new JsonObject();
+        requestData.addProperty("todo", "cardvote");
+        requestData.addProperty("cid", cid);
+        requestData.addProperty("type", type.value());
+        return postDoClassVoteAction(requestData, getModUrl(modId), cookie);
+    }
+
+    /**
+     * 给整合包点推荐
+     *
+     * @param groupId   群号，用于读取已配置的 Cookie（可选）
+     * @param modpackId 整合包 ID
+     */
+    public static @Nullable McModPushResponse pushModpack(@Nullable Long groupId, @Nonnull String modpackId) {
+        return pushModpack(groupId, modpackId, resolveOptionalCookie(groupId));
+    }
+
+    /**
+     * 给整合包点推荐
+     *
+     * @param groupId   群号
+     * @param modpackId 整合包 ID
+     * @param cookie    Cookie（可选）
+     */
+    public static @Nullable McModPushResponse pushModpack(@Nullable Long groupId, @Nonnull String modpackId, @Nullable String cookie) {
+        Long pid = parsePositiveId(modpackId, "modpack");
+        if (pid == null) {
+            return null;
+        }
+        JsonObject requestData = new JsonObject();
+        requestData.addProperty("todo", "push");
+        requestData.addProperty("pid", pid);
+        return postDoModpackPushAction(requestData, getModpackUrl(modpackId), cookie);
+    }
+
+    /**
+     * 给整合包投红票/黑票，重复请求会取消投票
+     *
+     * @param groupId   群号，用于读取已配置的 Cookie（可选）
+     * @param modpackId 整合包 ID
+     * @param type      投票类型
+     */
+    public static @Nullable McModCardVoteResponse voteModpack(@Nullable Long groupId, @Nonnull String modpackId,
+                                                              @Nonnull EnumCardVoteType type) {
+        return voteModpack(groupId, modpackId, type, resolveOptionalCookie(groupId));
+    }
+
+    /**
+     * 给整合包投红票
+     */
+    public static @Nullable McModCardVoteResponse voteModpackRed(@Nullable Long groupId, @Nonnull String modpackId) {
+        return voteModpack(groupId, modpackId, EnumCardVoteType.RED);
+    }
+
+    /**
+     * 给整合包投黑票
+     */
+    public static @Nullable McModCardVoteResponse voteModpackBlack(@Nullable Long groupId, @Nonnull String modpackId) {
+        return voteModpack(groupId, modpackId, EnumCardVoteType.BLACK);
+    }
+
+    /**
+     * 给整合包投红票/黑票，重复请求会取消投票
+     *
+     * @param groupId   群号
+     * @param modpackId 整合包 ID
+     * @param type      投票类型
+     * @param cookie    Cookie（可选）
+     */
+    public static @Nullable McModCardVoteResponse voteModpack(@Nullable Long groupId, @Nonnull String modpackId,
+                                                              @Nonnull EnumCardVoteType type, @Nullable String cookie) {
+        Long pid = parsePositiveId(modpackId, "modpack");
+        if (pid == null) {
+            return null;
+        }
+        JsonObject requestData = new JsonObject();
+        requestData.addProperty("todo", "cardvote");
+        requestData.addProperty("pid", pid);
+        requestData.addProperty("type", type.value());
+        return postDoModpackVoteAction(requestData, getModpackUrl(modpackId), cookie);
+    }
+
+    /**
+     * 确保模组已投指定类型票。
+     */
+    public static @Nullable McModCardVoteEnsureResult ensureModVote(@Nullable Long groupId, @Nonnull String modId,
+                                                                    @Nonnull EnumCardVoteType type) {
+        return ensureVoteState(groupId, modId, true, type, true);
+    }
+
+    /**
+     * 确保模组未投指定类型票。
+     */
+    public static @Nullable McModCardVoteEnsureResult ensureModUnvote(@Nullable Long groupId, @Nonnull String modId,
+                                                                      @Nonnull EnumCardVoteType type) {
+        return ensureVoteState(groupId, modId, true, type, false);
+    }
+
+    /**
+     * 确保整合包已投指定类型票。
+     */
+    public static @Nullable McModCardVoteEnsureResult ensureModpackVote(@Nullable Long groupId, @Nonnull String modpackId,
+                                                                        @Nonnull EnumCardVoteType type) {
+        return ensureVoteState(groupId, modpackId, false, type, true);
+    }
+
+    /**
+     * 确保整合包未投指定类型票。
+     */
+    public static @Nullable McModCardVoteEnsureResult ensureModpackUnvote(@Nullable Long groupId, @Nonnull String modpackId,
+                                                                         @Nonnull EnumCardVoteType type) {
+        return ensureVoteState(groupId, modpackId, false, type, false);
+    }
+
+    // endregion 模组/整合包互动
 
 
     /**
@@ -1451,24 +1669,84 @@ public final class McModUtils {
         try {
             String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8);
             String searchUrl = String.format("https://search.mcmod.cn/s?key=%s&filter=%d&mold=1", encodedQuery, type.filter());
-
-            HttpResponse response = HttpUtils.get(searchUrl)
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                    .header("Referer", "https://search.mcmod.cn/")
-                    .header("Accept-Language", "zh-CN,zh;q=0.9")
-                    .header("X-Requested-With", "XMLHttpRequest")
-                    .execute();
-
-            if (response == null || response.getBodyAsString() == null) {
+            String html = requestSearchPageHtml(searchUrl);
+            if (StringUtils.isNullOrEmpty(html)) {
+                LOGGER.warn("Search page fetch failed, filter: {}, query: {}", type.filter(), query);
                 return List.of();
             }
-
-            String html = response.getBodyAsString();
             return parseSearchPageHtml(html);
         } catch (Exception e) {
             LOGGER.error("Search by search page exception, filter: {}, query: {}", type, query, e);
             return List.of();
         }
+    }
+
+    @Nullable
+    private static String requestSearchPageHtml(@Nonnull String searchUrl) {
+        String html = requestSearchPage(searchUrl, cachedSearchYxdToken);
+        if (isSearchChallengeHtml(html)) {
+            String token = extractSearchYxdToken(html);
+            if (StringUtils.isNullOrEmpty(token)) {
+                token = bootstrapSearchYxdToken();
+            }
+            if (StringUtils.isNotNullOrEmpty(token)) {
+                cachedSearchYxdToken = token;
+                html = requestSearchPage(searchUrl, token);
+            }
+        }
+        return isSearchChallengeHtml(html) ? null : html;
+    }
+
+    @Nullable
+    private static String requestSearchPage(@Nonnull String searchUrl, @Nullable String yxdToken) {
+        HttpRequestBuilder builder = HttpUtils.get(searchUrl)
+                .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .header("Referer", "https://search.mcmod.cn/")
+                .header("Accept-Language", "zh-CN,zh;q=0.9")
+                .header("X-Requested-With", "XMLHttpRequest");
+        if (StringUtils.isNotNullOrEmpty(yxdToken)) {
+            builder.header("Cookie", "yxd_token=" + yxdToken);
+        }
+        HttpResponse response = builder.execute();
+        return response == null ? null : response.getBodyAsString();
+    }
+
+    private static boolean isSearchChallengeHtml(@Nullable String html) {
+        if (StringUtils.isNullOrEmpty(html) || html.length() < 500) {
+            return true;
+        }
+        return html.contains("yxd_token=") && html.contains("window.location.href");
+    }
+
+    @Nullable
+    private static String extractSearchYxdToken(@Nullable String html) {
+        if (StringUtils.isNullOrEmpty(html)) {
+            return null;
+        }
+        Matcher matcher = YXD_TOKEN_PATTERN.matcher(html);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    @Nullable
+    private static String bootstrapSearchYxdToken() {
+        if (StringUtils.isNotNullOrEmpty(cachedSearchYxdToken)) {
+            return cachedSearchYxdToken;
+        }
+        String[] bootstrapUrls = {
+                "https://www.mcmod.cn/",
+                "https://search.mcmod.cn/"
+        };
+        for (String bootstrapUrl : bootstrapUrls) {
+            HttpResponse response = HttpUtils.get(bootstrapUrl,
+                    new KeyValue<>("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"),
+                    new KeyValue<>("Referer", "https://www.mcmod.cn"));
+            String token = extractSearchYxdToken(response == null ? null : response.getBodyAsString());
+            if (StringUtils.isNotNullOrEmpty(token)) {
+                cachedSearchYxdToken = token;
+                return token;
+            }
+        }
+        return null;
     }
 
     /**
@@ -1590,6 +1868,10 @@ public final class McModUtils {
                 return null;
             }
 
+            if (link.contains("center.mcmod.cn")) {
+                title = title.replaceAll("\\(QQ[^)]*\\)", "").trim();
+            }
+
             // 修复链接URL
             link = fixUrl(link);
             if (link == null || link.contains("target=") || Pattern.matches("^\\d+$", title)) {
@@ -1614,6 +1896,17 @@ public final class McModUtils {
                 }
             }
 
+            // 提取封面图
+            String imageUrl = null;
+            Element coverImg = item.selectFirst(".media-object, .cover img, img");
+            if (coverImg != null) {
+                imageUrl = coverImg.attr("data-original");
+                if (StringUtils.isNullOrEmpty(imageUrl)) {
+                    imageUrl = coverImg.attr("src");
+                }
+                imageUrl = fixUrl(imageUrl);
+            }
+
             // 提取时间
             Date snapshotTime = null;
             Elements footNodes = item.select(".foot .info .value");
@@ -1627,7 +1920,8 @@ public final class McModUtils {
                     .setTitle(title)
                     .setSummary(summary != null ? summary : "")
                     .setLink(link)
-                    .setSnapshotTime(snapshotTime);
+                    .setSnapshotTime(snapshotTime)
+                    .setImageUrl(imageUrl);
         } catch (Exception e) {
             LOGGER.warn("Exception parsing search page item: {}", e.getMessage());
             return null;
@@ -1661,6 +1955,240 @@ public final class McModUtils {
             return "https://mcmod.cn/" + url;
         }
         return url;
+    }
+
+    /**
+     * 读取已配置且未过期的 Cookie，不触发登录
+     */
+    private static @Nullable String resolveOptionalCookie(@Nullable Long groupId) {
+        if (groupId == null) {
+            return null;
+        }
+        ReentrantLock lock = getGroupLock(groupId);
+        lock.lock();
+        try {
+            McModGroupConfig config = BaniraUtils.getGroupConfigOrGlobal(McModGroupConfig.class, groupId);
+            if (config == null || config.mcModCookieConfig() == null) {
+                return null;
+            }
+            McModCookieConfig cookieConfig = config.mcModCookieConfig();
+            if (StringUtils.isNotNullOrEmpty(cookieConfig.cookie()) && !cookieConfig.isExpired()) {
+                return cookieConfig.cookie();
+            }
+            return null;
+        } finally {
+            lock.unlock();
+        }
+    }
+
+    private static @Nullable Long parsePositiveId(@Nonnull String id, @Nonnull String fieldName) {
+        if (!id.matches("\\d+")) {
+            LOGGER.warn("Invalid {} id: {}", fieldName, id);
+            return null;
+        }
+        long value = StringUtils.toLong(id);
+        if (value <= 0) {
+            LOGGER.warn("Invalid {} id: {}", fieldName, id);
+            return null;
+        }
+        return value;
+    }
+
+    private static @Nullable JsonObject postMcModAction(@Nonnull String url, @Nonnull JsonObject requestData,
+                                                        @Nonnull String referer, @Nullable String cookie) {
+        try {
+            Map<String, String> formData = new LinkedHashMap<>();
+            formData.put("data", JsonUtils.toJsonString(requestData));
+
+            HttpRequestBuilder builder = HttpUtils.post(url)
+                    .formBody(formData)
+                    .header("Referer", referer);
+            if (StringUtils.isNotNullOrEmpty(cookie)) {
+                builder.header("Cookie", cookie);
+            }
+
+            HttpResponse response = builder.execute();
+            if (response == null || response.getBodyAsString() == null) {
+                return null;
+            }
+
+            return JsonUtils.parseJsonObject(response.getBodyAsString());
+        } catch (Exception e) {
+            LOGGER.error("MCMod action exception, url: {}, data: {}", url, requestData, e);
+            return null;
+        }
+    }
+
+    private static @Nullable McModCardVoteEnsureResult ensureVoteState(@Nullable Long groupId, @Nonnull String targetId,
+                                                                       boolean isMod, @Nonnull EnumCardVoteType type,
+                                                                       boolean wantVoted) {
+        if (parsePositiveId(targetId, isMod ? "mod" : "modpack") == null) {
+            return null;
+        }
+
+        String cacheKey = buildVoteCacheKey(groupId, isMod, targetId, type);
+        String cooldownKey = buildVoteCooldownKey(groupId, isMod, targetId);
+        EnumVoteState desired = wantVoted ? EnumVoteState.VOTED : EnumVoteState.NOT_VOTED;
+
+        EnumVoteState cachedState = VOTE_STATE_CACHE.get(cacheKey);
+        if (cachedState == desired) {
+            return new McModCardVoteEnsureResult()
+                    .setStateBefore(cachedState)
+                    .setStateAfter(cachedState)
+                    .setResponse(VOTE_RESPONSE_CACHE.get(cacheKey))
+                    .setApiCalls(0)
+                    .setFromCache(true);
+        }
+
+        long now = System.currentTimeMillis();
+        Long lastAttempt = VOTE_COOLDOWN_CACHE.get(cooldownKey);
+        if (lastAttempt != null && now - lastAttempt < VOTE_COOLDOWN_MS) {
+            return new McModCardVoteEnsureResult().setCooldownBlocked(true).setApiCalls(0);
+        }
+
+        String cookie = resolveOptionalCookie(groupId);
+        McModCardVoteResponse first = invokeVote(groupId, targetId, isMod, type, cookie);
+        McModCardVoteResponse second = invokeVote(groupId, targetId, isMod, type, cookie);
+        if (!isVoteResponseValid(first) || !isVoteResponseValid(second)) {
+            return null;
+        }
+
+        EnumVoteState stateBefore = detectVoteStateBefore(first, second, type);
+        McModCardVoteEnsureResult result;
+        if (stateBefore == desired) {
+            result = new McModCardVoteEnsureResult()
+                    .setStateBefore(stateBefore)
+                    .setStateAfter(stateBefore)
+                    .setResponse(second)
+                    .setApiCalls(2);
+        } else {
+            McModCardVoteResponse third = invokeVote(groupId, targetId, isMod, type, cookie);
+            if (!isVoteResponseValid(third)) {
+                return null;
+            }
+            result = new McModCardVoteEnsureResult()
+                    .setStateBefore(stateBefore)
+                    .setStateAfter(desired)
+                    .setResponse(third)
+                    .setApiCalls(3);
+        }
+
+        rememberVoteState(cacheKey, cooldownKey, result.getStateAfter(), result.getResponse());
+        return result;
+    }
+
+    @Nonnull
+    private static String resolveVoteAccountKey(@Nullable Long groupId) {
+        String userId = getLoginUserId(groupId);
+        if (StringUtils.isNotNullOrEmpty(userId)) {
+            return "u:" + userId;
+        }
+        if (groupId != null) {
+            return "g:" + groupId;
+        }
+        return "anon";
+    }
+
+    @Nonnull
+    private static String buildVoteCacheKey(@Nullable Long groupId, boolean isMod, @Nonnull String targetId,
+                                          @Nonnull EnumCardVoteType type) {
+        return resolveVoteAccountKey(groupId) + ":" + (isMod ? "mod" : "modpack") + ":" + targetId + ":" + type.value();
+    }
+
+    @Nonnull
+    private static String buildVoteCooldownKey(@Nullable Long groupId, boolean isMod, @Nonnull String targetId) {
+        return resolveVoteAccountKey(groupId) + ":" + (isMod ? "mod" : "modpack") + ":" + targetId;
+    }
+
+    private static void rememberVoteState(@Nonnull String cacheKey, @Nonnull String cooldownKey,
+                                          @Nonnull EnumVoteState state, @Nullable McModCardVoteResponse response) {
+        VOTE_STATE_CACHE.put(cacheKey, state);
+        if (response != null) {
+            VOTE_RESPONSE_CACHE.put(cacheKey, response);
+        }
+        VOTE_COOLDOWN_CACHE.put(cooldownKey, System.currentTimeMillis());
+    }
+
+    @Nullable
+    private static McModCardVoteResponse invokeVote(@Nullable Long groupId, @Nonnull String targetId, boolean isMod,
+                                                    @Nonnull EnumCardVoteType type, @Nullable String cookie) {
+        return isMod
+                ? voteMod(groupId, targetId, type, cookie)
+                : voteModpack(groupId, targetId, type, cookie);
+    }
+
+    private static boolean isVoteResponseValid(@Nullable McModCardVoteResponse response) {
+        return response != null && response.isSuccess();
+    }
+
+    /**
+     * 根据探测前后两次返回值推断投票前状态。
+     * 第一次调用若使目标类型票数上升，说明原先未投；下降则说明原先已投。
+     */
+    @Nonnull
+    private static EnumVoteState detectVoteStateBefore(@Nonnull McModCardVoteResponse first,
+                                                       @Nonnull McModCardVoteResponse second,
+                                                       @Nonnull EnumCardVoteType type) {
+        int firstCount = getVoteCount(first, type);
+        int secondCount = getVoteCount(second, type);
+        if (firstCount > secondCount) {
+            return EnumVoteState.NOT_VOTED;
+        }
+        if (firstCount < secondCount) {
+            return EnumVoteState.VOTED;
+        }
+        LOGGER.warn("Unable to detect vote state from identical counts, first={}, second={}", firstCount, secondCount);
+        return EnumVoteState.NOT_VOTED;
+    }
+
+    private static int getVoteCount(@Nonnull McModCardVoteResponse response, @Nonnull EnumCardVoteType type) {
+        if (response.getNum() == null) {
+            return 0;
+        }
+        String raw = type == EnumCardVoteType.RED
+                ? response.getNum().getRed()
+                : response.getNum().getBlack();
+        return (int) StringUtils.toLong(StringUtils.nullToEmpty(raw), 0);
+    }
+
+    private static @Nullable McModPushResponse postDoClassPushAction(@Nonnull JsonObject requestData, @Nonnull String referer,
+                                                                     @Nullable String cookie) {
+        JsonObject json = postMcModAction(DO_CLASS_URL, requestData, referer, cookie);
+        if (json == null) {
+            return null;
+        }
+        return com.mikuac.shiro.common.utils.JsonUtils.readValue(JsonUtils.toJsonString(json), new TypeReference<>() {
+        });
+    }
+
+    private static @Nullable McModCardVoteResponse postDoClassVoteAction(@Nonnull JsonObject requestData, @Nonnull String referer,
+                                                                         @Nullable String cookie) {
+        JsonObject json = postMcModAction(DO_CLASS_URL, requestData, referer, cookie);
+        if (json == null) {
+            return null;
+        }
+        return com.mikuac.shiro.common.utils.JsonUtils.readValue(JsonUtils.toJsonString(json), new TypeReference<>() {
+        });
+    }
+
+    private static @Nullable McModPushResponse postDoModpackPushAction(@Nonnull JsonObject requestData, @Nonnull String referer,
+                                                                       @Nullable String cookie) {
+        JsonObject json = postMcModAction(DO_MODPACK_URL, requestData, referer, cookie);
+        if (json == null) {
+            return null;
+        }
+        return com.mikuac.shiro.common.utils.JsonUtils.readValue(JsonUtils.toJsonString(json), new TypeReference<>() {
+        });
+    }
+
+    private static @Nullable McModCardVoteResponse postDoModpackVoteAction(@Nonnull JsonObject requestData, @Nonnull String referer,
+                                                                         @Nullable String cookie) {
+        JsonObject json = postMcModAction(DO_MODPACK_URL, requestData, referer, cookie);
+        if (json == null) {
+            return null;
+        }
+        return com.mikuac.shiro.common.utils.JsonUtils.readValue(JsonUtils.toJsonString(json), new TypeReference<>() {
+        });
     }
 
 

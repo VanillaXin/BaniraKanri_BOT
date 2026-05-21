@@ -1,5 +1,6 @@
 package xin.vanilla.banira.plugin;
 
+import com.google.gson.JsonObject;
 import com.mikuac.shiro.annotation.AnyMessageHandler;
 import com.mikuac.shiro.annotation.GroupMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
@@ -32,6 +33,7 @@ import xin.vanilla.banira.util.*;
 import xin.vanilla.banira.util.mcmod.*;
 
 import java.util.*;
+import java.util.regex.Matcher;
 
 /**
  * MCMod百科插件
@@ -56,10 +58,15 @@ public class McModPlugin extends BasePlugin {
     private static final Set<String> ITEM_INS = BaniraUtils.mutableSetOf("item", "data", "资料", "物品");
     private static final Set<String> TUTORIAL_INS = BaniraUtils.mutableSetOf("tutorial", "教程");
     private static final Set<String> MOD_RANDOM_INS = BaniraUtils.mutableSetOf("random", "随便看看");
+    private static final Set<String> CATEGORY_INS = BaniraUtils.mutableSetOf("category", "分类");
     private static final Set<String> USER_CARD_INS = BaniraUtils.mutableSetOf("card", "用户卡片");
     private static final Set<String> COMMENT_INS = BaniraUtils.mutableSetOf("comment", "发布评论", "评论");
     private static final Set<String> DEL_COMMENT_INS = BaniraUtils.mutableSetOf("delcomment", "删除评论");
     private static final Set<String> COMMENT_REPLY_INS = BaniraUtils.mutableSetOf("reply", "回复");
+    private static final Set<String> PUSH_INS = BaniraUtils.mutableSetOf("push", "recommend", "推荐");
+    private static final Set<String> VOTE_INS = BaniraUtils.mutableSetOf("vote", "投票");
+    private static final Set<String> RED_VOTE_INS = BaniraUtils.mutableSetOf("red", "红票", "红");
+    private static final Set<String> BLACK_VOTE_INS = BaniraUtils.mutableSetOf("black", "黑票", "黑");
 
 
     @Override
@@ -76,7 +83,7 @@ public class McModPlugin extends BasePlugin {
         String slashCmd = "/" + command.getFirst();
         String baniraCmd = prefix + command.getFirst();
 
-        HelpTopic topic = HelpTopics.of("MC百科", "MCMod 百科检索与评论检测。", 99, command);
+        HelpTopic topic = HelpTopics.of("MC百科", "MCMod 百科检索、互动与评论检测。", 99, command);
         HelpTopic search = HelpTopics.of("检索", "搜索模组、整合包、作者、用户、资料或教程。", 1, List.of("search", "检索"));
         search.child(HelpTopics.sub("模组", "按关键词搜索模组。", 1, MOD_INS,
                 buildSearchDetail(slashCmd, MOD_INS, true)));
@@ -93,13 +100,21 @@ public class McModPlugin extends BasePlugin {
         topic.child(search);
         topic.child(HelpTopics.sub("随便看看", "随机显示 MOD。", 2, MOD_RANDOM_INS,
                 slashCmd + " " + HelpTopics.formatAliasChoices(MOD_RANDOM_INS)));
-        topic.child(HelpTopics.sub("用户卡片", "展示用户卡片信息。", 3, USER_CARD_INS,
+        topic.child(HelpTopics.sub("分类浏览", "按分类浏览首页模组。", 3, CATEGORY_INS,
+                slashCmd + " " + HelpTopics.formatAliasChoices(CATEGORY_INS) + " <分类名>\n"
+                        + "例如：" + slashCmd + " category 科技"));
+        topic.child(HelpTopics.sub("用户卡片", "展示用户卡片信息。", 4, USER_CARD_INS,
                 slashCmd + " " + HelpTopics.formatAliasChoices(USER_CARD_INS) + " <用户ID>"));
-        topic.child(HelpTopics.sub("评论管理", "管理员回复或删除 MC 百科评论（仅群聊）。", 4, List.of("delcomment", "reply", "评论管理"),
-                "回复评论（需回复含评论信息的消息）：\n" + slashCmd + " " + HelpTopics.formatAliasChoices(COMMENT_REPLY_INS) + " <回复内容>\n\n"
+        HelpTopic interact = HelpTopics.of("互动", "推荐与投票。", 5, List.of("push", "vote", "互动", "推荐", "投票"));
+        interact.child(HelpTopics.sub("推荐", "点推荐。", 1, PUSH_INS, buildPushHelp(slashCmd)));
+        interact.child(HelpTopics.sub("投票", "投红票或黑票。", 2, VOTE_INS, buildVoteHelp(slashCmd)));
+        topic.child(interact);
+        topic.child(HelpTopics.sub("评论管理", "管理员发布、回复或删除 MC 百科评论（仅群聊）。", 6, List.of("delcomment", "reply", "comment", "评论管理"),
+                "发布评论：\n" + slashCmd + " " + HelpTopics.formatAliasChoices(COMMENT_INS) + " <类型> <容器ID> <内容>\n\n"
+                        + "回复评论（需回复含评论信息的消息）：\n" + slashCmd + " " + HelpTopics.formatAliasChoices(COMMENT_REPLY_INS) + " <回复内容>\n\n"
                         + "删除评论：\n" + slashCmd + " " + HelpTopics.formatAliasChoices(DEL_COMMENT_INS) + " <评论ID>\n\n"
                         + "需要群管理员权限。"));
-        HelpTopic commentWatch = HelpTopics.of("评论检测", "检测 MC 百科评论变化并提示。", 5, List.of("commentWatch", "评论检测"));
+        HelpTopic commentWatch = HelpTopics.of("评论检测", "检测 MC 百科评论变化并提示。", 7, List.of("commentWatch", "评论检测"));
         commentWatch.child(HelpTopics.opAdd(base,
                 baniraCmd + " " + base.add().getFirst() + " <类型> <容器ID>\n"
                         + "类型：" + HelpTopics.joinAliases(commentTypes)));
@@ -126,6 +141,26 @@ public class McModPlugin extends BasePlugin {
         return sb.toString();
     }
 
+    @Nonnull
+    private static String buildPushHelp(@Nonnull String slashCmd) {
+        String push = HelpTopics.formatAliasChoices(PUSH_INS);
+        String modType = HelpTopics.formatAliasChoices(MOD_INS);
+        String modpackType = HelpTopics.formatAliasChoices(MOD_PACK_INS);
+        return slashCmd + " " + push + " " + modType + " <模组ID>\n"
+                + slashCmd + " " + push + " " + modpackType + " <整合包ID>";
+    }
+
+    @Nonnull
+    private static String buildVoteHelp(@Nonnull String slashCmd) {
+        String vote = HelpTopics.formatAliasChoices(VOTE_INS);
+        String modType = HelpTopics.formatAliasChoices(MOD_INS);
+        String modpackType = HelpTopics.formatAliasChoices(MOD_PACK_INS);
+        String red = HelpTopics.formatAliasChoices(RED_VOTE_INS);
+        String black = HelpTopics.formatAliasChoices(BLACK_VOTE_INS);
+        return slashCmd + " " + vote + " " + modType + " <模组ID> " + red + "|" + black + "\n"
+                + slashCmd + " " + vote + " " + modpackType + " <整合包ID> " + red + "|" + black;
+    }
+
     @AnyMessageHandler
     public boolean query(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
@@ -150,11 +185,11 @@ public class McModPlugin extends BasePlugin {
             if (split.length > 3 && split[2].equals("-a")) {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 3, split.length));
                 List<McModSearchResult> results = McModUtils.searchModBySearchPage(keyword);
-                return handleSearchResults(bot, event, results, "模组", groupId, msgId);
+                return handleSearchResults(bot, event, results, "模组", keyword, groupId, msgId);
             } else {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 2, split.length));
                 List<McModContent> results = McModUtils.searchMod(keyword);
-                return handleSearchContents(bot, event, results, "模组", groupId, msgId);
+                return handleContentResults(bot, event, results, "模组", keyword, groupId, msgId);
             }
         }
         // 搜索整合包
@@ -165,11 +200,11 @@ public class McModPlugin extends BasePlugin {
             if (split.length > 3 && split[2].equals("-a")) {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 3, split.length));
                 List<McModSearchResult> results = McModUtils.searchModpackBySearchPage(keyword);
-                return handleSearchResults(bot, event, results, "整合包", groupId, msgId);
+                return handleSearchResults(bot, event, results, "整合包", keyword, groupId, msgId);
             } else {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 2, split.length));
                 List<McModContent> results = McModUtils.searchModpack(keyword);
-                return handleSearchContents(bot, event, results, "整合包", groupId, msgId);
+                return handleContentResults(bot, event, results, "整合包", keyword, groupId, msgId);
             }
         }
         // 搜索作者
@@ -180,11 +215,11 @@ public class McModPlugin extends BasePlugin {
             if (split.length > 3 && split[2].equals("-a")) {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 3, split.length));
                 List<McModSearchResult> results = McModUtils.searchAuthorBySearchPage(keyword);
-                return handleSearchResults(bot, event, results, "作者", groupId, msgId);
+                return handleSearchResults(bot, event, results, "作者", keyword, groupId, msgId);
             } else {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 2, split.length));
                 List<McModContent> results = McModUtils.searchAuthor(keyword);
-                return handleSearchContents(bot, event, results, "作者", groupId, msgId);
+                return handleContentResults(bot, event, results, "作者", keyword, groupId, msgId);
             }
         }
         // 搜索用户
@@ -194,7 +229,7 @@ public class McModPlugin extends BasePlugin {
             }
             String keyword = String.join(" ", Arrays.copyOfRange(split, 2, split.length));
             List<McModSearchResult> results = McModUtils.searchUserBySearchPage(keyword);
-            return handleSearchResults(bot, event, results, "用户", groupId, msgId);
+            return handleSearchResults(bot, event, results, "用户", keyword, groupId, msgId);
         }
         // 搜索资料
         else if (ITEM_INS.contains(ins)) {
@@ -203,7 +238,7 @@ public class McModPlugin extends BasePlugin {
             }
             String keyword = String.join(" ", Arrays.copyOfRange(split, 2, split.length));
             List<McModSearchResult> results = McModUtils.searchDataBySearchPage(keyword);
-            return handleSearchResults(bot, event, results, "资料", groupId, msgId);
+            return handleSearchResults(bot, event, results, "资料", keyword, groupId, msgId);
         }
         // 搜索教程
         else if (TUTORIAL_INS.contains(ins)) {
@@ -212,47 +247,29 @@ public class McModPlugin extends BasePlugin {
             }
             String keyword = String.join(" ", Arrays.copyOfRange(split, 2, split.length));
             List<McModSearchResult> results = McModUtils.searchTutorialBySearchPage(keyword);
-            return handleSearchResults(bot, event, results, "教程", groupId, msgId);
+            return handleSearchResults(bot, event, results, "教程", keyword, groupId, msgId);
         }
         // 随便看看
         else if (MOD_RANDOM_INS.contains(ins)) {
             List<McModContent> randomMods = McModUtils.getRandomMods();
             if (CollectionUtils.isNullOrEmpty(randomMods)) {
-                String msg = "未找到相关信息，可能是被百科娘吃掉了";
-                if (BaniraUtils.isGroupIdValid(groupId)) {
-                    bot.sendGroupMsg(groupId, msg, false);
-                } else {
-                    bot.sendPrivateMsg(event.getUserId(), msg, false);
-                }
-                return bot.setMsgEmojiLikeBrokenHeart(msgId);
-            } else {
-                LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
-                List<Map<String, Object>> forwardMsg = new ArrayList<>();
-                forwardMsg.add(com.mikuac.shiro.common.utils.ShiroUtils.generateSingleMsg(
-                        event.getUserId(),
-                        event.getSender().getNickname(),
-                        event.getMessage()
-                ));
-                for (McModContent mod : randomMods) {
-                    String msg = MsgUtils.builder()
-                            .img(mod.getCoverImageUrl())
-                            .text(mod.getFormattedName()).text("\n")
-                            .text("编号: " + mod.getId()).text("\n")
-                            .text("链接: " + mod.getDetailUrl())
-                            .build();
-                    forwardMsg.add(com.mikuac.shiro.common.utils.ShiroUtils.generateSingleMsg(
-                            loginInfoEx.getUserId(),
-                            loginInfoEx.getNickname(),
-                            msg
-                    ));
-                }
-                if (BaniraUtils.isGroupIdValid(groupId)) {
-                    bot.sendGroupForwardMsg(groupId, forwardMsg);
-                } else {
-                    bot.sendPrivateForwardMsg(event.getUserId(), forwardMsg);
-                }
-                return bot.setMsgEmojiLikeOk(msgId);
+                randomMods = loadRandomModsFromCategory();
             }
+            return handleContentResults(bot, event, randomMods, "模组", "", groupId, msgId);
+        }
+        // 分类浏览
+        else if (CATEGORY_INS.contains(ins)) {
+            if (split.length < 3) {
+                return bot.setMsgEmojiLikeBrokenHeart(msgId);
+            }
+            String categoryStr = String.join(" ", Arrays.copyOfRange(split, 2, split.length));
+            EnumModCategory category = EnumModCategory.valueOfEx(categoryStr);
+            if (category == null) {
+                return bot.setMsgEmojiLikeBrokenHeart(msgId);
+            }
+            McModIndexCategoryResult indexResult = McModUtils.getIndexCategory(category);
+            List<McModContent> contents = convertIndexCategoryToContents(indexResult);
+            return handleContentResults(bot, event, contents, category.name(), category.name(), groupId, msgId);
         }
         // 用户卡片
         else if (USER_CARD_INS.contains(ins)) {
@@ -264,54 +281,216 @@ public class McModPlugin extends BasePlugin {
             if (userCard == null) {
                 return bot.setMsgEmojiLikeBrokenHeart(msgId);
             }
-            String result = "【用户卡片】\n" +
-                    "用户名: " + userCard.getUsername() + "\n" +
-                    "用户ID: " + userId + "\n" +
-                    "等级: " + (userCard.getRank() != null ? userCard.getRank() : "未知") + "\n" +
-                    "在线状态: " + (userCard.getOnline() != null ?
-                    (userCard.getOnline() == 1 ? "在线" : userCard.getOnline() == 0 ? "离线" : "隐身") : "未知");
-            if (StringUtils.isNotNullOrEmpty(userCard.getSign())) {
-                result += "\n签名: " + userCard.getSign();
-            }
-            if (BaniraUtils.isGroupIdValid(groupId)) {
-                bot.sendGroupMsg(groupId, result, false);
+            String imageMsg = McModRenderHelper.renderUserCard(userCard, userId);
+            if (StringUtils.isNullOrEmptyEx(imageMsg)) {
+                String result = "【用户卡片】\n" +
+                        "用户名: " + userCard.getUsername() + "\n" +
+                        "用户ID: " + userId + "\n" +
+                        "等级: " + (userCard.getRank() != null ? userCard.getRank() : "未知") + "\n" +
+                        "在线状态: " + (userCard.getOnline() != null ?
+                        (userCard.getOnline() == 1 ? "在线" : userCard.getOnline() == 0 ? "离线" : "隐身") : "未知");
+                if (StringUtils.isNotNullOrEmpty(userCard.getSign())) {
+                    result += "\n签名: " + userCard.getSign();
+                }
+                sendMessage(bot, event, groupId, result);
             } else {
-                bot.sendPrivateMsg(event.getUserId(), result, false);
+                sendMessage(bot, event, groupId,
+                        McModRenderHelper.wrapCardMessage(McModUtils.getUserCenterUrl(userId), imageMsg));
             }
             return bot.setMsgEmojiLikeOk(msgId);
+        }
+        // 推荐
+        else if (PUSH_INS.contains(ins)) {
+            return handlePush(bot, event, split, groupId, msgId);
+        }
+        // 投票
+        else if (VOTE_INS.contains(ins)) {
+            return handleVote(bot, event, split, groupId, msgId);
         } else {
             return bot.setMsgEmojiLikeBrokenHeart(msgId);
         }
     }
 
+    // region 互动
+
+    private boolean handlePush(BaniraBot bot, AnyMessageEvent event, String[] split, Long groupId, int msgId) {
+        if (split.length < 4) {
+            return bot.setMsgEmojiLikeBrokenHeart(msgId);
+        }
+        InteractionTarget target = parseInteractionTarget(split[2]);
+        String targetId = split[3];
+        if (target == null || !isValidTargetId(targetId)) {
+            return bot.setMsgEmojiLikeBrokenHeart(msgId);
+        }
+
+        McModPushResponse response = target == InteractionTarget.MOD
+                ? McModUtils.pushMod(groupId, targetId)
+                : McModUtils.pushModpack(groupId, targetId);
+        if (response != null && response.isSuccess()) {
+            return bot.setMsgEmojiLikeHeart(msgId);
+        }
+        LOGGER.error("Failed to push {}, id: {}", target.label(), targetId);
+        return bot.setMsgEmojiLikeBrokenHeart(msgId);
+    }
+
+    private boolean handleVote(BaniraBot bot, AnyMessageEvent event, String[] split, Long groupId, int msgId) {
+        if (split.length < 5) {
+            return bot.setMsgEmojiLikeBrokenHeart(msgId);
+        }
+        InteractionTarget target = parseInteractionTarget(split[2]);
+        String targetId = split[3];
+        EnumCardVoteType voteType = parseVoteType(split[4]);
+        if (target == null || !isValidTargetId(targetId) || voteType == null) {
+            return bot.setMsgEmojiLikeBrokenHeart(msgId);
+        }
+
+        McModCardVoteEnsureResult result = target == InteractionTarget.MOD
+                ? McModUtils.ensureModVote(groupId, targetId, voteType)
+                : McModUtils.ensureModpackVote(groupId, targetId, voteType);
+        if (result != null && result.isCooldownBlocked()) {
+            sendMessage(bot, event, groupId, "操作频繁，请稍后再试");
+            return bot.setMsgEmojiLikeBrokenHeart(msgId);
+        }
+        if (result != null && result.isFromCache()) {
+            sendMessage(bot, event, groupId, "请勿重复投票");
+            return bot.setMsgEmojiLikeBrokenHeart(msgId);
+        }
+        if (result != null && result.isSuccess()) {
+            return bot.setMsgEmojiLikeHeart(msgId);
+        }
+        LOGGER.error("Failed to vote {}, id: {}, type: {}", target.label(), targetId, voteType);
+        return bot.setMsgEmojiLikeBrokenHeart(msgId);
+    }
+
+    private enum InteractionTarget {
+        MOD("模组"),
+        MODPACK("整合包");
+
+        private final String label;
+
+        InteractionTarget(String label) {
+            this.label = label;
+        }
+
+        String label() {
+            return label;
+        }
+    }
+
+    @Nullable
+    private static InteractionTarget parseInteractionTarget(@Nullable String typeStr) {
+        if (typeStr == null) {
+            return null;
+        }
+        if (MOD_INS.contains(typeStr)) {
+            return InteractionTarget.MOD;
+        }
+        if (MOD_PACK_INS.contains(typeStr)) {
+            return InteractionTarget.MODPACK;
+        }
+        return null;
+    }
+
+    @Nullable
+    private static EnumCardVoteType parseVoteType(@Nullable String typeStr) {
+        if (typeStr == null) {
+            return null;
+        }
+        if (RED_VOTE_INS.contains(typeStr)) {
+            return EnumCardVoteType.RED;
+        }
+        if (BLACK_VOTE_INS.contains(typeStr)) {
+            return EnumCardVoteType.BLACK;
+        }
+        return null;
+    }
+
+    private static boolean isValidTargetId(@Nullable String targetId) {
+        return StringUtils.isNotNullOrEmpty(targetId) && targetId.matches("\\d+");
+    }
+
+    // endregion 互动
+
     /**
      * 处理搜索结果
      */
     private boolean handleSearchResults(BaniraBot bot, AnyMessageEvent event, List<McModSearchResult> results,
-                                        String type, Long groupId, int msgId) {
+                                        String type, String keyword, Long groupId, int msgId) {
         if (CollectionUtils.isNullOrEmpty(results)) {
-            String msg = "未找到相关" + type + "信息，可能是被百科娘吃掉了";
-            if (BaniraUtils.isGroupIdValid(groupId)) {
-                bot.sendGroupMsg(groupId, msg, false);
-            } else {
-                bot.sendPrivateMsg(event.getUserId(), msg, false);
-            }
+            sendMessage(bot, event, groupId, "未找到相关" + type + "信息，可能是被百科娘吃掉了");
             return bot.setMsgEmojiLikeBrokenHeart(msgId);
         }
 
-        // 如果结果只有一条，直接发送
         if (results.size() == 1) {
             McModSearchResult result = results.getFirst();
-            String msg = buildSearchResultMessage(result);
-            if (BaniraUtils.isGroupIdValid(groupId)) {
-                bot.sendGroupMsg(groupId, msg, false);
+            String imageMsg = McModRenderHelper.renderSearchResult(result, type);
+            if (StringUtils.isNotNullOrEmpty(imageMsg)) {
+                String message = McModRenderHelper.shouldPrefixCardLink(type)
+                        ? McModRenderHelper.wrapCardMessage(result.getLink(), imageMsg)
+                        : imageMsg;
+                sendMessage(bot, event, groupId, message);
             } else {
-                bot.sendPrivateMsg(event.getUserId(), msg, false);
+                sendMessage(bot, event, groupId, buildSearchResultMessage(result));
             }
             return bot.setMsgEmojiLikeOk(msgId);
         }
 
-        // 多条结果，使用合并转发
+        int maxResults = Math.min(results.size(), 12);
+        List<McModSearchResult> displayResults = results.subList(0, maxResults);
+        List<JsonObject> listItems = displayResults.stream().map(McModRenderHelper::toListItem).toList();
+        String imageMsg = McModRenderHelper.renderList(type, keyword, listItems);
+        if (StringUtils.isNotNullOrEmpty(imageMsg)) {
+            sendMessage(bot, event, groupId, imageMsg);
+            if (results.size() > maxResults) {
+                sendMessage(bot, event, groupId, "... 还有 " + (results.size() - maxResults) + " 条结果未显示");
+            }
+            return bot.setMsgEmojiLikeOk(msgId);
+        }
+
+        return sendSearchForward(bot, event, results, type, groupId, msgId);
+    }
+
+    /**
+     * 处理内容搜索结果
+     */
+    private boolean handleContentResults(BaniraBot bot, AnyMessageEvent event, List<McModContent> results,
+                                         String type, String keyword, Long groupId, int msgId) {
+        if (CollectionUtils.isNullOrEmpty(results)) {
+            sendMessage(bot, event, groupId, "未找到相关" + type + "信息，可能是被百科娘吃掉了");
+            return bot.setMsgEmojiLikeBrokenHeart(msgId);
+        }
+
+        if (results.size() == 1) {
+            McModContent result = results.getFirst();
+            String imageMsg = McModRenderHelper.renderContent(result, type);
+            if (StringUtils.isNotNullOrEmpty(imageMsg)) {
+                String message = McModRenderHelper.shouldPrefixCardLink(type)
+                        ? McModRenderHelper.wrapCardMessage(result.getDetailUrl(), imageMsg)
+                        : imageMsg;
+                sendMessage(bot, event, groupId, message);
+            } else {
+                sendMessage(bot, event, groupId, buildContentMessage(result));
+            }
+            return bot.setMsgEmojiLikeOk(msgId);
+        }
+
+        int maxResults = Math.min(results.size(), 12);
+        List<McModContent> displayResults = results.subList(0, maxResults);
+        List<JsonObject> listItems = displayResults.stream().map(McModRenderHelper::toListItem).toList();
+        String imageMsg = McModRenderHelper.renderList(type, keyword, listItems);
+        if (StringUtils.isNotNullOrEmpty(imageMsg)) {
+            sendMessage(bot, event, groupId, imageMsg);
+            if (results.size() > maxResults) {
+                sendMessage(bot, event, groupId, "... 还有 " + (results.size() - maxResults) + " 条结果未显示");
+            }
+            return bot.setMsgEmojiLikeOk(msgId);
+        }
+
+        return sendContentForward(bot, event, results, type, groupId, msgId);
+    }
+
+    private boolean sendSearchForward(BaniraBot bot, AnyMessageEvent event, List<McModSearchResult> results,
+                                      String type, Long groupId, int msgId) {
         LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
         List<Map<String, Object>> forwardMsg = new ArrayList<>();
         forwardMsg.add(com.mikuac.shiro.common.utils.ShiroUtils.generateSingleMsg(
@@ -325,7 +504,6 @@ public class McModPlugin extends BasePlugin {
                 "找到 " + results.size() + " 条" + type + "搜索结果："
         ));
 
-        // 限制最多显示20条
         int maxResults = Math.min(results.size(), 20);
         for (int i = 0; i < maxResults; i++) {
             McModSearchResult result = results.get(i);
@@ -345,12 +523,94 @@ public class McModPlugin extends BasePlugin {
             ));
         }
 
+        sendForward(bot, event, groupId, forwardMsg);
+        return bot.setMsgEmojiLikeOk(msgId);
+    }
+
+    private boolean sendContentForward(BaniraBot bot, AnyMessageEvent event, List<McModContent> results,
+                                       String type, Long groupId, int msgId) {
+        LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
+        List<Map<String, Object>> forwardMsg = new ArrayList<>();
+        forwardMsg.add(com.mikuac.shiro.common.utils.ShiroUtils.generateSingleMsg(
+                event.getUserId(),
+                event.getSender().getNickname(),
+                event.getMessage()
+        ));
+        forwardMsg.add(com.mikuac.shiro.common.utils.ShiroUtils.generateSingleMsg(
+                bot.getSelfId(),
+                loginInfoEx.getNickname(),
+                "找到 " + results.size() + " 条" + type + "搜索结果："
+        ));
+
+        int maxResults = Math.min(results.size(), 20);
+        for (int i = 0; i < maxResults; i++) {
+            McModContent result = results.get(i);
+            forwardMsg.add(com.mikuac.shiro.common.utils.ShiroUtils.generateSingleMsg(
+                    bot.getSelfId(),
+                    loginInfoEx.getNickname(),
+                    buildContentMessage(result)
+            ));
+        }
+
+        if (results.size() > maxResults) {
+            forwardMsg.add(com.mikuac.shiro.common.utils.ShiroUtils.generateSingleMsg(
+                    bot.getSelfId(),
+                    loginInfoEx.getNickname(),
+                    "... 还有 " + (results.size() - maxResults) + " 条结果未显示"
+            ));
+        }
+
+        sendForward(bot, event, groupId, forwardMsg);
+        return bot.setMsgEmojiLikeOk(msgId);
+    }
+
+    private static void sendMessage(BaniraBot bot, AnyMessageEvent event, Long groupId, String message) {
+        if (BaniraUtils.isGroupIdValid(groupId)) {
+            bot.sendGroupMsg(groupId, message, false);
+        } else {
+            bot.sendPrivateMsg(event.getUserId(), message, false);
+        }
+    }
+
+    private static void sendForward(BaniraBot bot, AnyMessageEvent event, Long groupId, List<Map<String, Object>> forwardMsg) {
         if (BaniraUtils.isGroupIdValid(groupId)) {
             bot.sendGroupForwardMsg(groupId, forwardMsg);
         } else {
             bot.sendPrivateForwardMsg(event.getUserId(), forwardMsg);
         }
-        return bot.setMsgEmojiLikeOk(msgId);
+    }
+
+    @Nonnull
+    private static String buildContentMessage(@Nonnull McModContent result) {
+        MsgUtils msg = MsgUtils.builder()
+                .text(result.getFormattedName()).text("\n")
+                .text("编号: " + result.getId()).text("\n")
+                .text("链接: " + result.getDetailUrl());
+        if (StringUtils.isNotNullOrEmpty(result.getCoverImageUrl())) {
+            msg.text("\n").img(result.getCoverImageUrl());
+        }
+        return msg.build();
+    }
+
+    @Nonnull
+    private static List<McModContent> convertIndexCategoryToContents(@Nullable McModIndexCategoryResult indexResult) {
+        if (indexResult == null || indexResult.getLeft() == null || CollectionUtils.isNullOrEmpty(indexResult.getLeft().getModFrames())) {
+            return List.of();
+        }
+        List<McModContent> contents = new ArrayList<>();
+        for (McModIndexCategoryModFrame frame : indexResult.getLeft().getModFrames()) {
+            contents.add(new McModContent(EnumContentType.MOD, frame.getModId(), frame.getShortName(),
+                    frame.getMainName(), frame.getSecondaryName(), frame.getCoverImageUrl(), null));
+        }
+        return contents;
+    }
+
+    @Nonnull
+    private static List<McModContent> loadRandomModsFromCategory() {
+        EnumModCategory[] categories = EnumModCategory.values();
+        EnumModCategory category = categories[new Random().nextInt(categories.length)];
+        McModIndexCategoryResult indexResult = McModUtils.getIndexCategory(category);
+        return convertIndexCategoryToContents(indexResult);
     }
 
     /**
@@ -387,81 +647,46 @@ public class McModPlugin extends BasePlugin {
         return msg.build();
     }
 
-    /**
-     * 处理搜索结果
-     */
-    private boolean handleSearchContents(BaniraBot bot, AnyMessageEvent event, List<McModContent> results,
-                                         String type, Long groupId, int msgId) {
-        if (CollectionUtils.isNullOrEmpty(results)) {
-            String msg = "未找到相关" + type + "信息，可能是被百科娘吃掉了";
-            if (BaniraUtils.isGroupIdValid(groupId)) {
-                bot.sendGroupMsg(groupId, msg, false);
-            } else {
-                bot.sendPrivateMsg(event.getUserId(), msg, false);
-            }
-            return bot.setMsgEmojiLikeBrokenHeart(msgId);
+    @GroupMessageHandler
+    public boolean postComment(BaniraBot bot, GroupMessageEvent event) {
+        if (!bot.isAdmin(event.getGroupId(), event.getSender().getUserId())) {
+            return false;
         }
 
-        // 如果结果只有一条，直接发送
-        if (results.size() == 1) {
-            McModContent result = results.getFirst();
-            String msg = MsgUtils.builder()
-                    .text(result.getFormattedName()).text("\n")
-                    .text("编号: " + result.getId()).text("\n")
-                    .text("链接: " + result.getDetailUrl())
-                    .build();
-            if (BaniraUtils.isGroupIdValid(groupId)) {
-                bot.sendGroupMsg(groupId, msg, false);
-            } else {
-                bot.sendPrivateMsg(event.getUserId(), msg, false);
-            }
-            return bot.setMsgEmojiLikeOk(msgId);
+        String message = event.getMessage();
+        String[] split = message.split("\\s+");
+        if (split.length < 5) {
+            return false;
         }
 
-        // 多条结果，使用合并转发
-        LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
-        List<Map<String, Object>> forwardMsg = new ArrayList<>();
-        forwardMsg.add(com.mikuac.shiro.common.utils.ShiroUtils.generateSingleMsg(
-                event.getUserId(),
-                event.getSender().getNickname(),
-                event.getMessage()
-        ));
-        forwardMsg.add(com.mikuac.shiro.common.utils.ShiroUtils.generateSingleMsg(
-                bot.getSelfId(),
-                loginInfoEx.getNickname(),
-                "找到 " + results.size() + " 条" + type + "搜索结果："
-        ));
-
-        // 限制最多显示20条
-        int maxResults = Math.min(results.size(), 20);
-        for (int i = 0; i < maxResults; i++) {
-            McModContent result = results.get(i);
-            String msg = MsgUtils.builder()
-                    .text(result.getFormattedName()).text("\n")
-                    .text("编号: " + result.getId()).text("\n")
-                    .text("链接: " + result.getDetailUrl())
-                    .build();
-            forwardMsg.add(com.mikuac.shiro.common.utils.ShiroUtils.generateSingleMsg(
-                    bot.getSelfId(),
-                    loginInfoEx.getNickname(),
-                    msg
-            ));
+        if (insConfig.get().mcMod().stream().noneMatch(ins -> ("/" + ins).equals(split[0]))) {
+            return false;
         }
 
-        if (results.size() > maxResults) {
-            forwardMsg.add(com.mikuac.shiro.common.utils.ShiroUtils.generateSingleMsg(
-                    bot.getSelfId(),
-                    loginInfoEx.getNickname(),
-                    "... 还有 " + (results.size() - maxResults) + " 条结果未显示"
-            ));
+        if (!COMMENT_INS.contains(split[1])) {
+            return false;
         }
 
-        if (BaniraUtils.isGroupIdValid(groupId)) {
-            bot.sendGroupForwardMsg(groupId, forwardMsg);
-        } else {
-            bot.sendPrivateForwardMsg(event.getUserId(), forwardMsg);
+        bot.setMsgEmojiLikeOk(event.getMessageId());
+
+        EnumContentType commentType = parseCommentType(split[2]);
+        String containerId = split[3];
+        if (commentType == null || StringUtils.isNullOrEmptyEx(containerId) || !containerId.matches("\\d+")) {
+            return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
         }
-        return bot.setMsgEmojiLikeOk(msgId);
+
+        String commentText = String.join(" ", Arrays.copyOfRange(split, 4, split.length));
+        if (StringUtils.isNullOrEmptyEx(commentText)) {
+            return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+        }
+
+        String htmlText = "<p>" + org.jsoup.Jsoup.parse(commentText).text() + "</p>";
+        McModCommentResponse response = McModUtils.comment(event.getGroupId(), commentType, containerId, htmlText);
+        if (response != null && response.isSuccess()) {
+            return bot.setMsgEmojiLikeHeart(event.getMessageId());
+        }
+        LOGGER.error("Failed to post comment");
+        return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
     }
 
 
@@ -563,15 +788,22 @@ public class McModPlugin extends BasePlugin {
         }
 
         try {
-            // 从消息中提取信息
-            // 格式：类型: MOD\n容器: 123456\n编号: 789012\n...
+            Matcher compactMatcher = McModCommentService.COMMENT_METADATA_PATTERN.matcher(message);
+            if (compactMatcher.find()) {
+                EnumContentType commentType = EnumContentType.valueOfEx(compactMatcher.group(1));
+                if (commentType == null) {
+                    return null;
+                }
+                return new CommentInfo(commentType, compactMatcher.group(2), compactMatcher.group(3));
+            }
+
+            // 兼容旧格式：类型/容器/编号
             String[] lines = message.split("\n");
             String commentTypeStr = null;
             String containerId = null;
             String commentId = null;
 
-            // 遍历前5行
-            for (int i = 0; i < lines.length && i < 5; i++) {
+            for (int i = 0; i < lines.length && i < 8; i++) {
                 String line = lines[i].trim();
                 if (line.startsWith("类型:")) {
                     commentTypeStr = line.substring("类型:".length()).trim();
@@ -587,7 +819,6 @@ public class McModPlugin extends BasePlugin {
                 return null;
             }
 
-            // 解析评论类型
             EnumContentType commentType = EnumContentType.valueOfEx(commentTypeStr);
             if (commentType == null) {
                 LOGGER.warn("Unknown comment type: {}", commentTypeStr);
@@ -863,7 +1094,7 @@ public class McModPlugin extends BasePlugin {
             sb.append("当前群的检测目标列表：\n");
             for (int i = 0; i < watchInfos.size(); i++) {
                 ModWatchInfo info = watchInfos.get(i);
-                String typeName = getCommentTypeName(info.commentType());
+                String typeName = McModCommentService.getCommentTypeName(info.commentType());
                 sb.append(i + 1).append(". ").append(typeName).append(" - ").append(info.containerId());
 
                 // 根据类型添加链接
@@ -887,18 +1118,6 @@ public class McModPlugin extends BasePlugin {
             LOGGER.error("Error listing containers", e);
             return bot.setMsgEmojiLikeBrokenHeart(msgId);
         }
-    }
-
-    /**
-     * 获取评论类型名称
-     */
-    private String getCommentTypeName(EnumContentType commentType) {
-        return switch (commentType) {
-            case MOD -> "模组";
-            case MODPACK -> "整合包";
-            case AUTHOR -> "作者";
-            case USER_CENTER -> "用户中心";
-        };
     }
 
 }

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCMod 用户详情卡片</title>
+    <style>
+        :root {
+            --accent: #3d8b40;
+            --accent-soft: #e8f3e9;
+            --text: #1f2933;
+            --muted: #667885;
+            --line: #e6ebef;
+            --bg: #eef1f4;
+            --card: #ffffff;
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        body { display: flex; justify-content: center; padding: 8px; }
+
+        .card {
+            width: 780px;
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 96px 1fr 170px;
+            gap: 16px;
+            padding: 20px 22px 16px;
+            background: linear-gradient(180deg, #f8fbf8 0%, #ffffff 100%);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .avatar-wrap {
+            width: 96px;
+            height: 96px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: var(--accent-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 3px solid rgba(61, 139, 64, 0.18);
+        }
+
+        .avatar-wrap img { width: 100%; height: 100%; object-fit: cover; }
+
+        .avatar-fallback {
+            font-size: 28px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .hero-main { min-width: 0; }
+
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .pill-type { background: var(--accent-soft); color: var(--accent); }
+        .pill-rank { background: #edf4ff; color: #2563eb; }
+        .pill-online { background: #e8f5e9; color: #2e7d32; }
+        .pill-offline { background: #f1f5f9; color: #64748b; }
+        .pill-hidden { background: #fff4e5; color: #c27803; }
+        .pill-group { background: #f5f3ff; color: #6d28d9; }
+
+        .username {
+            font-size: 26px;
+            font-weight: 800;
+            line-height: 1.25;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+
+        .uid, .register {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.6;
+        }
+
+        .exp-panel {
+            background: #f7faf8;
+            border: 1px solid #dbe8dc;
+            border-radius: 14px;
+            padding: 12px;
+            align-self: start;
+        }
+
+        .exp-title {
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .exp-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 11px;
+            margin-bottom: 5px;
+        }
+
+        .exp-item .label { color: var(--muted); }
+        .exp-item .value { font-weight: 700; color: var(--text); }
+
+        .sign-box {
+            margin: 0 22px 12px;
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #fafbfc;
+            border: 1px solid var(--line);
+            font-size: 13px;
+            line-height: 1.75;
+            color: #334155;
+            word-break: break-word;
+        }
+
+        .section { padding: 0 22px 12px; }
+
+        .section-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .section-head::before {
+            content: "";
+            width: 4px;
+            height: 14px;
+            border-radius: 999px;
+            background: var(--accent);
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px 14px;
+        }
+
+        .stat-item {
+            display: grid;
+            grid-template-columns: 92px 1fr;
+            gap: 8px;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--line);
+        }
+
+        .stat-item:nth-last-child(-n+2) { border-bottom: none; }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .stat-value {
+            font-size: 13px;
+            color: var(--text);
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .chip {
+            padding: 5px 11px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--accent-soft);
+            color: var(--accent);
+            border: 1px solid rgba(61, 139, 64, 0.12);
+        }
+
+        .chip-more {
+            background: #f1f5f9;
+            color: #64748b;
+            border-color: #dbe3ea;
+            font-weight: 700;
+        }
+
+        .badge-chip {
+            background: #fff7ed;
+            color: #c2410c;
+            border-color: #fed7aa;
+        }
+
+        .footer {
+            margin-top: 4px;
+            padding: 12px 22px 14px;
+            border-top: 1px solid var(--line);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--muted);
+            background: #fafbfc;
+        }
+
+        .brand { color: var(--accent); font-weight: 800; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="hero">
+        <div class="avatar-wrap" id="avatarWrap">
+            <div class="avatar-fallback" id="avatarFallback">U</div>
+        </div>
+        <div class="hero-main">
+            <div class="badge-row" id="badgeRow">
+                <span class="pill pill-type" id="typeBadge">用户</span>
+            </div>
+            <div class="username" id="username">加载中...</div>
+            <div class="uid" id="userId">ID: -</div>
+            <div class="register" id="registerTime"></div>
+        </div>
+        <div class="exp-panel" id="expPanel" style="display:none;">
+            <div class="exp-title">经验信息</div>
+            <div id="expList"></div>
+        </div>
+    </div>
+
+    <div class="sign-box" id="signBox" style="display:none;"></div>
+
+    <div class="section" id="statsSection" style="display:none;">
+        <div class="section-head"><div class="section-title">用户统计</div></div>
+        <div class="stats-grid" id="statsGrid"></div>
+    </div>
+
+    <div class="section" id="modsSection" style="display:none;">
+        <div class="section-head"><div class="section-title">开发者模组</div></div>
+        <div class="chip-row" id="developerMods"></div>
+    </div>
+
+    <div class="section" id="badgesSection" style="display:none;">
+        <div class="section-head"><div class="section-title">徽章</div></div>
+        <div class="chip-row" id="badges"></div>
+    </div>
+
+    <div class="footer">
+        <span class="brand">MCMod 用户中心</span>
+        <span id="updateTime"></span>
+    </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+    window.__mcModReady = false;
+    const MOD_LIMIT = 20;
+
+    function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value || "";
+    }
+
+    function preloadImage(url, timeoutMs) {
+        timeoutMs = timeoutMs || 5000;
+        return new Promise(resolve => {
+            if (!url) return resolve(false);
+            const img = new Image();
+            let finished = false;
+            const finish = ok => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timer);
+                resolve(ok);
+            };
+            const timer = setTimeout(() => finish(false), timeoutMs);
+            img.onload = () => finish(true);
+            img.onerror = () => finish(false);
+            img.src = url;
+        });
+    }
+
+    function renderHeader() {
+        setText("typeBadge", configData.typeName || "用户");
+        setText("username", configData.username || "未知用户");
+        setText("userId", "ID: " + (configData.userId || "-"));
+
+        const badgeRow = document.getElementById("badgeRow");
+        if (configData.rank) {
+            const rank = document.createElement("span");
+            rank.className = "pill pill-rank";
+            rank.textContent = "Lv." + configData.rank;
+            badgeRow.appendChild(rank);
+        }
+        if (configData.online) {
+            const online = document.createElement("span");
+            online.className = "pill pill-online";
+            online.textContent = configData.online;
+            if (configData.online === "离线") online.className = "pill pill-offline";
+            if (configData.online === "隐身") online.className = "pill pill-hidden";
+            badgeRow.appendChild(online);
+        }
+        if (configData.userGroup) {
+            const group = document.createElement("span");
+            group.className = "pill pill-group";
+            group.textContent = configData.userGroup;
+            badgeRow.appendChild(group);
+        }
+        if (configData.registerTime) {
+            document.getElementById("registerTime").textContent = "注册时间 " + configData.registerTime;
+        }
+    }
+
+    function renderExpPanel() {
+        const items = [];
+        if (configData.expTotal) items.push({ l: "总经验", v: configData.expTotal });
+        if (configData.expYet) items.push({ l: "当前经验", v: configData.expYet });
+        if (configData.expProgress) items.push({ l: "经验进度", v: configData.expProgress });
+        if (!items.length) return;
+        document.getElementById("expPanel").style.display = "block";
+        const container = document.getElementById("expList");
+        items.forEach(item => {
+            const el = document.createElement("div");
+            el.className = "exp-item";
+            el.innerHTML = '<span class="label">' + item.l + '</span><span class="value">' + item.v + '</span>';
+            container.appendChild(el);
+        });
+    }
+
+    function renderStats() {
+        const items = configData.stats || [];
+        if (!items.length) return;
+        document.getElementById("statsSection").style.display = "block";
+        const container = document.getElementById("statsGrid");
+        items.slice(0, 10).forEach(item => {
+            const el = document.createElement("div");
+            el.className = "stat-item";
+            el.innerHTML = '<div class="stat-label">' + (item.l || "") + '</div><div class="stat-value">' + (item.v || "") + '</div>';
+            container.appendChild(el);
+        });
+    }
+
+    function renderDeveloperMods() {
+        const items = configData.developerMods || [];
+        if (!items.length) return;
+        document.getElementById("modsSection").style.display = "block";
+        const container = document.getElementById("developerMods");
+        items.slice(0, MOD_LIMIT).forEach(text => {
+            const el = document.createElement("span");
+            el.className = "chip";
+            el.textContent = text;
+            container.appendChild(el);
+        });
+        const rest = items.length - MOD_LIMIT;
+        if (rest > 0) {
+            const more = document.createElement("span");
+            more.className = "chip chip-more";
+            more.textContent = "等" + rest + "项";
+            container.appendChild(more);
+        }
+    }
+
+    function renderBadges() {
+        const items = configData.badges || [];
+        if (!items.length) return;
+        document.getElementById("badgesSection").style.display = "block";
+        const container = document.getElementById("badges");
+        items.slice(0, 6).forEach(item => {
+            const el = document.createElement("span");
+            el.className = "chip badge-chip";
+            el.textContent = item.t || item.title || "";
+            container.appendChild(el);
+        });
+    }
+
+    function setUpdateTime() {
+        const now = new Date();
+        setText("updateTime", now.getFullYear() + "-" +
+            String(now.getMonth() + 1).padStart(2, "0") + "-" +
+            String(now.getDate()).padStart(2, "0") + " " +
+            String(now.getHours()).padStart(2, "0") + ":" +
+            String(now.getMinutes()).padStart(2, "0"));
+    }
+
+    async function loadAvatar() {
+        const avatar = configData.avatar;
+        if (!avatar) {
+            document.getElementById("avatarFallback").textContent =
+                (configData.username || "U").substring(0, 1).toUpperCase();
+            return;
+        }
+        if (avatar.startsWith("data:") || await preloadImage(avatar)) {
+            document.getElementById("avatarWrap").innerHTML = '<img src="' + avatar + '" alt="avatar">';
+            return;
+        }
+        document.getElementById("avatarFallback").textContent =
+            (configData.username || "U").substring(0, 1).toUpperCase();
+    }
+
+    (async function render() {
+        try {
+            renderHeader();
+            renderExpPanel();
+            if (configData.sign) {
+                document.getElementById("signBox").style.display = "block";
+                setText("signBox", configData.sign);
+            }
+            renderStats();
+            renderDeveloperMods();
+            renderBadges();
+            setUpdateTime();
+            window.__mcModReady = true;
+            await loadAvatar();
+        } catch (error) {
+            setUpdateTime();
+            window.__mcModReady = true;
+        }
+    })();
+</script>
+</body>
+</html>

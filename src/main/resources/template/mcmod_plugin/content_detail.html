@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCMod 百科详情卡片</title>
+    <style>
+        :root {
+            --accent: #3d8b40;
+            --accent-soft: #e8f3e9;
+            --text: #1f2933;
+            --muted: #667885;
+            --line: #e6ebef;
+            --panel: #2f3438;
+            --bg: #eef1f4;
+            --card: #ffffff;
+            --radius: 16px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        body { display: flex; justify-content: center; padding: 8px; }
+
+        .card {
+            width: 780px;
+            background: var(--card);
+            border-radius: var(--radius);
+            box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 88px 1fr 188px;
+            gap: 16px;
+            padding: 20px 22px 16px;
+            background: linear-gradient(180deg, #f8fbf8 0%, #ffffff 100%);
+            border-bottom: 1px solid var(--line);
+        }
+
+        .icon-wrap {
+            width: 88px;
+            height: 88px;
+            border-radius: 20px;
+            overflow: hidden;
+            background: var(--accent-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(61, 139, 64, 0.15);
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.65);
+        }
+
+        .icon-wrap img { width: 100%; height: 100%; object-fit: cover; }
+
+        .icon-fallback {
+            font-size: 22px;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+        }
+
+        .hero-main { min-width: 0; }
+
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            margin-bottom: 10px;
+        }
+
+        .pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 3px 9px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            line-height: 1.2;
+            border: 1px solid transparent;
+        }
+
+        .pill-type {
+            background: var(--accent-soft);
+            color: var(--accent);
+            border-color: rgba(61, 139, 64, 0.12);
+        }
+
+        .pill-cat {
+            background: #fff4f7;
+            color: #9b1c42;
+            border-color: rgba(155, 28, 66, 0.12);
+        }
+
+        .title-line {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        .short-badge {
+            padding: 2px 8px;
+            border-radius: 8px;
+            background: var(--accent);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+        }
+
+        .title {
+            font-size: 24px;
+            font-weight: 800;
+            line-height: 1.25;
+            color: var(--text);
+            word-break: break-word;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .stats-panel {
+            background: #f7faf8;
+            border: 1px solid #dbe8dc;
+            color: var(--text);
+            border-radius: 14px;
+            padding: 14px 14px 12px;
+            align-self: start;
+        }
+
+        .score-main {
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1;
+            color: var(--accent);
+        }
+
+        .score-comment {
+            margin-top: 4px;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .stats-list {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid var(--line);
+        }
+
+        .stats-item {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 11px;
+            margin-bottom: 5px;
+        }
+
+        .stats-item .label { color: var(--muted); }
+        .stats-item .value { font-weight: 700; color: var(--text); }
+
+        .info-panel {
+            padding: 14px 22px 8px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 8px 14px;
+        }
+
+        .info-item {
+            display: grid;
+            grid-template-columns: 88px 1fr;
+            gap: 8px;
+            align-items: start;
+            padding: 8px 0;
+            border-bottom: 1px dashed var(--line);
+        }
+
+        .info-item:nth-last-child(-n+2) {
+            border-bottom: none;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: var(--muted);
+            line-height: 1.5;
+        }
+
+        .info-value {
+            font-size: 13px;
+            color: var(--text);
+            line-height: 1.5;
+            word-break: break-word;
+        }
+
+        .vote-bar {
+            margin: 0 22px 12px;
+            padding: 10px 12px;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: #fafbfc;
+        }
+
+        .vote-track {
+            display: flex;
+            height: 8px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: #eceff1;
+            margin-bottom: 8px;
+        }
+
+        .vote-red { background: linear-gradient(90deg, #ef5350, #e53935); }
+        .vote-black { background: #616161; }
+
+        .vote-text {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--muted);
+        }
+
+        .section {
+            padding: 0 22px 12px;
+        }
+
+        .section-head {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .section-head::before {
+            content: "";
+            width: 4px;
+            height: 14px;
+            border-radius: 999px;
+            background: var(--accent);
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--text);
+        }
+
+        .tag-row, .chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 700;
+            background: #edf4ff;
+            color: #2563eb;
+        }
+
+        .chip {
+            padding: 5px 11px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            background: var(--accent-soft);
+            color: var(--accent);
+            border: 1px solid rgba(61, 139, 64, 0.12);
+        }
+
+        .chip-more {
+            background: #f1f5f9;
+            color: #64748b;
+            border-color: #dbe3ea;
+            font-weight: 700;
+        }
+
+        .version-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .version-group {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 12px;
+            border-radius: 12px;
+            background: #fafbfc;
+            border: 1px solid var(--line);
+        }
+
+        .version-loader-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 11px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 800;
+            color: var(--accent);
+            background: var(--accent-soft);
+            border: 1px solid rgba(61, 139, 64, 0.16);
+            flex-shrink: 0;
+        }
+
+        .version-pill {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            background: #ffffff;
+            border: 1px solid #dbe3ea;
+            line-height: 1.2;
+        }
+
+        .authors-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+        }
+
+        .author-card {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            padding: 8px;
+            border-radius: 12px;
+            background: #fafbfc;
+            border: 1px solid var(--line);
+            min-width: 0;
+        }
+
+        .author-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            overflow: hidden;
+            background: var(--accent-soft);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            font-size: 12px;
+            font-weight: 800;
+            color: var(--accent);
+        }
+
+        .author-avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .author-name {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .author-role {
+            font-size: 10px;
+            color: var(--muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .description {
+            padding: 12px 14px;
+            border-radius: 12px;
+            background: #fafbfc;
+            border: 1px solid var(--line);
+            font-size: 13px;
+            line-height: 1.75;
+            color: #334155;
+            word-break: break-word;
+            white-space: pre-wrap;
+            display: -webkit-box;
+            -webkit-line-clamp: 4;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .footer {
+            margin-top: 4px;
+            padding: 12px 22px 14px;
+            border-top: 1px solid var(--line);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 11px;
+            color: var(--muted);
+            background: #fafbfc;
+        }
+
+        .brand {
+            color: var(--accent);
+            font-weight: 800;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="hero">
+        <div class="icon-wrap" id="iconWrap">
+            <div class="icon-fallback" id="iconFallback">MC</div>
+        </div>
+        <div class="hero-main">
+            <div class="badge-row" id="badgeRow">
+                <span class="pill pill-type" id="typeBadge">模组</span>
+            </div>
+            <div class="title-line">
+                <span class="short-badge" id="shortBadge" style="display:none;"></span>
+                <div class="title" id="title">加载中...</div>
+            </div>
+            <div class="subtitle" id="subtitle"></div>
+        </div>
+        <div class="stats-panel" id="statsPanel" style="display:none;">
+            <div class="score-main" id="scoreMain">-</div>
+            <div class="score-comment" id="scoreComment"></div>
+            <div class="stats-list" id="statsList"></div>
+        </div>
+    </div>
+
+    <div class="info-panel">
+        <div class="info-grid" id="infoGrid"></div>
+    </div>
+
+    <div class="vote-bar" id="voteBar" style="display:none;">
+        <div class="vote-track" id="voteTrack"></div>
+        <div class="vote-text">
+            <span id="redVoteText"></span>
+            <span id="blackVoteText"></span>
+        </div>
+    </div>
+
+    <div class="section" id="tagsSection" style="display:none;">
+        <div class="section-head"><div class="section-title">标签</div></div>
+        <div class="tag-row" id="tags"></div>
+    </div>
+
+    <div class="section" id="versionsSection" style="display:none;">
+        <div class="section-head"><div class="section-title">支持版本</div></div>
+        <div class="version-list" id="versions"></div>
+    </div>
+
+    <div class="section" id="authorsSection" style="display:none;">
+        <div class="section-head"><div class="section-title">开发团队</div></div>
+        <div class="authors-grid" id="authorDetails"></div>
+    </div>
+
+    <div class="section" id="relatedSection" style="display:none;">
+        <div class="section-head"><div class="section-title">联动模组</div></div>
+        <div class="chip-row" id="relatedMods"></div>
+    </div>
+
+    <div class="section" id="descSection" style="display:none;">
+        <div class="section-head"><div class="section-title" id="descTitle">模组介绍</div></div>
+        <div class="description" id="description"></div>
+    </div>
+
+    <div class="footer">
+        <span class="brand">MCMod 百科</span>
+        <span id="updateTime"></span>
+    </div>
+</div>
+
+<script src="config.js"></script>
+<script>
+    window.__mcModReady = false;
+
+    const OFFICIAL_TAGS = ["活跃", "开源", "稳定", "闭源", "停更", "弃坑", "半弃坑", "Beta"];
+    const LOADER_NAMES = ["NeoForge", "Forge", "Fabric", "Quilt", "LiteLoader", "Rift", "DataPack"];
+    const MC_VERSION_PATTERN = /\d+\.\d+(?:\.\d+)?(?:-[\w.]+)?/g;
+
+    function preloadImage(url, timeoutMs) {
+        timeoutMs = timeoutMs || 3000;
+        return new Promise(resolve => {
+            if (!url) return resolve(false);
+            const img = new Image();
+            let finished = false;
+            const finish = ok => {
+                if (finished) return;
+                finished = true;
+                clearTimeout(timer);
+                resolve(ok);
+            };
+            const timer = setTimeout(() => finish(false), timeoutMs);
+            img.onload = () => finish(true);
+            img.onerror = () => finish(false);
+            img.src = url;
+        });
+    }
+
+    function setText(id, value) {
+        const el = document.getElementById(id);
+        if (el) el.textContent = value || "";
+    }
+
+    function getAbbrev(text) {
+        if (!text) return "MC";
+        return text.length > 4 ? text.substring(0, 4) : text;
+    }
+
+    function stripShortPrefix(title) {
+        return (title || "").replace(/^\[[^\]]+]\s*/, "").trim();
+    }
+
+    function renderHeader() {
+        setText("typeBadge", configData.typeName || "模组");
+
+        if (configData.shortName) {
+            const badge = document.getElementById("shortBadge");
+            badge.style.display = "inline-flex";
+            badge.textContent = configData.shortName;
+        }
+
+        let displayTitle = stripShortPrefix(configData.title || "");
+        if (!displayTitle) displayTitle = configData.title || "";
+        setText("title", displayTitle);
+
+        const subtitle = configData.subTitle || "";
+        const subtitleEl = document.getElementById("subtitle");
+        if (subtitle && subtitle !== displayTitle && !displayTitle.endsWith(subtitle)) {
+            subtitleEl.style.display = "block";
+            setText("subtitle", subtitle);
+        } else {
+            subtitleEl.style.display = "none";
+        }
+
+        const badgeRow = document.getElementById("badgeRow");
+        (configData.tags || []).forEach(tag => {
+            const text = tag.t || tag.text || "";
+            if (!text || !OFFICIAL_TAGS.includes(text)) return;
+            const el = document.createElement("span");
+            el.className = "pill";
+            el.textContent = text;
+            el.style.background = tag.bg || "#e8f3e9";
+            el.style.color = tag.c || "#3d8b40";
+            badgeRow.appendChild(el);
+        });
+        (configData.categories || []).forEach(text => {
+            const el = document.createElement("span");
+            el.className = "pill pill-cat";
+            el.textContent = text;
+            badgeRow.appendChild(el);
+        });
+    }
+
+    function renderInfoGrid() {
+        const items = configData.metaItems || [];
+        if (!items.length) {
+            document.querySelector(".info-panel").style.display = "none";
+            return;
+        }
+        const container = document.getElementById("infoGrid");
+        items.forEach(item => {
+            const el = document.createElement("div");
+            el.className = "info-item";
+            el.innerHTML = '<div class="info-label">' + (item.l || "") + '</div><div class="info-value">' + (item.v || "") + '</div>';
+            container.appendChild(el);
+        });
+    }
+
+    function renderStatsPanel() {
+        const stats = [];
+        if (configData.yIndex) stats.push({ l: "昨日指数", v: configData.yIndex });
+        if (configData.yIndexAvg) stats.push({ l: "昨日平均", v: configData.yIndexAvg });
+        if (configData.viewNum) stats.push({ l: "总浏览", v: configData.viewNum });
+        if (configData.fillRate && configData.fillRate !== "--") stats.push({ l: "资料填充率", v: configData.fillRate });
+
+        if (!configData.score && !stats.length) return;
+        document.getElementById("statsPanel").style.display = "block";
+        setText("scoreMain", configData.score || "-");
+        setText("scoreComment", configData.scoreComment || "");
+        const list = document.getElementById("statsList");
+        stats.forEach(item => {
+            const el = document.createElement("div");
+            el.className = "stats-item";
+            el.innerHTML = '<span class="label">' + item.l + '</span><span class="value">' + item.v + '</span>';
+            list.appendChild(el);
+        });
+    }
+
+    function parseVotePercent(text) {
+        const match = (text || "").match(/\((\d+)%\)/);
+        return match ? parseInt(match[1], 10) : 0;
+    }
+
+    function renderVoteBar() {
+        if (!configData.redVote && !configData.blackVote) return;
+        document.getElementById("voteBar").style.display = "block";
+        setText("redVoteText", configData.redVote || "");
+        setText("blackVoteText", configData.blackVote || "");
+        const track = document.getElementById("voteTrack");
+        const red = parseVotePercent(configData.redVote);
+        const black = parseVotePercent(configData.blackVote);
+        if (red > 0) {
+            const redEl = document.createElement("div");
+            redEl.className = "vote-red";
+            redEl.style.width = red + "%";
+            track.appendChild(redEl);
+        }
+        if (black > 0) {
+            const blackEl = document.createElement("div");
+            blackEl.className = "vote-black";
+            blackEl.style.width = black + "%";
+            track.appendChild(blackEl);
+        }
+    }
+
+    function renderTags() {
+        const labelTags = (configData.tags || []).filter(tag => {
+            const text = tag.t || tag.text || "";
+            return text && !OFFICIAL_TAGS.includes(text);
+        });
+        if (!labelTags.length) return;
+        document.getElementById("tagsSection").style.display = "block";
+        const container = document.getElementById("tags");
+        labelTags.forEach(tag => {
+            const el = document.createElement("span");
+            el.className = "tag";
+            el.textContent = tag.t || tag.text || "";
+            container.appendChild(el);
+        });
+    }
+
+    function splitVersionPills(item) {
+        if (item.vv && item.vv.length) {
+            return item.vv.filter(Boolean);
+        }
+        const tokens = [];
+        const source = item.v || "";
+        let match;
+        MC_VERSION_PATTERN.lastIndex = 0;
+        while ((match = MC_VERSION_PATTERN.exec(source)) !== null) {
+            if (!tokens.includes(match[0])) {
+                tokens.push(match[0]);
+            }
+        }
+        if (tokens.length) {
+            return tokens;
+        }
+        return source.split(/[,，;；\s]+/)
+            .map(v => v.trim())
+            .filter(v => v && !LOADER_NAMES.some(name => name.toLowerCase() === v.toLowerCase()));
+    }
+
+    function renderVersions() {
+        const items = configData.versions || [];
+        if (!items.length) return;
+        document.getElementById("versionsSection").style.display = "block";
+        const container = document.getElementById("versions");
+        items.forEach(item => {
+            const pills = splitVersionPills(item);
+            if (!pills.length) return;
+            const group = document.createElement("div");
+            group.className = "version-group";
+            const loader = document.createElement("span");
+            loader.className = "version-loader-pill";
+            loader.textContent = item.l || "版本";
+            group.appendChild(loader);
+            pills.forEach(version => {
+                const pill = document.createElement("span");
+                pill.className = "version-pill";
+                pill.textContent = version;
+                group.appendChild(pill);
+            });
+            container.appendChild(group);
+        });
+    }
+
+    function truncateText(text, maxLen) {
+        if (!text) return "";
+        if (text.length <= maxLen) return text;
+        return text.substring(0, maxLen - 1) + "…";
+    }
+
+    function setAvatarImage(avatarEl, url) {
+        if (!url) return;
+        avatarEl.innerHTML = '<img src="' + url + '" alt="avatar">';
+    }
+
+    async function loadIcon() {
+        const icon = configData.icon || configData.cover;
+        if (!icon) return;
+        if (icon.startsWith("data:") || await preloadImage(icon, 5000)) {
+            document.getElementById("iconWrap").innerHTML = '<img src="' + icon + '" alt="icon">';
+        }
+    }
+
+    async function renderAuthors() {
+        const items = configData.authorDetails || [];
+        if (!items.length && !(configData.authors || []).length) return;
+        document.getElementById("authorsSection").style.display = "block";
+        const container = document.getElementById("authorDetails");
+        const tasks = [];
+        if (items.length) {
+            items.forEach(item => {
+                const card = document.createElement("div");
+                card.className = "author-card";
+                const avatar = document.createElement("div");
+                avatar.className = "author-avatar";
+                avatar.textContent = getAbbrev(item.a || item.n);
+                const body = document.createElement("div");
+                body.innerHTML = '<div class="author-name">' + (item.n || "") + '</div><div class="author-role">' + (item.r || "") + '</div>';
+                card.appendChild(avatar);
+                card.appendChild(body);
+                container.appendChild(card);
+                if (item.i) {
+                    if (item.i.startsWith("data:")) {
+                        setAvatarImage(avatar, item.i);
+                    } else {
+                        tasks.push(preloadImage(item.i, 5000).then(ok => {
+                            if (ok) setAvatarImage(avatar, item.i);
+                        }));
+                    }
+                }
+            });
+            await Promise.all(tasks);
+            return;
+        }
+        (configData.authors || []).forEach(name => {
+            const card = document.createElement("div");
+            card.className = "author-card";
+            card.innerHTML = '<div class="author-avatar">' + getAbbrev(name) + '</div><div><div class="author-name">' + name + '</div></div>';
+            container.appendChild(card);
+        });
+    }
+
+    const RELATED_MOD_LIMIT = 20;
+
+    function renderRelatedMods() {
+        const items = configData.relatedMods || [];
+        if (!items.length) return;
+        document.getElementById("relatedSection").style.display = "block";
+        const container = document.getElementById("relatedMods");
+        items.slice(0, RELATED_MOD_LIMIT).forEach(text => {
+            const el = document.createElement("span");
+            el.className = "chip";
+            el.textContent = text;
+            container.appendChild(el);
+        });
+        const restCount = items.length - RELATED_MOD_LIMIT;
+        if (restCount > 0) {
+            const more = document.createElement("span");
+            more.className = "chip chip-more";
+            more.textContent = "等" + restCount + "项";
+            container.appendChild(more);
+        }
+    }
+
+    function renderChips(containerId, sectionId, items) {
+        if (!items || !items.length) return;
+        document.getElementById(sectionId).style.display = "block";
+        const container = document.getElementById(containerId);
+        items.forEach(text => {
+            const el = document.createElement("span");
+            el.className = "chip";
+            el.textContent = text;
+            container.appendChild(el);
+        });
+    }
+
+    function setUpdateTime() {
+        const now = new Date();
+        setText("updateTime", now.getFullYear() + "-" +
+            String(now.getMonth() + 1).padStart(2, "0") + "-" +
+            String(now.getDate()).padStart(2, "0") + " " +
+            String(now.getHours()).padStart(2, "0") + ":" +
+            String(now.getMinutes()).padStart(2, "0"));
+    }
+
+    (async function render() {
+        try {
+            renderHeader();
+            renderInfoGrid();
+            renderStatsPanel();
+            renderVoteBar();
+            renderTags();
+            renderVersions();
+            renderRelatedMods();
+            if (configData.description) {
+                document.getElementById("descSection").style.display = "block";
+                setText("descTitle", configData.descTitle || "模组介绍");
+                setText("description", truncateText(configData.description, 220));
+            }
+            document.getElementById("iconFallback").textContent =
+                configData.shortName || configData.abbrev || getAbbrev(stripShortPrefix(configData.title));
+            setUpdateTime();
+            window.__mcModReady = true;
+            await Promise.all([loadIcon(), renderAuthors()]);
+        } catch (error) {
+            setUpdateTime();
+            window.__mcModReady = true;
+        }
+    })();
+</script>
+</body>
+</html>

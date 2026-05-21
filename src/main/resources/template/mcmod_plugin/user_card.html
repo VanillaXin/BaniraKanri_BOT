@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCMod 用户卡片</title>
+    <style>
+        :root {
+            --primary: #43a047;
+            --primary-dark: #2e7d32;
+            --bg: linear-gradient(135deg, #f1f8e9 0%, #e8f5e9 100%);
+            --card-bg: #ffffff;
+            --text: #2e4a2f;
+            --text-muted: #6b8f6e;
+            --radius: 18px;
+            --shadow: 0 12px 32px rgba(67, 160, 71, 0.18);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body {
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        body { display: flex; justify-content: center; padding: 12px; }
+
+        .card {
+            width: 96%;
+            background: var(--card-bg);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card::before {
+            content: "";
+            display: block;
+            height: 6px;
+            background: linear-gradient(90deg, #43a047, #81c784);
+        }
+
+        .header {
+            display: flex;
+            gap: 18px;
+            padding: 24px;
+            align-items: center;
+        }
+
+        .avatar {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            overflow: hidden;
+            border: 3px solid rgba(67, 160, 71, 0.25);
+            background: #e8f5e9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            flex-shrink: 0;
+        }
+
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+        .info { flex: 1; min-width: 0; }
+
+        .name {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--primary-dark);
+            margin-bottom: 6px;
+            word-break: break-word;
+        }
+
+        .uid { font-size: 13px; color: var(--text-muted); margin-bottom: 10px; }
+
+        .tags { display: flex; gap: 8px; flex-wrap: wrap; }
+
+        .tag {
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .tag-rank { background: rgba(67, 160, 71, 0.12); color: var(--primary-dark); }
+        .tag-online { background: #e8f5e9; color: #388e3c; }
+        .tag-offline { background: #f5f5f5; color: #757575; }
+
+        .sign {
+            margin: 0 24px 16px;
+            padding: 14px 16px;
+            background: rgba(67, 160, 71, 0.08);
+            border-radius: 12px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text);
+            word-break: break-word;
+        }
+
+        .exp {
+            margin: 0 24px 20px;
+            display: flex;
+            gap: 16px;
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        .exp-item strong { color: var(--primary-dark); }
+
+        .footer {
+            border-top: 1px solid #e8f5e9;
+            padding: 12px 24px;
+            font-size: 12px;
+            color: var(--text-muted);
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="header">
+        <div class="avatar" id="avatarWrap"><span id="avatarFallback">U</span></div>
+        <div class="info">
+            <div class="name" id="username">用户</div>
+            <div class="uid" id="userId">ID: -</div>
+            <div class="tags">
+                <span class="tag tag-rank" id="rankTag">等级 -</span>
+                <span class="tag tag-online" id="onlineTag">未知</span>
+            </div>
+        </div>
+    </div>
+    <div class="sign" id="signBox" style="display:none;"></div>
+    <div class="exp" id="expBox" style="display:none;">
+        <div class="exp-item">总经验 <strong id="expTotal">-</strong></div>
+        <div class="exp-item">当前 <strong id="expYet">-</strong></div>
+        <div class="exp-item">进度 <strong id="expProgress">-</strong></div>
+    </div>
+    <div class="footer">MCMod 用户卡片</div>
+</div>
+
+<script src="config.js"></script>
+<script>
+    window.__mcModReady = false;
+
+    function preloadImage(url) {
+        return new Promise(resolve => {
+            if (!url) return resolve(false);
+            const img = new Image();
+            img.onload = () => resolve(true);
+            img.onerror = () => resolve(false);
+            img.src = url;
+        });
+    }
+
+    (async function render() {
+        try {
+            document.getElementById("username").textContent = configData.username || "未知用户";
+            document.getElementById("userId").textContent = "ID: " + (configData.userId || "-");
+            document.getElementById("rankTag").textContent = "等级 " + (configData.rank || "未知");
+            const onlineTag = document.getElementById("onlineTag");
+            onlineTag.textContent = configData.online || "未知";
+            if (configData.online === "离线") {
+                onlineTag.className = "tag tag-offline";
+            }
+
+            if (configData.sign) {
+                const signBox = document.getElementById("signBox");
+                signBox.style.display = "block";
+                signBox.textContent = configData.sign;
+            }
+
+            if (configData.expTotal || configData.expYet || configData.expProgress) {
+                document.getElementById("expBox").style.display = "flex";
+                document.getElementById("expTotal").textContent = configData.expTotal || "-";
+                document.getElementById("expYet").textContent = configData.expYet || "-";
+                document.getElementById("expProgress").textContent = configData.expProgress || "-";
+            }
+
+            const avatar = configData.avatar;
+            if (avatar && await preloadImage(avatar)) {
+                document.getElementById("avatarWrap").innerHTML =
+                    '<img src="' + avatar + '" alt="avatar">';
+            } else {
+                document.getElementById("avatarFallback").textContent =
+                    (configData.username || "U").substring(0, 1).toUpperCase();
+            }
+        } finally {
+            window.__mcModReady = true;
+        }
+    })();
+</script>
+</body>
+</html>
