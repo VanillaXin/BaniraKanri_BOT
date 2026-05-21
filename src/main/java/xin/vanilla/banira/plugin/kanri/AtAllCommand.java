@@ -28,7 +28,7 @@ public class AtAllCommand implements KanriHandler {
     @Nonnull
     @Override
     public HelpTopic getHelpSubTopic() {
-        String detail = "用法：\n" + BaniraUtils.getKanriInsPrefixWithSpace() + getAction();
+        String detail = "用法：\n" + BaniraUtils.getKanriInsPrefixWithSpace() + HelpTopics.formatAliasChoices(getAction());
         return HelpTopics.of("艾特全体", "艾特全体成员。", 17, getAction()).detail(detail);
     }
 

@@ -2,6 +2,7 @@ package xin.vanilla.banira.plugin.help;
 
 import jakarta.annotation.Nonnull;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
+import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.Collection;
@@ -93,6 +94,16 @@ public final class HelpTopics {
             return list.getFirst();
         }
         return "<" + String.join(", ", list) + ">";
+    }
+
+    @Nonnull
+    public static String formatLocatorKeys(@Nonnull List<KeyValue<String, String>> locator) {
+        return formatAliasChoices(locator.stream().map(KeyValue::getKey).toList());
+    }
+
+    @Nonnull
+    public static String formatLocatorValues(@Nonnull List<KeyValue<String, String>> locator) {
+        return formatAliasChoices(locator.stream().map(KeyValue::getValue).toList());
     }
 
 }

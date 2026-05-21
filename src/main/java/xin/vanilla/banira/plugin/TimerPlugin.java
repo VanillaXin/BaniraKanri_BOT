@@ -53,14 +53,17 @@ public class TimerPlugin extends BasePlugin {
         String prefix = BaniraUtils.getInsPrefixWithSpace();
         List<String> aliases = timerIns.locator().stream().map(kv -> kv.getKey()).toList();
         HelpTopic topic = HelpTopics.of("定时任务", "按 Cron 表达式定时发送消息。", 2, aliases);
-        String locatorKeys = timerIns.locator().stream().map(kv -> kv.getKey() + " ... " + kv.getValue()).toList().toString();
+        String locatorKeyHint = HelpTopics.formatLocatorKeys(timerIns.locator());
+        String locatorValueHint = HelpTopics.formatLocatorValues(timerIns.locator());
+        String delHint = HelpTopics.formatAliasChoices(base.del());
+        String listHint = HelpTopics.formatAliasChoices(base.list());
         topic.child(HelpTopics.opAdd(base,
-                "用法：\n" + prefix + "<" + locatorKeys + "> <Cron表达式> <回复内容>"));
+                "用法：\n" + prefix + locatorKeyHint + " <Cron表达式> " + locatorValueHint + " <回复内容>"));
         topic.child(HelpTopics.opDel(base,
-                "用法1：(根据编号删除)\n" + prefix + aliases + " " + base.del() + " <定时任务编号> ...\n\n"
-                        + "用法2：(回复添加成功的响应消息)\n" + prefix + aliases + " " + base.del()));
+                "用法1：(根据编号删除)\n" + prefix + locatorKeyHint + " " + delHint + " <定时任务编号> ...\n\n"
+                        + "用法2：(回复添加成功的响应消息)\n" + prefix + locatorKeyHint + " " + delHint));
         topic.child(HelpTopics.opList(base,
-                "用法：\n" + prefix + aliases + " " + base.list() + " [<页数>] [<关键词>]"));
+                "用法：\n" + prefix + locatorKeyHint + " " + listHint + " [<页数>] [<关键词>]"));
         topics.add(topic);
     }
 

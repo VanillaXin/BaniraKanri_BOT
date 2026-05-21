@@ -31,9 +31,12 @@ public class AdminCommand implements KanriHandler {
     public HelpTopic getHelpSubTopic() {
         String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
         BaseInstructionsConfig base = insConfig.get().base();
+        String actionHint = HelpTopics.formatAliasChoices(getAction());
+        String addHint = HelpTopics.formatAliasChoices(base.add());
+        String delHint = HelpTopics.formatAliasChoices(base.del());
         return HelpTopics.of("增删群管理员", "增加或移除群管理员。", 20, getAction())
-                .child(HelpTopics.opAdd(base, "用法：\n" + prefix + getAction() + " " + base.add() + " <QQ号|艾特> ..."))
-                .child(HelpTopics.opDel(base, "用法：\n" + prefix + getAction() + " " + base.del() + " <QQ号|艾特> ..."));
+                .child(HelpTopics.opAdd(base, "用法：\n" + prefix + actionHint + " " + addHint + " <QQ号|艾特> ..."))
+                .child(HelpTopics.opDel(base, "用法：\n" + prefix + actionHint + " " + delHint + " <QQ号|艾特> ..."));
     }
 
     @Override

@@ -77,18 +77,19 @@ public class WifePlugin extends BasePlugin {
         String prefix = BaniraUtils.getInsPrefixWithSpace();
         List<String> wife = insConfig.get().wife();
         List<WifeConfig> wifeConfig = getWifeConfig(groupId);
+        String wifeHint = HelpTopics.formatAliasChoices(wife);
         HelpTopic topic = HelpTopics.of("抽老婆", "抽取每日群友老婆。", 99, wife);
         topic.child(HelpTopics.sub("抽取", "按群规则抽取老婆。", 1, wife,
                 "可用规则：\n" + wifeConfig.stream().map(WifeConfig::reg).sorted().toList()));
         topic.child(HelpTopics.sub("年度统计", "查看抽老婆年度统计。", 2, base.status(),
-                prefix + wife + " " + base.status()));
-        topic.child(HelpTopics.opEnable(base, prefix + wife + " " + base.enable()));
-        topic.child(HelpTopics.opDisable(base, prefix + wife + " " + base.disable()));
+                prefix + wifeHint + " " + HelpTopics.formatAliasChoices(base.status())));
+        topic.child(HelpTopics.opEnable(base, prefix + wifeHint + " " + HelpTopics.formatAliasChoices(base.enable())));
+        topic.child(HelpTopics.opDisable(base, prefix + wifeHint + " " + HelpTopics.formatAliasChoices(base.disable())));
         topic.child(HelpTopics.opAdd(base,
-                prefix + wife + " " + base.add() + "\n<正则表达式>\n[<昵称表达式>]\n[<抽取成功提示>]\n[<抽取失败提示>]"));
+                prefix + wifeHint + " " + HelpTopics.formatAliasChoices(base.add()) + "\n<正则表达式>\n[<昵称表达式>]\n[<抽取成功提示>]\n[<抽取失败提示>]"));
         topic.child(HelpTopics.opDel(base,
-                prefix + wife + " " + base.del() + "\n<正则表达式>\n[<昵称表达式>]\n[<抽取成功提示>]\n[<抽取失败提示>]"));
-        topic.child(HelpTopics.opList(base, prefix + wife + " " + base.list()));
+                prefix + wifeHint + " " + HelpTopics.formatAliasChoices(base.del()) + "\n<正则表达式>\n[<昵称表达式>]\n[<抽取成功提示>]\n[<抽取失败提示>]"));
+        topic.child(HelpTopics.opList(base, prefix + wifeHint + " " + HelpTopics.formatAliasChoices(base.list())));
         topics.add(topic);
     }
 

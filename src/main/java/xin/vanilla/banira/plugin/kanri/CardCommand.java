@@ -33,8 +33,9 @@ public class CardCommand implements KanriHandler {
     @Override
     public HelpTopic getHelpSubTopic() {
         String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
-        String detail = "用法1：\n" + prefix + getAction() + " <QQ号|艾特> ... <名片>\n\n"
-                + "用法2：(回复要设置的内容)\n" + prefix + getAction();
+        String actionHint = HelpTopics.formatAliasChoices(getAction());
+        String detail = "用法1：\n" + prefix + actionHint + " <QQ号|艾特> ... <名片>\n\n"
+                + "用法2：(回复要设置的内容)\n" + prefix + actionHint;
         return HelpTopics.of("设置群名片", "设置群成员名片。", 14, getAction()).detail(detail);
     }
 

@@ -34,10 +34,11 @@ public class RecallCommand implements KanriHandler {
     @Override
     public HelpTopic getHelpSubTopic() {
         String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
-        String detail = "用法1：(回复要撤回的消息)\n" + prefix + getAction() + "\n\n"
-                + "用法2：(撤回当前消息前的第n条消息)\n" + prefix + getAction() + " <n> ...\n\n"
-                + "用法3：(撤回当前消息前的第n~m条消息)\n" + prefix + getAction() + " <n:m> ...\n\n"
-                + "用法4：(撤回当前消息前的第n条及后面的共m消息)\n" + prefix + getAction() + " <n+m> ...";
+        String actionHint = HelpTopics.formatAliasChoices(getAction());
+        String detail = "用法1：(回复要撤回的消息)\n" + prefix + actionHint + "\n\n"
+                + "用法2：(撤回当前消息前的第n条消息)\n" + prefix + actionHint + " <n> ...\n\n"
+                + "用法3：(撤回当前消息前的第n~m条消息)\n" + prefix + actionHint + " <n:m> ...\n\n"
+                + "用法4：(撤回当前消息前的第n条及后面的共m消息)\n" + prefix + actionHint + " <n+m> ...";
         return HelpTopics.of("撤回消息", "撤回群内消息。", 13, getAction()).detail(detail);
     }
 

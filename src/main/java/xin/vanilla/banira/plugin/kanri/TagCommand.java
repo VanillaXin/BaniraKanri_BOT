@@ -33,8 +33,9 @@ public class TagCommand implements KanriHandler {
     @Override
     public HelpTopic getHelpSubTopic() {
         String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
-        String detail = "用法1：\n" + prefix + getAction() + " <QQ号|艾特> ... <头衔>\n\n"
-                + "用法2：(回复要设置的内容)\n" + prefix + getAction();
+        String actionHint = HelpTopics.formatAliasChoices(getAction());
+        String detail = "用法1：\n" + prefix + actionHint + " <QQ号|艾特> ... <头衔>\n\n"
+                + "用法2：(回复要设置的内容)\n" + prefix + actionHint;
         return HelpTopics.of("设置群头衔", "设置群成员头衔。", 15, getAction()).detail(detail);
     }
 

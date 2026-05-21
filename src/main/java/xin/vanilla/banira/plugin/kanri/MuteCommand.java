@@ -31,9 +31,10 @@ public class MuteCommand implements KanriHandler {
     @Override
     public HelpTopic getHelpSubTopic() {
         String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
-        String detail = "用法1：\n" + prefix + getAction() + " <QQ号|艾特> ... <禁言秒数>\n\n"
-                + "用法2：(回复要禁言的成员)\n" + prefix + getAction() + " <禁言秒数>\n\n"
-                + "用法3：(全员禁言)\n" + prefix + getAction() + " @全体成员";
+        String actionHint = HelpTopics.formatAliasChoices(getAction());
+        String detail = "用法1：\n" + prefix + actionHint + " <QQ号|艾特> ... <禁言秒数>\n\n"
+                + "用法2：(回复要禁言的成员)\n" + prefix + actionHint + " <禁言秒数>\n\n"
+                + "用法3：(全员禁言)\n" + prefix + actionHint + " @全体成员";
         return HelpTopics.of("禁言", "禁言群成员或全员。", 10, getAction()).detail(detail);
     }
 

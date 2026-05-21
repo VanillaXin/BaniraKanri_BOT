@@ -31,8 +31,9 @@ public class GroupNameCommand implements KanriHandler {
     @Override
     public HelpTopic getHelpSubTopic() {
         String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
-        String detail = "用法1：\n" + prefix + getAction() + " <群名称>\n\n"
-                + "用法2：(回复要设置的内容)\n" + prefix + getAction();
+        String actionHint = HelpTopics.formatAliasChoices(getAction());
+        String detail = "用法1：\n" + prefix + actionHint + " <群名称>\n\n"
+                + "用法2：(回复要设置的内容)\n" + prefix + actionHint;
         return HelpTopics.of("设置群名称", "修改群名称。", 16, getAction()).detail(detail);
     }
 

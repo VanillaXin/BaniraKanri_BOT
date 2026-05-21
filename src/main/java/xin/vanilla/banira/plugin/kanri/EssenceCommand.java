@@ -35,13 +35,16 @@ public class EssenceCommand implements KanriHandler {
     public HelpTopic getHelpSubTopic() {
         String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
         BaseInstructionsConfig base = insConfig.get().base();
+        String actionHint = HelpTopics.formatAliasChoices(getAction());
+        String addHint = HelpTopics.formatAliasChoices(base.add());
+        String delHint = HelpTopics.formatAliasChoices(base.del());
         return HelpTopics.of("群精华消息", "添加或删除群精华消息。", 23, getAction())
                 .child(HelpTopics.opAdd(base,
-                        "用法1：\n" + prefix + getAction() + " " + base.add() + " <精华消息>\n\n"
-                                + "用法2：(回复要添加的内容)\n" + prefix + getAction() + base.add().getFirst()))
+                        "用法1：\n" + prefix + actionHint + " " + addHint + " <精华消息>\n\n"
+                                + "用法2：(回复要添加的内容)\n" + prefix + actionHint + " " + addHint))
                 .child(HelpTopics.opDel(base,
-                        "用法1：\n" + prefix + getAction() + " " + base.del() + " <精华消息>\n\n"
-                                + "用法2：(回复要删除的内容)\n" + prefix + getAction() + " " + base.del().getFirst()));
+                        "用法1：\n" + prefix + actionHint + " " + delHint + " <精华消息>\n\n"
+                                + "用法2：(回复要删除的内容)\n" + prefix + actionHint + " " + delHint));
     }
 
     @Override

@@ -30,9 +30,9 @@ public class KickCommand implements KanriHandler {
     @Override
     public HelpTopic getHelpSubTopic() {
         String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
-        String detail = "用法1：\n" + prefix + getAction() + " " +
-                "<QQ号|艾特> ..." + "\n\n" +
-                "用法2：(回复要踢的成员)\n" + prefix + getAction();
+        String actionHint = HelpTopics.formatAliasChoices(getAction());
+        String detail = "用法1：\n" + prefix + actionHint + " <QQ号|艾特> ...\n\n"
+                + "用法2：(回复要踢的成员)\n" + prefix + actionHint;
         return HelpTopics.of("踢出成员", "踢出群成员。", 12, getAction()).detail(detail);
     }
 

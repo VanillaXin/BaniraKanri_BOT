@@ -33,6 +33,9 @@ public class PermissionCommand implements KanriHandler {
     public HelpTopic getHelpSubTopic() {
         String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
         BaseInstructionsConfig base = insConfig.get().base();
+        String actionHint = HelpTopics.formatAliasChoices(getAction());
+        String addHint = HelpTopics.formatAliasChoices(base.add());
+        String delHint = HelpTopics.formatAliasChoices(base.del());
         String permissionList = EnumPermission.getAll().stream()
                 .sorted()
                 .map(op -> op.name() + "：" + op.getDesc())
@@ -40,10 +43,10 @@ public class PermissionCommand implements KanriHandler {
                 .orElse("");
         return HelpTopics.of("设置权限", "设置管家或女仆的权限。", 24, getAction())
                 .child(HelpTopics.opAdd(base,
-                        "用法：\n" + prefix + getAction() + " " + base.add() + " <QQ号|艾特> ... <权限别称> ...\n\n"
+                        "用法：\n" + prefix + actionHint + " " + addHint + " <QQ号|艾特> ... <权限别称> ...\n\n"
                                 + "权限别称列表：\n" + permissionList))
                 .child(HelpTopics.opDel(base,
-                        "用法：\n" + prefix + getAction() + " " + base.del() + " <QQ号|艾特> ... <权限别称> ...\n\n"
+                        "用法：\n" + prefix + actionHint + " " + delHint + " <QQ号|艾特> ... <权限别称> ...\n\n"
                                 + "权限别称列表：\n" + permissionList));
     }
 

@@ -28,11 +28,10 @@ public class LoudCommand implements KanriHandler {
     @Override
     public HelpTopic getHelpSubTopic() {
         String prefix = BaniraUtils.getKanriInsPrefixWithSpace();
-        String detail = "用法1：\n" + prefix + getAction() + " " +
-                "<QQ号|艾特> ..." + "\n\n" +
-                "用法2：(回复要解除禁言的成员)\n" + prefix + getAction() + "\n\n" +
-                "用法3：(解除全员禁言)\n" + prefix + getAction() + " " +
-                "@全体成员";
+        String actionHint = HelpTopics.formatAliasChoices(getAction());
+        String detail = "用法1：\n" + prefix + actionHint + " <QQ号|艾特> ...\n\n"
+                + "用法2：(回复要解除禁言的成员)\n" + prefix + actionHint + "\n\n"
+                + "用法3：(解除全员禁言)\n" + prefix + actionHint + " @全体成员";
         return HelpTopics.of("解除禁言", "解除群成员或全员禁言。", 11, getAction()).detail(detail);
     }
 

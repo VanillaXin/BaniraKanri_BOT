@@ -74,23 +74,29 @@ public class KeywordPlugin extends BasePlugin {
         keywordTypes.addAll(keyIns.contain());
         keywordTypes.addAll(keyIns.pinyin());
         keywordTypes.addAll(keyIns.regex());
-        String targetHint = String.format("[%s, %s, <群号>]", String.join(", ", base.global()), String.join(", ", base.that()));
-        String locatorValues = keyIns.locator().stream().map(KeyValue::getValue).toList().toString();
+        String featureHint = HelpTopics.formatLocatorKeys(keyIns.locator());
+        String replyLocatorHint = HelpTopics.formatLocatorValues(keyIns.locator());
+        String addHint = HelpTopics.formatAliasChoices(base.add());
+        String delHint = HelpTopics.formatAliasChoices(base.del());
+        String enableHint = HelpTopics.formatAliasChoices(base.enable());
+        String listHint = HelpTopics.formatAliasChoices(base.list());
+        String keywordTypeHint = HelpTopics.formatAliasChoices(keywordTypes);
+        String targetHint = String.format("[%s, %s, <群号>]", HelpTopics.joinAliases(base.global()), HelpTopics.joinAliases(base.that()));
 
         HelpTopic topic = HelpTopics.of("关键词回复", "按关键词自动回复消息。", 2, aliases);
         topic.child(HelpTopics.opAdd(base,
-                "用法：\n" + prefix + aliases + " " + base.add() + " " + targetHint + " " + keywordTypes
-                        + " <关键词> " + locatorValues + " <回复内容>"));
+                "用法：\n" + prefix + featureHint + " " + addHint + " " + targetHint + " " + keywordTypeHint
+                        + " <关键词> " + replyLocatorHint + " <回复内容>"));
         topic.child(HelpTopics.opDel(base,
-                "用法1：\n" + prefix + aliases + " " + base.del() + " " + targetHint + " " + keywordTypes
-                        + " <关键词> " + locatorValues + " <回复内容>\n\n"
-                        + "用法2：(根据编号删除)\n" + prefix + aliases + " " + base.del() + " <关键词编号> ...\n\n"
-                        + "用法3：(回复添加成功的响应消息)\n" + prefix + aliases + " " + base.del()));
+                "用法1：\n" + prefix + featureHint + " " + delHint + " " + targetHint + " " + keywordTypeHint
+                        + " <关键词> " + replyLocatorHint + " <回复内容>\n\n"
+                        + "用法2：(根据编号删除)\n" + prefix + featureHint + " " + delHint + " <关键词编号> ...\n\n"
+                        + "用法3：(回复添加成功的响应消息)\n" + prefix + featureHint + " " + delHint));
         topic.child(HelpTopics.opEnable(base,
-                "用法1：(根据编号启用)\n" + prefix + aliases + " " + base.enable() + " <关键词编号> ...\n\n"
-                        + "用法2：(回复添加成功的响应消息)\n" + prefix + aliases + " " + base.enable()));
+                "用法1：(根据编号启用)\n" + prefix + featureHint + " " + enableHint + " <关键词编号> ...\n\n"
+                        + "用法2：(回复添加成功的响应消息)\n" + prefix + featureHint + " " + enableHint));
         topic.child(HelpTopics.opList(base,
-                "用法：\n" + prefix + aliases + " " + base.list() + " [<页数>] <关键词内容>"));
+                "用法：\n" + prefix + featureHint + " " + listHint + " [<页数>] <关键词内容>"));
         topics.add(topic);
     }
 

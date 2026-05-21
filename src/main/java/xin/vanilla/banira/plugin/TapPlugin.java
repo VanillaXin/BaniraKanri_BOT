@@ -32,7 +32,7 @@ public class TapPlugin extends BasePlugin {
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
         topics.add(HelpTopics.of("戳一戳", "对指定用户发送戳一戳。", 99, insConfig.get().tap())
-                .detail(BaniraUtils.getInsPrefixWithSpace() + insConfig.get().tap() + " <QQ号|艾特> ... [<次数>]"));
+                .detail(BaniraUtils.getInsPrefixWithSpace() + HelpTopics.formatAliasChoices(insConfig.get().tap()) + " <QQ号|艾特> ... [<次数>]"));
     }
 
     @AnyMessageHandler
