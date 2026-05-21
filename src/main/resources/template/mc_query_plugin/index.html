@@ -214,6 +214,10 @@
             animation: float 4s ease-in-out infinite;
         }
 
+        .player-avatar-fallback {
+            font-size: 14px;
+        }
+
         .player-name {
             font-size: 14px;
             font-weight: 500;
@@ -355,6 +359,32 @@
     pingValue.style.color = dotColor;
 
     const grid = document.getElementById("playerGrid");
+    const avatarSources = [
+        id => 'https://mc-heads.net/head/' + id + '/32',
+        id => 'https://minotar.net/avatar/' + id + '/32',
+    ];
+
+    function resolvePlayerId(player, useName) {
+        if (useName) return encodeURIComponent(player.name || '?');
+        return player.uuidSimple || (player.uuid || '').replace(/-/g, '') || encodeURIComponent(player.name || '?');
+    }
+
+    function loadPlayerAvatar(img, avatar, player, sourceIndex, useName) {
+        const sources = avatarSources;
+        if (sourceIndex >= sources.length) {
+            if (!useName && player.name) {
+                loadPlayerAvatar(img, avatar, player, 0, true);
+                return;
+            }
+            avatar.textContent = (player.name || '?').substring(0, 1).toUpperCase();
+            avatar.classList.add('player-avatar-fallback');
+            if (img.parentNode === avatar) avatar.removeChild(img);
+            return;
+        }
+        img.onerror = () => loadPlayerAvatar(img, avatar, player, sourceIndex + 1, useName);
+        img.src = sources[sourceIndex](resolvePlayerId(player, useName));
+    }
+
     configData.onlinePlayers.forEach(player => {
         const playerCard = document.createElement("div");
         playerCard.className = "player-card";
@@ -363,12 +393,10 @@
         avatar.className = "player-avatar";
         const img = document.createElement('img');
         img.className = "player-icon";
-        img.src = "https://crafatar.com/avatars/" + player.uuid + "?overlay=true";
-        img.alt = "ServerIcon";
-        img.addEventListener('error', function () {
-            avatar.style.display = 'none';
-        });
+        img.alt = player.name || "Player";
+        img.loading = "lazy";
         avatar.appendChild(img);
+        loadPlayerAvatar(img, avatar, player, 0, false);
 
         const name = document.createElement("div");
         name.className = "player-name";
