@@ -28,11 +28,15 @@ import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.plugin.mcmod.McModCommentScheduler;
 import xin.vanilla.banira.plugin.mcmod.McModCommentService;
+import xin.vanilla.banira.plugin.mcmod.McModSearchListSession;
+import xin.vanilla.banira.plugin.mcmod.McModSearchListSource;
+import xin.vanilla.banira.plugin.mcmod.McModSearchListStore;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.*;
 import xin.vanilla.banira.util.mcmod.*;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 
 /**
@@ -50,6 +54,11 @@ public class McModPlugin extends BasePlugin {
     private McModCommentScheduler mcModCommentScheduler;
     @Resource
     private McModCommentService mcModCommentService;
+
+    @Resource
+    private McModSearchListStore mcModSearchListStore;
+
+    private static final long SEARCH_LIST_SESSION_TTL_MS = TimeUnit.MINUTES.toMillis(10);
 
     private static final Set<String> MOD_INS = BaniraUtils.mutableSetOf("mod", "模组");
     private static final Set<String> MOD_PACK_INS = BaniraUtils.mutableSetOf("modpack", "pack", "整合包");
@@ -132,7 +141,8 @@ public class McModPlugin extends BasePlugin {
     private static String buildSearchDetail(@Nonnull String slashCmd, @Nonnull Collection<String> aliases, boolean supportPaging) {
         String ins = HelpTopics.formatAliasChoices(aliases);
         StringBuilder sb = new StringBuilder();
-        sb.append(slashCmd).append(' ').append(ins).append(" <关键词>");
+        sb.append(slashCmd).append(' ').append(ins).append(" <关键词或ID>");
+        sb.append('\n').append("多结果时回复列表图片并发送序号查看详情，也可直接使用 ID 查询");
         if (supportPaging) {
             sb.append('\n')
                     .append(slashCmd).append(' ').append(ins).append(" -a <关键词>\n")
@@ -162,6 +172,39 @@ public class McModPlugin extends BasePlugin {
     }
 
     @AnyMessageHandler
+    public boolean selectSearchListItem(BaniraBot bot, AnyMessageEvent event) {
+        if (!BaniraUtils.hasReply(event.getArrayMsg())) {
+            return false;
+        }
+        Long replyId = BaniraUtils.getReplyId(event.getArrayMsg());
+        Optional<McModSearchListSession> sessionOpt = mcModSearchListStore.findByMessageId(replyId);
+        if (sessionOpt.isEmpty()) {
+            return false;
+        }
+        McModSearchListSession session = sessionOpt.get();
+        if (!Objects.equals(session.userId(), event.getUserId())) {
+            return bot.setMsgEmojiLikeNo(event.getMessageId());
+        }
+        Integer index = parseListSelectionIndex(event.getMessage());
+        if (index == null || index < 1 || index > session.itemCount()) {
+            sendMessage(bot, event, event.getGroupId(),
+                    "请输入 1-" + session.itemCount() + " 之间的序号");
+            return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+        }
+        bot.setMsgEmojiLikeOk(event.getMessageId());
+        Long groupId = event.getGroupId();
+        String typeName = session.typeName();
+        if (session.source() == McModSearchListSource.CONTENT) {
+            McModContent content = session.contents().get(index - 1);
+            sendContentDetail(bot, event, groupId, typeName, content);
+        } else {
+            McModSearchResult result = session.searchResults().get(index - 1);
+            sendSearchDetail(bot, event, groupId, typeName, result);
+        }
+        return true;
+    }
+
+    @AnyMessageHandler
     public boolean query(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
         if (insConfig.get().mcMod().stream().noneMatch(ins -> message.startsWith("/" + ins + " "))) {
@@ -184,10 +227,22 @@ public class McModPlugin extends BasePlugin {
             }
             if (split.length > 3 && split[2].equals("-a")) {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 3, split.length));
+                if (isNumericId(keyword)) {
+                    McModContent direct = McModUtils.getModName(keyword);
+                    if (direct != null) {
+                        return handleContentResults(bot, event, List.of(direct), "模组", keyword, groupId, msgId);
+                    }
+                }
                 List<McModSearchResult> results = McModUtils.searchModBySearchPage(keyword);
                 return handleSearchResults(bot, event, results, "模组", keyword, groupId, msgId);
             } else {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 2, split.length));
+                if (isNumericId(keyword)) {
+                    McModContent direct = McModUtils.getModName(keyword);
+                    if (direct != null) {
+                        return handleContentResults(bot, event, List.of(direct), "模组", keyword, groupId, msgId);
+                    }
+                }
                 List<McModContent> results = McModUtils.searchMod(keyword);
                 return handleContentResults(bot, event, results, "模组", keyword, groupId, msgId);
             }
@@ -199,10 +254,22 @@ public class McModPlugin extends BasePlugin {
             }
             if (split.length > 3 && split[2].equals("-a")) {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 3, split.length));
+                if (isNumericId(keyword)) {
+                    McModContent direct = McModUtils.getModpackName(keyword);
+                    if (direct != null) {
+                        return handleContentResults(bot, event, List.of(direct), "整合包", keyword, groupId, msgId);
+                    }
+                }
                 List<McModSearchResult> results = McModUtils.searchModpackBySearchPage(keyword);
                 return handleSearchResults(bot, event, results, "整合包", keyword, groupId, msgId);
             } else {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 2, split.length));
+                if (isNumericId(keyword)) {
+                    McModContent direct = McModUtils.getModpackName(keyword);
+                    if (direct != null) {
+                        return handleContentResults(bot, event, List.of(direct), "整合包", keyword, groupId, msgId);
+                    }
+                }
                 List<McModContent> results = McModUtils.searchModpack(keyword);
                 return handleContentResults(bot, event, results, "整合包", keyword, groupId, msgId);
             }
@@ -214,10 +281,22 @@ public class McModPlugin extends BasePlugin {
             }
             if (split.length > 3 && split[2].equals("-a")) {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 3, split.length));
+                if (isNumericId(keyword)) {
+                    McModContent direct = McModUtils.getAuthorName(keyword);
+                    if (direct != null) {
+                        return handleContentResults(bot, event, List.of(direct), "作者", keyword, groupId, msgId);
+                    }
+                }
                 List<McModSearchResult> results = McModUtils.searchAuthorBySearchPage(keyword);
                 return handleSearchResults(bot, event, results, "作者", keyword, groupId, msgId);
             } else {
                 String keyword = String.join(" ", Arrays.copyOfRange(split, 2, split.length));
+                if (isNumericId(keyword)) {
+                    McModContent direct = McModUtils.getAuthorName(keyword);
+                    if (direct != null) {
+                        return handleContentResults(bot, event, List.of(direct), "作者", keyword, groupId, msgId);
+                    }
+                }
                 List<McModContent> results = McModUtils.searchAuthor(keyword);
                 return handleContentResults(bot, event, results, "作者", keyword, groupId, msgId);
             }
@@ -228,6 +307,12 @@ public class McModPlugin extends BasePlugin {
                 return bot.setMsgEmojiLikeBrokenHeart(msgId);
             }
             String keyword = String.join(" ", Arrays.copyOfRange(split, 2, split.length));
+            if (isNumericId(keyword)) {
+                McModSearchResult direct = buildUserSearchResult(keyword);
+                if (direct != null) {
+                    return handleSearchResults(bot, event, List.of(direct), "用户", keyword, groupId, msgId);
+                }
+            }
             List<McModSearchResult> results = McModUtils.searchUserBySearchPage(keyword);
             return handleSearchResults(bot, event, results, "用户", keyword, groupId, msgId);
         }
@@ -423,15 +508,7 @@ public class McModPlugin extends BasePlugin {
 
         if (results.size() == 1) {
             McModSearchResult result = results.getFirst();
-            String imageMsg = McModRenderHelper.renderSearchResult(result, type);
-            if (StringUtils.isNotNullOrEmpty(imageMsg)) {
-                String message = McModRenderHelper.shouldPrefixCardLink(type)
-                        ? McModRenderHelper.wrapCardMessage(result.getLink(), imageMsg)
-                        : imageMsg;
-                sendMessage(bot, event, groupId, message);
-            } else {
-                sendMessage(bot, event, groupId, buildSearchResultMessage(result));
-            }
+            sendSearchDetail(bot, event, groupId, type, result);
             return bot.setMsgEmojiLikeOk(msgId);
         }
 
@@ -440,7 +517,8 @@ public class McModPlugin extends BasePlugin {
         List<JsonObject> listItems = displayResults.stream().map(McModRenderHelper::toListItem).toList();
         String imageMsg = McModRenderHelper.renderList(type, keyword, listItems);
         if (StringUtils.isNotNullOrEmpty(imageMsg)) {
-            sendMessage(bot, event, groupId, imageMsg);
+            Integer listMsgId = sendMessageAndGetId(bot, event, groupId, imageMsg);
+            saveSearchListSession(listMsgId, event, groupId, type, McModSearchListSource.SEARCH, displayResults, null);
             if (results.size() > maxResults) {
                 sendMessage(bot, event, groupId, "... 还有 " + (results.size() - maxResults) + " 条结果未显示");
             }
@@ -462,15 +540,7 @@ public class McModPlugin extends BasePlugin {
 
         if (results.size() == 1) {
             McModContent result = results.getFirst();
-            String imageMsg = McModRenderHelper.renderContent(result, type);
-            if (StringUtils.isNotNullOrEmpty(imageMsg)) {
-                String message = McModRenderHelper.shouldPrefixCardLink(type)
-                        ? McModRenderHelper.wrapCardMessage(result.getDetailUrl(), imageMsg)
-                        : imageMsg;
-                sendMessage(bot, event, groupId, message);
-            } else {
-                sendMessage(bot, event, groupId, buildContentMessage(result));
-            }
+            sendContentDetail(bot, event, groupId, type, result);
             return bot.setMsgEmojiLikeOk(msgId);
         }
 
@@ -479,7 +549,8 @@ public class McModPlugin extends BasePlugin {
         List<JsonObject> listItems = displayResults.stream().map(McModRenderHelper::toListItem).toList();
         String imageMsg = McModRenderHelper.renderList(type, keyword, listItems);
         if (StringUtils.isNotNullOrEmpty(imageMsg)) {
-            sendMessage(bot, event, groupId, imageMsg);
+            Integer listMsgId = sendMessageAndGetId(bot, event, groupId, imageMsg);
+            saveSearchListSession(listMsgId, event, groupId, type, McModSearchListSource.CONTENT, null, displayResults);
             if (results.size() > maxResults) {
                 sendMessage(bot, event, groupId, "... 还有 " + (results.size() - maxResults) + " 条结果未显示");
             }
@@ -572,6 +643,96 @@ public class McModPlugin extends BasePlugin {
         }
     }
 
+    @Nullable
+    private static Integer sendMessageAndGetId(BaniraBot bot, AnyMessageEvent event, Long groupId, String message) {
+        ActionData<MsgId> msgIdData;
+        if (BaniraUtils.isGroupIdValid(groupId)) {
+            msgIdData = bot.sendGroupMsg(groupId, message, false);
+        } else {
+            msgIdData = bot.sendPrivateMsg(event.getUserId(), message, false);
+        }
+        return bot.isActionDataMsgIdNotEmpty(msgIdData) ? bot.getActionDataMsgId(msgIdData) : null;
+    }
+
+    private void saveSearchListSession(@Nullable Integer listMsgId, @Nonnull AnyMessageEvent event, @Nullable Long groupId,
+                                       @Nonnull String typeName, @Nonnull McModSearchListSource source,
+                                       @Nullable List<McModSearchResult> searchResults,
+                                       @Nullable List<McModContent> contents) {
+        if (listMsgId == null || listMsgId <= 0) {
+            return;
+        }
+        McModSearchListSession session = new McModSearchListSession()
+                .messageId(listMsgId.longValue())
+                .userId(event.getUserId())
+                .groupId(BaniraUtils.isGroupIdValid(groupId) ? groupId : 0L)
+                .typeName(typeName)
+                .source(source)
+                .expireAt(System.currentTimeMillis() + SEARCH_LIST_SESSION_TTL_MS);
+        if (source == McModSearchListSource.SEARCH && searchResults != null) {
+            session.searchResults(new ArrayList<>(searchResults));
+        } else if (source == McModSearchListSource.CONTENT && contents != null) {
+            session.contents(new ArrayList<>(contents));
+        }
+        mcModSearchListStore.save(session);
+    }
+
+    private static void sendSearchDetail(BaniraBot bot, AnyMessageEvent event, Long groupId,
+                                         String typeName, McModSearchResult result) {
+        String imageMsg = McModRenderHelper.renderSearchResult(result, typeName);
+        if (StringUtils.isNotNullOrEmpty(imageMsg)) {
+            String message = McModRenderHelper.shouldPrefixCardLink(typeName)
+                    ? McModRenderHelper.wrapCardMessage(result.getLink(), imageMsg)
+                    : imageMsg;
+            sendMessage(bot, event, groupId, message);
+        } else {
+            sendMessage(bot, event, groupId, buildSearchResultMessage(result));
+        }
+    }
+
+    private static void sendContentDetail(BaniraBot bot, AnyMessageEvent event, Long groupId,
+                                          String typeName, McModContent content) {
+        String imageMsg = McModRenderHelper.renderContent(content, typeName);
+        if (StringUtils.isNotNullOrEmpty(imageMsg)) {
+            String message = McModRenderHelper.shouldPrefixCardLink(typeName)
+                    ? McModRenderHelper.wrapCardMessage(content.getDetailUrl(), imageMsg)
+                    : imageMsg;
+            sendMessage(bot, event, groupId, message);
+        } else {
+            sendMessage(bot, event, groupId, buildContentMessage(content));
+        }
+    }
+
+    @Nullable
+    private static McModSearchResult buildUserSearchResult(@Nonnull String userId) {
+        McModUserCardResult card = McModUtils.getUserCard(userId);
+        if (card == null) {
+            return null;
+        }
+        return new McModSearchResult()
+                .setTitle(card.getUsername())
+                .setLink(McModUtils.getUserCenterUrl(userId));
+    }
+
+    private static boolean isNumericId(@Nullable String value) {
+        return StringUtils.isNotNullOrEmpty(value) && value.matches("\\d+");
+    }
+
+    @Nullable
+    private static Integer parseListSelectionIndex(@Nullable String message) {
+        if (StringUtils.isNullOrEmptyEx(message)) {
+            return null;
+        }
+        String text = BaniraUtils.replaceReply(message).replaceAll("\\[CQ:[^\\]]+]", "").trim();
+        if (!text.matches("\\d+")) {
+            return null;
+        }
+        try {
+            return Integer.parseInt(text);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
     private static void sendForward(BaniraBot bot, AnyMessageEvent event, Long groupId, List<Map<String, Object>> forwardMsg) {
         if (BaniraUtils.isGroupIdValid(groupId)) {
             bot.sendGroupForwardMsg(groupId, forwardMsg);
@@ -616,7 +777,8 @@ public class McModPlugin extends BasePlugin {
     /**
      * 构建搜索结果消息
      */
-    private String buildSearchResultMessage(McModSearchResult result) {
+    @Nonnull
+    private static String buildSearchResultMessage(@Nonnull McModSearchResult result) {
         MsgUtils msg = MsgUtils.builder();
 
         // 副标题

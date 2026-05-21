@@ -207,6 +207,10 @@ public final class McModRenderHelper {
         JsonUtils.setString(item, "link", StringUtils.nullToEmpty(result.getLink()));
         JsonUtils.setString(item, "cover", StringUtils.nullToEmpty(result.getImageUrl()));
         JsonUtils.setString(item, "abbrev", buildAbbrev(null, result.getTitle()));
+        String id = McModUtils.extractContentIdFromLink(result.getLink());
+        if (StringUtils.isNotNullOrEmpty(id)) {
+            JsonUtils.setString(item, "id", id);
+        }
         return item;
     }
 

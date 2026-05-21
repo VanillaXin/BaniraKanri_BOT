@@ -127,10 +127,24 @@
             margin-top: 2px;
         }
 
+        .item-id {
+            font-size: 11px;
+            color: var(--primary-dark);
+            margin-top: 3px;
+            font-weight: 600;
+        }
+
         .footer {
             padding: 10px 22px 16px;
             font-size: 12px;
             color: var(--text-muted);
+        }
+
+        .footer-hint {
+            margin-bottom: 6px;
+        }
+
+        .footer-brand {
             text-align: right;
         }
     </style>
@@ -143,7 +157,10 @@
         <div class="keyword" id="keywordLine"></div>
     </div>
     <div class="list" id="itemList"></div>
-    <div class="footer">MCMod 百科 · BaniraKanri</div>
+    <div class="footer">
+        <div class="footer-hint">回复本消息并发送序号查看详情 · 也可使用 ID 直接查询</div>
+        <div class="footer-brand">MCMod 百科 · BaniraKanri</div>
+    </div>
 </div>
 
 <script src="config.js"></script>
@@ -192,6 +209,12 @@
             sub.className = "item-sub";
             sub.textContent = item.subtitle;
             body.appendChild(sub);
+        }
+        if (item.id) {
+            const idLine = document.createElement("div");
+            idLine.className = "item-id";
+            idLine.textContent = "ID: " + item.id;
+            body.appendChild(idLine);
         }
         row.appendChild(body);
 

@@ -232,6 +232,8 @@ public final class McModUtils {
     }
 
     private static final Pattern USER_CENTER_URL_PATTERN = Pattern.compile("//center\\.mcmod\\.cn/(?<userId>\\d+)/");
+    private static final Pattern CONTENT_ID_FROM_LINK_PATTERN = Pattern.compile("/(?:class|modpack|author)/(\\d+)\\.html");
+    private static final Pattern USER_CENTER_ID_FROM_LINK_PATTERN = Pattern.compile("center\\.mcmod\\.cn/(\\d+)");
     private static final Pattern YXD_TOKEN_PATTERN = Pattern.compile("yxd_token=([a-f0-9]+)");
     private static volatile String cachedSearchYxdToken;
 
@@ -796,6 +798,25 @@ public final class McModUtils {
 
     public static String getUserCenterUrl(String uid) {
         return String.format("https://center.mcmod.cn/%s/", uid);
+    }
+
+    /**
+     * 从 MCMod 链接中提取内容 ID
+     */
+    @Nullable
+    public static String extractContentIdFromLink(@Nullable String link) {
+        if (StringUtils.isNullOrEmpty(link)) {
+            return null;
+        }
+        Matcher contentMatcher = CONTENT_ID_FROM_LINK_PATTERN.matcher(link);
+        if (contentMatcher.find()) {
+            return contentMatcher.group(1);
+        }
+        Matcher userMatcher = USER_CENTER_ID_FROM_LINK_PATTERN.matcher(link);
+        if (userMatcher.find()) {
+            return userMatcher.group(1);
+        }
+        return null;
     }
 
 
