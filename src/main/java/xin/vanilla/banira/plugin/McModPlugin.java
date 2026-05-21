@@ -26,11 +26,7 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
-import xin.vanilla.banira.plugin.mcmod.McModCommentScheduler;
-import xin.vanilla.banira.plugin.mcmod.McModCommentService;
-import xin.vanilla.banira.plugin.mcmod.McModSearchListSession;
-import xin.vanilla.banira.plugin.mcmod.McModSearchListSource;
-import xin.vanilla.banira.plugin.mcmod.McModSearchListStore;
+import xin.vanilla.banira.plugin.mcmod.*;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.*;
 import xin.vanilla.banira.util.mcmod.*;
@@ -440,10 +436,24 @@ public class McModPlugin extends BasePlugin {
             sendMessage(bot, event, groupId, "请勿重复投票");
             return bot.setMsgEmojiLikeBrokenHeart(msgId);
         }
+        if (result != null && result.isLoginRequired()) {
+            sendMessage(bot, event, groupId, "投票失败，未登录");
+            return bot.setMsgEmojiLikeBrokenHeart(msgId);
+        }
         if (result != null && result.isSuccess()) {
+            if (result.isUnchanged() && !result.isFromCache()) {
+                sendMessage(bot, event, groupId, "请勿重复投票");
+                return bot.setMsgEmojiLikeBrokenHeart(msgId);
+            }
             return bot.setMsgEmojiLikeHeart(msgId);
         }
-        LOGGER.error("Failed to vote {}, id: {}, type: {}", target.label(), targetId, voteType);
+        Integer errorState = result != null ? result.getErrorState() : null;
+        LOGGER.error("Failed to vote {}, id: {}, type: {}, errorState: {}", target.label(), targetId, voteType, errorState);
+        if (result != null && errorState != null) {
+            sendMessage(bot, event, groupId, "投票失败，" + errorState);
+        } else {
+            sendMessage(bot, event, groupId, "投票失败，请稍后重试");
+        }
         return bot.setMsgEmojiLikeBrokenHeart(msgId);
     }
 

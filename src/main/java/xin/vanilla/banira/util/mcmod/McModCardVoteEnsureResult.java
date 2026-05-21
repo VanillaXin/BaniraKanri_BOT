@@ -37,6 +37,12 @@ public class McModCardVoteEnsureResult {
      * 是否因冷却中而拒绝请求
      */
     private boolean cooldownBlocked;
+    /**
+     * API 返回的非零 state（探测或切换失败时）
+     */
+    private Integer errorState;
+
+    public static final int STATE_LOGIN_REQUIRED = 234;
 
     public boolean isSuccess() {
         if (cooldownBlocked) {
@@ -45,7 +51,14 @@ public class McModCardVoteEnsureResult {
         if (fromCache) {
             return true;
         }
+        if (errorState != null) {
+            return false;
+        }
         return response != null && response.isSuccess();
+    }
+
+    public boolean isLoginRequired() {
+        return errorState != null && errorState == STATE_LOGIN_REQUIRED;
     }
 
     /**

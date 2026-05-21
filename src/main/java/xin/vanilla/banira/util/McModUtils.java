@@ -1505,6 +1505,7 @@ public final class McModUtils {
 
     private static final String DO_CLASS_URL = "https://www.mcmod.cn/action/doClass/";
     private static final String DO_MODPACK_URL = "https://www.mcmod.cn/action/doModpack/";
+    private static final String MCMOD_ACTION_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
     private static final long VOTE_COOLDOWN_MS = 60_000;
 
     /**
@@ -2028,6 +2029,7 @@ public final class McModUtils {
 
             HttpRequestBuilder builder = HttpUtils.post(url)
                     .formBody(formData)
+                    .header("User-Agent", MCMOD_ACTION_UA)
                     .header("Referer", referer);
             if (StringUtils.isNotNullOrEmpty(cookie)) {
                 builder.header("Cookie", cookie);
@@ -2076,7 +2078,11 @@ public final class McModUtils {
         McModCardVoteResponse first = invokeVote(groupId, targetId, isMod, type, cookie);
         McModCardVoteResponse second = invokeVote(groupId, targetId, isMod, type, cookie);
         if (!isVoteResponseValid(first) || !isVoteResponseValid(second)) {
-            return null;
+            LOGGER.warn("Vote probe failed, target={} id={}, type={}, firstState={}, secondState={}",
+                    isMod ? "mod" : "modpack", targetId, type,
+                    first != null ? first.getState() : null,
+                    second != null ? second.getState() : null);
+            return buildVoteProbeFailure(first, second, 2);
         }
 
         EnumVoteState stateBefore = detectVoteStateBefore(first, second, type);
@@ -2090,7 +2096,10 @@ public final class McModUtils {
         } else {
             McModCardVoteResponse third = invokeVote(groupId, targetId, isMod, type, cookie);
             if (!isVoteResponseValid(third)) {
-                return null;
+                LOGGER.warn("Vote toggle failed, target={} id={}, type={}, thirdState={}",
+                        isMod ? "mod" : "modpack", targetId, type,
+                        third != null ? third.getState() : null);
+                return buildVoteProbeFailure(third, second, 3);
             }
             result = new McModCardVoteEnsureResult()
                     .setStateBefore(stateBefore)
@@ -2145,6 +2154,29 @@ public final class McModUtils {
 
     private static boolean isVoteResponseValid(@Nullable McModCardVoteResponse response) {
         return response != null && response.isSuccess();
+    }
+
+    @Nonnull
+    private static McModCardVoteEnsureResult buildVoteProbeFailure(@Nullable McModCardVoteResponse primary,
+                                                                   @Nullable McModCardVoteResponse secondary,
+                                                                   int apiCalls) {
+        McModCardVoteResponse response = primary != null ? primary : secondary;
+        return new McModCardVoteEnsureResult()
+                .setResponse(response)
+                .setErrorState(resolveVoteErrorState(primary, secondary))
+                .setApiCalls(apiCalls);
+    }
+
+    @Nullable
+    private static Integer resolveVoteErrorState(@Nullable McModCardVoteResponse primary,
+                                                 @Nullable McModCardVoteResponse secondary) {
+        if (primary != null && primary.getState() != null && primary.getState() != 0) {
+            return primary.getState();
+        }
+        if (secondary != null && secondary.getState() != null && secondary.getState() != 0) {
+            return secondary.getState();
+        }
+        return null;
     }
 
     /**
