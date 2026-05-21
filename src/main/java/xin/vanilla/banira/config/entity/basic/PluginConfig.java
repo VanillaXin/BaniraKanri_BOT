@@ -37,6 +37,7 @@ public class PluginConfig implements SharedConfig {
         this.capability.put(ExamplePlugin.class.getName(), 0);
         this.capability.put(WifePlugin.class.getName(), 99);
         this.capability.put(McQueryPlugin.class.getName(), 99);
+        this.capability.put(McRconPlugin.class.getName(), 99);
         this.capability.put(DownloadMediaPlugin.class.getName(), 99);
         this.capability.put(TapPlugin.class.getName(), 99);
         this.capability.put(PlantPlugin.class.getName(), 99);

@@ -333,23 +333,26 @@
     document.getElementById("description").innerHTML = configData.description;
     document.getElementById("playerCount").innerText = configData.onlinePlayer + " / " + configData.maxPlayer;
 
-    // 设置ping值和对应的颜色
+    // 设置 ping 值和对应的颜色
     const pingValue = document.getElementById("ping-value");
     const pingDot = document.getElementById("ping-dot");
     const ping = configData.ping;
-    pingValue.innerText = ping === -1 ? '∞' : ping;
+    pingValue.innerText = ping < 0 ? '∞' : ping;
 
-    let dotColor;
-    if (ping > 0 && ping < 50) {
-        dotColor = "#2ecc71";
-    } else if (ping < 100) {
-        dotColor = "#3498db";
-    } else if (ping < 200) {
-        dotColor = "#f39c12";
-    } else {
-        dotColor = "#e74c3c";
+    function getPingColor(value) {
+        if (value < 0) return '#e74c3c';
+        if (value <= 100) return '#2ecc71';
+        if (value <= 200) return '#3498db';
+        const t = Math.min((value - 200) / 400, 1);
+        const r = Math.round(243 - t * 75);
+        const g = Math.round(156 - t * 96);
+        const b = Math.round(18 + t * 6);
+        return `rgb(${r}, ${g}, ${b})`;
     }
+
+    const dotColor = getPingColor(ping);
     pingDot.style.backgroundColor = dotColor;
+    pingValue.style.color = dotColor;
 
     const grid = document.getElementById("playerGrid");
     configData.onlinePlayers.forEach(player => {
@@ -360,7 +363,7 @@
         avatar.className = "player-avatar";
         const img = document.createElement('img');
         img.className = "player-icon";
-        img.src = "https://crafatar.com/avatars/' + player.uuid + '?overlay=true";
+        img.src = "https://crafatar.com/avatars/" + player.uuid + "?overlay=true";
         img.alt = "ServerIcon";
         img.addEventListener('error', function () {
             avatar.style.display = 'none';

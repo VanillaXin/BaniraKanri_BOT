@@ -16,11 +16,11 @@ import com.mikuac.shiro.dto.action.response.MsgResp;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.dto.event.message.MessageEvent;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.message.McQueryCode;
+import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KeyValue;
@@ -57,66 +57,62 @@ public class McQueryPlugin extends BasePlugin {
     private static final File HTML_FILE = new File("config/mc_query_plugin/index.html");
     private static final File CONFIG_FILE = new File("config/mc_query_plugin/config.js");
 
-    @Override
-    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
-        BaseInstructionsConfig base = BaniraUtils.getBaseIns();
-        String prefix = BaniraUtils.getInsPrefixWithSpace();
-        List<String> mcQuery = insConfig.get().mcQuery();
-        String cmd = mcQuery.getFirst();
-        String mcCmd = prefix + cmd;
-        HelpTopic topic = HelpTopics.of("MC服务器", "查询 Minecraft 服务器状态。", 99, mcQuery);
-        topic.child(HelpTopics.opAdd(base,
-                "增加 MC 服务器配置，下次可直接使用名称查询。\n\n"
-                        + "用法1：\n" + mcCmd + " " + base.add().getFirst() + " [<服务器名称>] <查询地址> <查询端口>\n\n"
-                        + "用法2：\n" + mcCmd + " " + base.add().getFirst() + " [<服务器名称>] <查询地址:查询端口>"));
-        topic.child(HelpTopics.opDel(base,
-                "用法1：(根据编号删除)\n" + mcCmd + " " + base.del().getFirst() + " <MC服务器编号> ...\n\n"
-                        + "用法2：(回复添加成功的响应消息)\n" + mcCmd + " " + base.del().getFirst()));
-        topic.child(HelpTopics.opList(base,
-                "用法：\n" + mcCmd + " " + base.list().getFirst() + " [<页数>] [<MC服务器名称>]"));
-        topic.child(HelpTopics.sub("直接查询", "不保存配置，直接通过地址或已保存名称查询。", 4, querys,
-                "用法1：\n/list [<服务器名称>] <查询地址> <查询端口>\n\n"
-                        + "用法2：\n/list [<服务器名称>] <查询地址:查询端口>\n\n"
-                        + "别名：/ls\n"
-                        + "已保存的服务器也可直接使用名称查询。"));
-        topics.add(topic);
+    private enum QueryOutputMode {
+        AUTO, TEXT, IMAGE
     }
 
-    private static final Set<String> querys = BaniraUtils.mutableSetOf(
-            "/list", "/ls"
-    );
+    @Override
+    public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
+        InstructionsConfig ins = insConfig.get();
+        BaseInstructionsConfig base = BaniraUtils.getBaseIns();
+        String prefix = BaniraUtils.getInsPrefixWithSpace();
+        List<String> mcQuery = ins.mcQuery();
+        String mcCmd = prefix + mcQuery.getFirst();
+        String slashCmd = "/" + ins.mcQuerySlash().getFirst();
+        String textFlag = HelpTopics.formatAliasChoices(ins.mcQueryText());
+        String imgFlag = HelpTopics.formatAliasChoices(ins.mcQueryImg());
+
+        HelpTopic topic = HelpTopics.of("MC服务器", "查询 Minecraft 服务器在线状态与玩家列表。", 99, mcQuery);
+        topic.child(HelpTopics.opAdd(base,
+                "保存服务器配置，之后可直接用名称查询。\n\n"
+                        + "用法1：\n" + mcCmd + " " + base.add().getFirst() + " [<名称>] <查询地址> <查询端口>\n\n"
+                        + "用法2：\n" + mcCmd + " " + base.add().getFirst() + " [<名称>] <查询地址:查询端口>"));
+        topic.child(HelpTopics.opDel(base,
+                "用法1（按编号）：\n" + mcCmd + " " + base.del().getFirst() + " <编号> ...\n\n"
+                        + "用法2（回复添加消息）：\n" + mcCmd + " " + base.del().getFirst()));
+        topic.child(HelpTopics.opList(base,
+                "查看已保存的服务器列表。\n\n"
+                        + "用法：\n" + mcCmd + " " + base.list().getFirst() + " [<页数>] [<名称>]"));
+        HelpTopic direct = HelpTopics.sub("直接查询", "无需保存配置，直接查询地址或已保存名称。", 4, ins.mcQuerySlash(),
+                "用法1：\n" + slashCmd + " [<名称>] <查询地址> <查询端口>\n\n"
+                        + "用法2：\n" + slashCmd + " [<名称>] <查询地址:查询端口>\n\n"
+                        + "省略参数时查询当前群全部已保存服务器。\n"
+                        + "单条默认图片，多条默认文本；可用 " + textFlag + " / " + imgFlag + " 指定输出格式。\n\n"
+                        + "示例：\n" + slashCmd + " " + ins.mcQueryText().getFirst() + " hypixel.net\n"
+                        + slashCmd + " " + ins.mcQueryImg().getFirst() + " 我的服务器");
+        topic.child(direct);
+        topics.add(topic);
+    }
 
     @AnyMessageHandler
     public boolean query(BaniraBot bot, AnyMessageEvent event) {
         String message = event.getMessage();
-        if (querys.stream().anyMatch(message::startsWith)) {
-            List<MinecraftRecord> records = extractMinecraftRecords(message, event);
+        String matchedSlash = matchSlashQuery(message);
+        if (matchedSlash == null) return false;
 
-            if (CollectionUtils.isNotNullOrEmpty(records)) {
-                // 合并转发文字
-                if (records.size() > 1) {
-                    LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
-                    List<Map<String, Object>> msg = new ArrayList<>();
-                    msg.add(ShiroUtils.generateSingleMsg(event.getUserId(), event.getSender().getNickname(), event.getMessage()));
-                    for (MinecraftRecord record : records) {
-                        msg.add(ShiroUtils.generateSingleMsg(loginInfoEx.getUserId(), loginInfoEx.getNickname()
-                                , McQueryCode.getQueryInfo(record.getName(), record.getQueryIp(), record.getQueryPort())
-                        ));
-                    }
-                    ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, msg);
-                    return bot.isActionDataMsgIdNotEmpty(msgIdData);
-                }
-                // 图片
-                else {
-                    bot.setMsgEmojiLikeOk(event.getMessageId());
-                    String msg = getQueryInfoImg(records.getFirst());
-                    if (StringUtils.isNullOrEmptyEx(msg)) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
-                    ActionData<MsgId> msgIdData = bot.sendMsg(event, msg, false);
-                    return bot.isActionDataMsgIdNotEmpty(msgIdData);
-                }
-            }
+        QueryOutputMode mode = parseOutputMode(message, matchedSlash);
+        String queryBody = stripSlashPrefix(message, matchedSlash);
+        List<MinecraftRecord> records = extractMinecraftRecords(queryBody, event);
+
+        if (CollectionUtils.isNullOrEmpty(records)) return false;
+
+        boolean useImage = resolveUseImage(mode, records.size());
+        bot.setMsgEmojiLikeOk(event.getMessageId());
+
+        if (useImage) {
+            return sendImageResults(bot, event, records);
         }
-        return false;
+        return sendTextResults(bot, event, records);
     }
 
     @AnyMessageHandler
@@ -321,7 +317,8 @@ public class McQueryPlugin extends BasePlugin {
                     List<MinecraftRecord> recordList = minecraftRecordManager.getMinecraftRecordList(new MinecraftRecordQueryParam().setId(ids).setEnable(true));
                     if (!recordList.isEmpty()) {
                         for (MinecraftRecord record : recordList) {
-                            this.deleteMinecraftRecord(bot, event, record, loginInfoEx, forwardMsg);
+                            record.setGroupId(0L);
+                            this.modifyMinecraftRecord(bot, event, record, loginInfoEx, forwardMsg);
                         }
                     } else {
                         forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname()
@@ -338,6 +335,86 @@ public class McQueryPlugin extends BasePlugin {
         return false;
     }
 
+    // region 直接查询
+
+    private String matchSlashQuery(String message) {
+        if (StringUtils.isNullOrEmptyEx(message)) return null;
+        for (String ins : insConfig.get().mcQuerySlash()) {
+            String prefix = "/" + ins;
+            if (message.equals(prefix) || message.startsWith(prefix + " ")) {
+                return ins;
+            }
+        }
+        return null;
+    }
+
+    private QueryOutputMode parseOutputMode(String message, String matchedSlash) {
+        String body = stripSlashPrefix(message, matchedSlash).trim();
+        if (body.isEmpty()) return QueryOutputMode.AUTO;
+        String first = body.split("\\s+")[0];
+        if (insConfig.get().mcQueryText().contains(first)) return QueryOutputMode.TEXT;
+        if (insConfig.get().mcQueryImg().contains(first)) return QueryOutputMode.IMAGE;
+        return QueryOutputMode.AUTO;
+    }
+
+    private String stripSlashPrefix(String message, String matchedSlash) {
+        String prefix = "/" + matchedSlash;
+        if (message.equals(prefix)) return "";
+        String body = message.substring(prefix.length()).trim();
+        if (body.isEmpty()) return body;
+        String[] tokens = body.split("\\s+");
+        if (insConfig.get().mcQueryText().contains(tokens[0]) || insConfig.get().mcQueryImg().contains(tokens[0])) {
+            return body.substring(tokens[0].length()).trim();
+        }
+        return body;
+    }
+
+    private boolean resolveUseImage(QueryOutputMode mode, int recordCount) {
+        return switch (mode) {
+            case TEXT -> false;
+            case IMAGE -> true;
+            case AUTO -> recordCount == 1;
+        };
+    }
+
+    private boolean sendTextResults(BaniraBot bot, AnyMessageEvent event, List<MinecraftRecord> records) {
+        LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
+        List<Map<String, Object>> msg = new ArrayList<>();
+        msg.add(ShiroUtils.generateSingleMsg(event.getUserId(), event.getSender().getNickname(), event.getMessage()));
+        for (MinecraftRecord record : records) {
+            msg.add(ShiroUtils.generateSingleMsg(loginInfoEx.getUserId(), loginInfoEx.getNickname()
+                    , McQueryCode.getQueryInfo(record.getName(), record.getQueryIp(), record.getQueryPort())
+            ));
+        }
+        ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, msg);
+        return bot.isActionDataMsgIdNotEmpty(msgIdData);
+    }
+
+    private boolean sendImageResults(BaniraBot bot, AnyMessageEvent event, List<MinecraftRecord> records) {
+        if (records.size() == 1) {
+            String msg = getQueryInfoImg(records.getFirst());
+            if (StringUtils.isNullOrEmptyEx(msg)) return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
+            ActionData<MsgId> msgIdData = bot.sendMsg(event, msg, false);
+            return bot.isActionDataMsgIdNotEmpty(msgIdData);
+        }
+        LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
+        List<Map<String, Object>> forwardMsg = new ArrayList<>();
+        forwardMsg.add(ShiroUtils.generateSingleMsg(event.getUserId(), event.getSender().getNickname(), event.getMessage()));
+        for (MinecraftRecord record : records) {
+            forwardMsg.add(ShiroUtils.generateSingleMsg(loginInfoEx.getUserId(), loginInfoEx.getNickname()
+                    , McQueryCode.getQueryInfo(record.getName(), record.getQueryIp(), record.getQueryPort())
+            ));
+            String img = getQueryInfoImg(record);
+            if (!StringUtils.isNullOrEmptyEx(img)) {
+                forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname(), img));
+            }
+        }
+        ActionData<MsgId> msgIdData = bot.sendForwardMsg(event, forwardMsg);
+        return bot.isActionDataMsgIdNotEmpty(msgIdData);
+    }
+
+    // endregion 直接查询
+
     public List<MinecraftRecord> extractMinecraftRecords(String message, AnyMessageEvent event) {
         if (message == null) {
             return Collections.emptyList();
@@ -345,23 +422,17 @@ public class McQueryPlugin extends BasePlugin {
 
         String trimmed = message.trim();
         if (trimmed.isEmpty()) {
-            return Collections.emptyList();
+            return fetchRecordsByName(null, event.getSelfId(), event.getGroupId());
         }
 
         String[] tokens = trimmed.split("\\s+");
         List<MinecraftRecord> records = new ArrayList<>();
 
-        // 没有第二个 token：直接返回默认列表
-        if (tokens.length < 2 || StringUtils.isNullOrEmptyEx(tokens[1])) {
-            records.addAll(fetchRecordsByName(null, event.getSelfId(), event.getGroupId()));
-            return records;
-        }
-
-        NetAddressUtils.NetAddress addr = NetAddressUtils.findAddressAndPort(tokens, 1);
+        NetAddressUtils.NetAddress addr = NetAddressUtils.findAddressAndPort(tokens, 0);
         if (addr != null) {
             String ip = addr.host();
             int port = addr.port();
-            String name = (addr.index() > 1) ? joinTokens(tokens, 1, addr.index()) : "Minecraft Server";
+            String name = (addr.index() > 0) ? joinTokens(tokens, 0, addr.index()) : "Minecraft Server";
 
             records.add(new MinecraftRecord()
                     .setBotId(event.getSelfId())
@@ -371,9 +442,7 @@ public class McQueryPlugin extends BasePlugin {
                     .setQueryPort(port)
             );
         } else {
-            // 未找到 host/host，从库中查询
-            String name = message.substring(message.indexOf(tokens[1]));
-            records.addAll(fetchRecordsByName(name, event.getSelfId(), event.getGroupId()));
+            records.addAll(fetchRecordsByName(trimmed, event.getSelfId(), event.getGroupId()));
         }
         return records;
     }

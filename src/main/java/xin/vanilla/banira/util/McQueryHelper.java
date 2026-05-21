@@ -38,8 +38,9 @@ public class McQueryHelper {
 
     private static final int PACKET_TYPE_HANDSHAKE = 0;
     private static final int PACKET_TYPE_STATUS = 0;
-    private static final int PROTOCOL_VERSION = 4;
+    private static final int PROTOCOL_VERSION = 765;
     private static final int SOCKET_TIMEOUT = 10000;
+    private static final int PING_TIMEOUT = 3000;
     private static final AtomicLong PING_ID = new AtomicLong(1);
 
     private McQueryHelper(String name, String address) throws URISyntaxException {
@@ -397,7 +398,7 @@ public class McQueryHelper {
                 // 读取状态响应
                 readStatusResponse(in);
 
-                // 尝试获取ping值
+                // 尝试获取 ping 值（失败不影响状态查询结果）
                 measurePing(socket, out, in);
 
                 setError(null);
@@ -411,6 +412,11 @@ public class McQueryHelper {
         } catch (Exception e) {
             LOGGER.error("Failed to query server {}", serverAddress, e);
             setError(ERROR_MSG_UNKNOWN_RESPONSE);
+        }
+
+        // 状态查询成功但 ping 失败时，尝试独立连接测量
+        if (StringUtils.isNullOrEmptyEx(error()) && ping < 0) {
+            measurePingStandalone();
         }
     }
 
@@ -489,32 +495,77 @@ public class McQueryHelper {
     }
 
     /**
-     * 测量服务器ping值
+     * 测量服务器 ping 值（与状态查询共用连接）
      */
     private void measurePing(Socket socket, OutputStream out, InputStream in) {
         try {
+            socket.setSoTimeout(PING_TIMEOUT);
             long pingId = PING_ID.getAndIncrement();
-            long startTime = System.currentTimeMillis();
+            long startTime = System.nanoTime();
 
-            // 发送ping请求
             sendPingRequest(out, pingId);
 
-            // 读取ping响应
-            if (readPingResponse(in, pingId)) {
-                long endTime = System.currentTimeMillis();
-                ping = endTime - startTime;
+            int packetLength = readVarInt(in);
+            if (packetLength < 9) {
+                ping = -1;
+                return;
+            }
+            int packetId = readVarInt(in);
+            if (packetId != 1) {
+                ping = -1;
+                return;
+            }
+            long responseId = readLong(in);
+            if (responseId == pingId) {
+                ping = (System.nanoTime() - startTime) / 1_000_000L;
                 serverJson.addProperty("ping", ping);
             } else {
-                setError(ERROR_MSG_PING_FAILED);
+                ping = -1;
             }
         } catch (Exception e) {
-            LOGGER.warn("Failed to measure ping for server {}", serverAddress, e);
-            // Ping失败不影响主要状态查询
+            LOGGER.warn("Failed to measure ping for server {} on shared connection", serverAddress, e);
+            ping = -1;
+        } finally {
+            try {
+                socket.setSoTimeout(SOCKET_TIMEOUT);
+            } catch (Exception ignored) {
+            }
         }
     }
 
     /**
-     * 发送ping请求
+     * 独立连接测量 ping（部分服务器在状态响应后会关闭共享连接）
+     */
+    private void measurePingStandalone() {
+        try (Socket socket = new Socket(serverAddress, queryPort)) {
+            socket.setSoTimeout(PING_TIMEOUT);
+            try (OutputStream out = socket.getOutputStream();
+                 InputStream in = socket.getInputStream()) {
+                sendHandshakePacket(out);
+                sendStatusRequestPacket(out);
+                readStatusResponse(in);
+
+                long pingId = PING_ID.getAndIncrement();
+                long startTime = System.nanoTime();
+                sendPingRequest(out, pingId);
+
+                int packetLength = readVarInt(in);
+                if (packetLength < 9) return;
+                int packetId = readVarInt(in);
+                if (packetId != 1) return;
+                long responseId = readLong(in);
+                if (responseId == pingId) {
+                    ping = (System.nanoTime() - startTime) / 1_000_000L;
+                    serverJson.addProperty("ping", ping);
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.debug("Standalone ping failed for server {}", serverAddress, e);
+        }
+    }
+
+    /**
+     * 发送 ping 请求
      */
     private void sendPingRequest(OutputStream out, long pingId) throws IOException {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -527,40 +578,6 @@ public class McQueryHelper {
 
         // 发送数据包
         sendPacket(out, buffer.toByteArray());
-    }
-
-    /**
-     * 读取ping响应
-     */
-    private boolean readPingResponse(InputStream in, long expectedPingId) throws IOException {
-        // 设置读取超时时间为2秒
-        int timeout = 2000;
-        long startTime = System.currentTimeMillis();
-
-        while (System.currentTimeMillis() - startTime < timeout) {
-            if (in.available() > 0) {
-                // 读取数据包长度
-                int packetLength = readVarInt(in);
-
-                // 读取数据包ID
-                int packetId = readVarInt(in);
-
-                if (packetId == 1) {
-                    // 读取ping响应负载
-                    long pingId = readLong(in);
-                    return pingId == expectedPingId;
-                }
-            }
-
-            try {
-                Thread.sleep(10);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                return false;
-            }
-        }
-
-        return false;
     }
 
     /**

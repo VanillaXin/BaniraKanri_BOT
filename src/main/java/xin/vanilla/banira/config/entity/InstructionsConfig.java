@@ -59,6 +59,31 @@ public class InstructionsConfig {
     private List<String> mcQuery;
 
     /**
+     * MC 服务器直接查询指令
+     */
+    private List<String> mcQuerySlash;
+
+    /**
+     * MC 查询文本输出模式标记
+     */
+    private List<String> mcQueryText;
+
+    /**
+     * MC 查询图片输出模式标记
+     */
+    private List<String> mcQueryImg;
+
+    /**
+     * MC 服务器 RCON
+     */
+    private List<String> mcRcon;
+
+    /**
+     * MC RCON 密码设置
+     */
+    private List<String> mcRconPsw;
+
+    /**
      * 戳一戳
      */
     private List<String> tap;
@@ -98,6 +123,11 @@ public class InstructionsConfig {
         this.media = BaniraUtils.mutableListOf("获取文件", "获取链接", "下载文件", "getfile", "download", "geturl");
         this.wife = BaniraUtils.mutableListOf("老婆", "wife");
         this.mcQuery = BaniraUtils.mutableListOf("我的世界", "麦块", "mcquery");
+        this.mcQuerySlash = BaniraUtils.mutableListOf("list", "ls", "mc");
+        this.mcQueryText = BaniraUtils.mutableListOf("-t", "text", "文本");
+        this.mcQueryImg = BaniraUtils.mutableListOf("-i", "img", "pic", "图片");
+        this.mcRcon = BaniraUtils.mutableListOf("rcon", "远程", "mc远程");
+        this.mcRconPsw = BaniraUtils.mutableListOf("密码", "psw", "password");
         this.tap = BaniraUtils.mutableListOf("戳一戳", "戳", "tap", "poke");
         this.alive = BaniraUtils.mutableListOf("存活", "活着", "在线", "活着?", "活着？", "online", "alive", "survival");
         this.plant = BaniraUtils.mutableListOf("plant", "tea", "花言草语", "胡言乱语", "喝茶", "品茶");
