@@ -348,25 +348,33 @@ public class McQueryPlugin extends BasePlugin {
         return null;
     }
 
+    private String stripCommandOnly(String message, String matchedSlash) {
+        String prefix = "/" + matchedSlash;
+        if (message.equals(prefix)) return "";
+        return message.substring(prefix.length()).trim();
+    }
+
     private QueryOutputMode parseOutputMode(String message, String matchedSlash) {
-        String body = stripSlashPrefix(message, matchedSlash).trim();
+        String body = stripCommandOnly(message, matchedSlash);
         if (body.isEmpty()) return QueryOutputMode.AUTO;
         String first = body.split("\\s+")[0];
-        if (insConfig.get().mcQueryText().contains(first)) return QueryOutputMode.TEXT;
-        if (insConfig.get().mcQueryImg().contains(first)) return QueryOutputMode.IMAGE;
+        if (matchModeFlag(insConfig.get().mcQueryText(), first)) return QueryOutputMode.TEXT;
+        if (matchModeFlag(insConfig.get().mcQueryImg(), first)) return QueryOutputMode.IMAGE;
         return QueryOutputMode.AUTO;
     }
 
     private String stripSlashPrefix(String message, String matchedSlash) {
-        String prefix = "/" + matchedSlash;
-        if (message.equals(prefix)) return "";
-        String body = message.substring(prefix.length()).trim();
+        String body = stripCommandOnly(message, matchedSlash);
         if (body.isEmpty()) return body;
         String[] tokens = body.split("\\s+");
-        if (insConfig.get().mcQueryText().contains(tokens[0]) || insConfig.get().mcQueryImg().contains(tokens[0])) {
+        if (matchModeFlag(insConfig.get().mcQueryText(), tokens[0]) || matchModeFlag(insConfig.get().mcQueryImg(), tokens[0])) {
             return body.substring(tokens[0].length()).trim();
         }
         return body;
+    }
+
+    private boolean matchModeFlag(List<String> flags, String token) {
+        return flags != null && flags.contains(token);
     }
 
     private boolean resolveUseImage(QueryOutputMode mode, int recordCount) {
@@ -477,6 +485,8 @@ public class McQueryPlugin extends BasePlugin {
                             .setScreenshotOptions(new Page.ScreenshotOptions()
                                     .setFullPage(true)
                             )
+                            .setReadyExpression("window.__mcQueryReady === true")
+                            .setReadyTimeout(10000)
             );
             return MsgUtils.builder()
                     .img(render.getByte())

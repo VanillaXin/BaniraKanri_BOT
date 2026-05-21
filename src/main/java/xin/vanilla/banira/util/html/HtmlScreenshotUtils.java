@@ -2,12 +2,14 @@ package xin.vanilla.banira.util.html;
 
 
 import com.microsoft.playwright.*;
+import lombok.extern.slf4j.Slf4j;
 
 import java.io.File;
 
 /**
  * Html -> Image
  */
+@Slf4j
 public class HtmlScreenshotUtils {
 
     private static Playwright playwrightInstance;
@@ -40,6 +42,7 @@ public class HtmlScreenshotUtils {
             try (BrowserContext context = browser.newContext(config.getContextOptions())) {
                 try (Page page = context.newPage()) {
                     page.navigate(config.getUrl());
+                    waitForReady(page, config);
 
                     // 若未设置录制参数，只截取一张图片
                     if (config.getDuration() == null || config.getInterval() == null) {
@@ -66,6 +69,16 @@ public class HtmlScreenshotUtils {
 
         }
         return result;
+    }
+
+    private static void waitForReady(Page page, HtmlScreenshotConfig config) {
+        if (config.getReadyExpression() == null) return;
+        int timeout = config.getReadyTimeout() != null ? config.getReadyTimeout() : 8000;
+        try {
+            page.waitForFunction(config.getReadyExpression(), new Page.WaitForFunctionOptions().setTimeout(timeout));
+        } catch (PlaywrightException e) {
+            LOGGER.warn("Page ready wait timed out, screenshot will proceed: {}", config.getReadyExpression());
+        }
     }
 
     public static synchronized void close() {

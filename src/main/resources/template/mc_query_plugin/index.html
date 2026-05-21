@@ -329,9 +329,17 @@
 
 <script src="config.js"></script>
 <script>
+    window.__mcQueryReady = false;
 
-    if (configData.serverIcon) document.getElementById('serverIcon').innerHTML = '<img class="server-icon" src="' + configData.serverIcon + '" alt="ServerIcon">';
-    else document.getElementById("serverIconTitle").innerText = configData.serverName.substring(0, 2).toUpperCase();
+    function preloadImage(url) {
+        return new Promise(resolve => {
+            const img = new Image();
+            img.onload = () => resolve(true);
+            img.onerror = () => resolve(false);
+            img.src = url;
+        });
+    }
+
     document.getElementById("serverName").innerText = configData.serverName;
     document.getElementById("serverAddress").innerText = configData.serverAddress;
     document.getElementById("description").innerHTML = configData.description;
@@ -369,34 +377,42 @@
         return player.uuidSimple || (player.uuid || '').replace(/-/g, '') || encodeURIComponent(player.name || '?');
     }
 
-    function loadPlayerAvatar(img, avatar, player, sourceIndex, useName) {
-        const sources = avatarSources;
-        if (sourceIndex >= sources.length) {
-            if (!useName && player.name) {
-                loadPlayerAvatar(img, avatar, player, 0, true);
-                return;
+    async function resolveAvatarUrl(player) {
+        for (const useName of [false, true]) {
+            for (const source of avatarSources) {
+                const url = source(resolvePlayerId(player, useName));
+                if (await preloadImage(url)) return url;
             }
-            avatar.textContent = (player.name || '?').substring(0, 1).toUpperCase();
-            avatar.classList.add('player-avatar-fallback');
-            if (img.parentNode === avatar) avatar.removeChild(img);
-            return;
         }
-        img.onerror = () => loadPlayerAvatar(img, avatar, player, sourceIndex + 1, useName);
-        img.src = sources[sourceIndex](resolvePlayerId(player, useName));
+        return null;
     }
 
-    configData.onlinePlayers.forEach(player => {
+    async function renderServerIcon() {
+        if (configData.serverIcon && await preloadImage(configData.serverIcon)) {
+            document.getElementById('serverIcon').innerHTML =
+                '<img class="server-icon" src="' + configData.serverIcon + '" alt="ServerIcon">';
+        } else {
+            document.getElementById("serverIconTitle").innerText = configData.serverName.substring(0, 2).toUpperCase();
+        }
+    }
+
+    async function renderPlayer(player) {
         const playerCard = document.createElement("div");
         playerCard.className = "player-card";
 
         const avatar = document.createElement("div");
         avatar.className = "player-avatar";
-        const img = document.createElement('img');
-        img.className = "player-icon";
-        img.alt = player.name || "Player";
-        img.loading = "lazy";
-        avatar.appendChild(img);
-        loadPlayerAvatar(img, avatar, player, 0, false);
+        const avatarUrl = await resolveAvatarUrl(player);
+        if (avatarUrl) {
+            const img = document.createElement('img');
+            img.className = "player-icon";
+            img.alt = player.name || "Player";
+            img.src = avatarUrl;
+            avatar.appendChild(img);
+        } else {
+            avatar.textContent = (player.name || '?').substring(0, 1).toUpperCase();
+            avatar.classList.add('player-avatar-fallback');
+        }
 
         const name = document.createElement("div");
         name.className = "player-name";
@@ -405,13 +421,20 @@
         playerCard.appendChild(avatar);
         playerCard.appendChild(name);
         grid.appendChild(playerCard);
-    });
+    }
 
-    // 更新时间和日期
-    const now = new Date();
-    document.getElementById('update-time').textContent =
-        `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ` +
-        `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+    (async function renderPanel() {
+        try {
+            await renderServerIcon();
+            await Promise.all((configData.onlinePlayers || []).map(renderPlayer));
+        } finally {
+            const now = new Date();
+            document.getElementById('update-time').textContent =
+                `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ` +
+                `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            window.__mcQueryReady = true;
+        }
+    })();
 </script>
 </body>
 </html>

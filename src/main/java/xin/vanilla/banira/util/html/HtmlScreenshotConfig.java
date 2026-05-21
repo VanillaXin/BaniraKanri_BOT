@@ -35,6 +35,14 @@ public class HtmlScreenshotConfig {
      */
     private Integer interval;
     /**
+     * 截图前等待页面就绪的 JS 表达式
+     */
+    private String readyExpression;
+    /**
+     * 等待就绪超时（毫秒）
+     */
+    private Integer readyTimeout;
+    /**
      * 网页地址
      */
     private String url;
