@@ -117,7 +117,6 @@
             padding: 12px 24px;
             font-size: 12px;
             color: var(--text-muted);
-            text-align: right;
         }
     </style>
 </head>
@@ -140,9 +139,10 @@
         <div class="exp-item">当前 <strong id="expYet">-</strong></div>
         <div class="exp-item">进度 <strong id="expProgress">-</strong></div>
     </div>
-    <div class="footer">MCMod 用户卡片</div>
+    <div class="footer" id="banira-footer"></div>
 </div>
 
+<script src="footer.js"></script>
 <script src="config.js"></script>
 <script>
     window.__mcModReady = false;
@@ -190,6 +190,7 @@
                     (configData.username || "U").substring(0, 1).toUpperCase();
             }
         } finally {
+            setBaniraFooter("banira-footer", "MCMod 用户卡片");
             window.__mcModReady = true;
         }
     })();

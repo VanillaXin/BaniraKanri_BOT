@@ -484,10 +484,6 @@
             background: #fafbfc;
         }
 
-        .brand {
-            color: var(--accent);
-            font-weight: 800;
-        }
     </style>
 </head>
 <body>
@@ -554,12 +550,10 @@
         <div class="description" id="description"></div>
     </div>
 
-    <div class="footer">
-        <span class="brand">MCMod 百科</span>
-        <span id="updateTime"></span>
-    </div>
+    <div class="footer" id="banira-footer"></div>
 </div>
 
+<script src="footer.js"></script>
 <script src="config.js"></script>
 <script>
     window.__mcModReady = false;
@@ -930,15 +924,6 @@
         });
     }
 
-    function setUpdateTime() {
-        const now = new Date();
-        setText("updateTime", now.getFullYear() + "-" +
-            String(now.getMonth() + 1).padStart(2, "0") + "-" +
-            String(now.getDate()).padStart(2, "0") + " " +
-            String(now.getHours()).padStart(2, "0") + ":" +
-            String(now.getMinutes()).padStart(2, "0"));
-    }
-
     (async function render() {
         try {
             renderHeader();
@@ -955,11 +940,11 @@
             }
             document.getElementById("iconFallback").textContent =
                 configData.shortName || configData.abbrev || getAbbrev(stripShortPrefix(configData.title));
-            setUpdateTime();
+            setBaniraFooter("banira-footer", "MCMod 百科");
             window.__mcModReady = true;
             await Promise.all([loadIcon(), renderAuthors()]);
         } catch (error) {
-            setUpdateTime();
+            setBaniraFooter("banira-footer", "MCMod 百科");
             window.__mcModReady = true;
         }
     })();

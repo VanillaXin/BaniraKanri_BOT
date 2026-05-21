@@ -144,9 +144,10 @@
             margin-bottom: 6px;
         }
 
-        .footer-brand {
-            text-align: right;
+        #banira-footer {
+            margin-top: 4px;
         }
+
     </style>
 </head>
 <body>
@@ -159,10 +160,11 @@
     <div class="list" id="itemList"></div>
     <div class="footer">
         <div class="footer-hint">回复本消息并发送序号查看详情 · 也可使用 ID 直接查询</div>
-        <div class="footer-brand">MCMod 百科 · BaniraKanri</div>
+        <div id="banira-footer"></div>
     </div>
 </div>
 
+<script src="footer.js"></script>
 <script src="config.js"></script>
 <script>
     window.__mcModReady = false;
@@ -235,6 +237,7 @@
                 list.appendChild(await renderItem(items[i], i));
             }
         } finally {
+            setBaniraFooter("banira-footer", "MCMod 百科");
             window.__mcModReady = true;
         }
     })();

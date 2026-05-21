@@ -116,12 +116,10 @@
     </div>
     <div class="parent" id="parentBox" style="display:none;"></div>
     <div class="content" id="contentBox"></div>
-    <div class="footer">
-        <span>MCMod 评论监控</span>
-        <span id="commentIdLine"></span>
-    </div>
+    <div class="footer" id="banira-footer"></div>
 </div>
 
+<script src="footer.js"></script>
 <script src="config.js"></script>
 <script>
     window.__mcModReady = false;
@@ -139,6 +137,7 @@
         if (configData.userName) metaParts.push(configData.userName);
         if (configData.floor) metaParts.push("#" + configData.floor);
         if (configData.time) metaParts.push(configData.time);
+        if (configData.commentId) metaParts.push("#" + configData.commentId);
         document.getElementById("metaLine").textContent = metaParts.join(" · ");
 
         if (isReply && configData.parentUser) {
@@ -149,7 +148,7 @@
         }
 
         document.getElementById("contentBox").textContent = configData.content || "";
-        document.getElementById("commentIdLine").textContent = "#" + (configData.commentId || "-");
+        setBaniraFooter("banira-footer", "MCMod 评论监控");
         window.__mcModReady = true;
     })();
 </script>

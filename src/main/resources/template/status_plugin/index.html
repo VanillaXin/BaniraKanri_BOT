@@ -6,6 +6,7 @@
     <title>BaniraKanri - 机器人监控面板</title>
     <link rel="stylesheet" href="style/all.min.css">
     <script src="script/chart.js"></script>
+    <script src="footer.js"></script>
     <script src="config.js"></script>
     <style>
         @import url('style/css2.css');
@@ -612,7 +613,7 @@
         }
 
         footer {
-            text-align: center;
+            text-align: left;
             margin-top: 40px;
             padding: 25px;
             background: var(--card-bg);
@@ -625,21 +626,12 @@
             animation: float 10s ease-in-out infinite;
         }
 
-        footer::before {
-            content: '🌸 💖 🌸';
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 1.2rem;
-            animation: bounce 3s ease-in-out infinite;
-        }
-
         footer p {
             color: var(--dark);
             font-size: 1rem;
             font-weight: 600;
-            margin-top: 20px;
+            margin-top: 0;
+            width: 100%;
             background: linear-gradient(45deg, var(--primary), var(--accent));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
@@ -967,7 +959,7 @@
     </div>
 
     <footer>
-        <p>BaniraKanri 框架状态面板 | 最后更新: <span id="update-time"></span></p>
+        <p id="banira-footer"></p>
     </footer>
 </div>
 
@@ -1075,12 +1067,7 @@
             config.resources.swap.percentage > 90 ? '#e74c3c' :
                 config.resources.swap.percentage > 70 ? '#f39c12' : '#2ecc71';
 
-        // 更新时间和日期
-        const now = new Date();
-        document.getElementById('update-time').textContent =
-            `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ` +
-            `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-
+        setBaniraFooter("banira-footer", "框架状态");
     }
 
     // 初始化页面

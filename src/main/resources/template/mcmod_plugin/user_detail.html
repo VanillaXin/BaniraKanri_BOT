@@ -234,7 +234,6 @@
             background: #fafbfc;
         }
 
-        .brand { color: var(--accent); font-weight: 800; }
     </style>
 </head>
 <body>
@@ -274,12 +273,10 @@
         <div class="chip-row" id="badges"></div>
     </div>
 
-    <div class="footer">
-        <span class="brand">MCMod 用户中心</span>
-        <span id="updateTime"></span>
-    </div>
+    <div class="footer" id="banira-footer"></div>
 </div>
 
+<script src="footer.js"></script>
 <script src="config.js"></script>
 <script>
     window.__mcModReady = false;
@@ -402,15 +399,6 @@
         });
     }
 
-    function setUpdateTime() {
-        const now = new Date();
-        setText("updateTime", now.getFullYear() + "-" +
-            String(now.getMonth() + 1).padStart(2, "0") + "-" +
-            String(now.getDate()).padStart(2, "0") + " " +
-            String(now.getHours()).padStart(2, "0") + ":" +
-            String(now.getMinutes()).padStart(2, "0"));
-    }
-
     async function loadAvatar() {
         const avatar = configData.avatar;
         if (!avatar) {
@@ -437,11 +425,11 @@
             renderStats();
             renderDeveloperMods();
             renderBadges();
-            setUpdateTime();
+            setBaniraFooter("banira-footer", "MCMod 用户中心");
             window.__mcModReady = true;
             await loadAvatar();
         } catch (error) {
-            setUpdateTime();
+            setBaniraFooter("banira-footer", "MCMod 用户中心");
             window.__mcModReady = true;
         }
     })();

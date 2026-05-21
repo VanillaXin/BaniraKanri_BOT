@@ -228,18 +228,13 @@
 
         .footer {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
             align-items: center;
             margin-top: 30px;
             padding-top: 20px;
             border-top: 1px solid #ffe6ee;
             color: var(--text-secondary);
             font-size: 13px;
-        }
-
-        .footer-icon {
-            margin: 0 5px;
-            color: var(--secondary-color);
         }
 
         /* Ping值的颜色样式 */
@@ -318,15 +313,11 @@
             <div class="players-grid" id="playerGrid"></div>
         </div>
 
-        <div class="footer">
-            <span class="footer-icon">❀</span>
-            <span class="footer-icon">❤</span>
-            <span class="footer-icon">❀</span>
-            <span>BaniraKanri MC状态面板 | 最后更新: <span id="update-time"></span></span>
-        </div>
+        <div class="footer" id="banira-footer"></div>
     </div>
 </div>
 
+<script src="footer.js"></script>
 <script src="config.js"></script>
 <script>
     window.__mcQueryReady = false;
@@ -428,10 +419,7 @@
             await renderServerIcon();
             await Promise.all((configData.onlinePlayers || []).map(renderPlayer));
         } finally {
-            const now = new Date();
-            document.getElementById('update-time').textContent =
-                `${now.getFullYear()}-${(now.getMonth() + 1).toString().padStart(2, '0')}-${now.getDate().toString().padStart(2, '0')} ` +
-                `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
+            setBaniraFooter("banira-footer", "MC 状态");
             window.__mcQueryReady = true;
         }
     })();

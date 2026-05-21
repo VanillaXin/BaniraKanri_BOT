@@ -262,10 +262,22 @@
 
     footer {
       margin-top: 2rem;
-      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
       font-size: 0.75rem;
       color: var(--text-muted);
       opacity: 0.75;
+    }
+
+    .banira-footer-brand {
+      text-align: left;
+    }
+
+    .banira-footer-time {
+      text-align: right;
+      white-space: nowrap;
     }
 
     .loading-overlay {
@@ -339,9 +351,7 @@
 
     <div class="status info" id="status">准备就绪</div>
 
-    <footer>
-      独立工具页，不随项目打包 · 无需联网 · 双击即可使用（需 Chrome / Edge / Firefox 等现代浏览器）
-    </footer>
+    <footer id="banira-footer"></footer>
   </div>
 
   <script>
@@ -974,6 +984,17 @@
         loadingEl.classList.add('hidden');
       }
     }
+
+    (function () {
+      const el = document.getElementById("banira-footer");
+      if (!el) return;
+      const now = new Date();
+      const pad = n => String(n).padStart(2, "0");
+      const time = now.getFullYear() + "-" + pad(now.getMonth() + 1) + "-" + pad(now.getDate()) + " "
+        + pad(now.getHours()) + ":" + pad(now.getMinutes()) + ":" + pad(now.getSeconds());
+      el.innerHTML = '<span class="banira-footer-brand">花言草语·BaniraKanri</span>'
+        + '<span class="banira-footer-time">' + time + "</span>";
+    })();
 
     init();
     // endregion UI
