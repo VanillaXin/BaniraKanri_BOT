@@ -111,6 +111,7 @@ public class TimerPlugin extends BasePlugin {
 
                 if (StringUtils.isNullOrEmptyEx(reason)) {
                     try {
+                        timerRecord.setReplyMsg(BaniraUtils.replaceBaniraFileCode(timerRecord.getReplyMsg()));
                         timerRecordManager.addTimerRecord(timerRecord);
                         if (timerRecord.getId() == 0) {
                             reason = "添加失败";

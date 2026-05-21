@@ -183,9 +183,6 @@ public class KeywordPlugin extends BasePlugin {
 
                 if (StringUtils.isNullOrEmptyEx(reason)) {
                     try {
-                        if (PlantCipher.isPlantToken(keywordRecord.getReplyMsg())) {
-                            keywordRecord.setReplyMsg(PlantCipher.decode(keywordRecord.getReplyMsg()));
-                        }
                         keywordRecord.setReplyMsg(BaniraUtils.replaceBaniraFileCode(keywordRecord.getReplyMsg()));
                         keywordRecordManager.addKeywordRecord(keywordRecord);
                         if (keywordRecord.getId() == 0) {
