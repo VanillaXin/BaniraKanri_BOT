@@ -4,6 +4,8 @@ services:
     image: banira-kanri:latest
     container_name: banira-kanri
     restart: unless-stopped
+    # Chromium 无头模式建议共享 IPC，降低 OOM 概率
+    ipc: host
     ports:
       - "8080:8080"
     volumes:
@@ -11,5 +13,6 @@ services:
       - ./config:/app/config
       - ./logs:/app/logs
       - ./cache:/app/cache
+      - ./playwright:/app/.cache
     environment:
       TZ: Asia/Shanghai

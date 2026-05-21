@@ -73,8 +73,8 @@ public class StatusPlugin extends BasePlugin {
     private volatile long lastRenderTime = 0;
     private static final Random RANDOM = new Random();
 
-    private static final File HTML_FILE = new File("config/status_plugin/index.html");
-    private static final File TEMP_BG_FILE = new File("config/status_plugin/temp.png");
+    private static final File HTML_FILE = new File("config/plugin/status_plugin/index.html");
+    private static final File TEMP_BG_FILE = new File("config/plugin/status_plugin/temp.png");
     private static final String CLIP_SELECTOR = ".container";
 
     @Override

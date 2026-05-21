@@ -51,7 +51,7 @@ public class McQueryPlugin extends BasePlugin {
     @Resource
     private IMinecraftRecordManager minecraftRecordManager;
 
-    private static final File HTML_FILE = new File("config/mc_query_plugin/index.html");
+    private static final File HTML_FILE = new File("config/plugin/mc_query_plugin/index.html");
     private static final String CLIP_SELECTOR = ".card";
 
     private enum QueryOutputMode {

@@ -43,6 +43,7 @@ out/
 /data/
 /config/
 /cache/
+/playwright/
 dist/
 
 # 构建镜像用字体（本地拷贝，不提交仓库）

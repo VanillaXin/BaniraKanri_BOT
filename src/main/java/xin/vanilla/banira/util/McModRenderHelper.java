@@ -32,7 +32,7 @@ public final class McModRenderHelper {
     private McModRenderHelper() {
     }
 
-    private static final File TEMPLATE_DIR = new File("config/mcmod_plugin");
+    private static final File TEMPLATE_DIR = new File("config/plugin/mcmod_plugin");
     private static final String READY_EXPRESSION = "window.__mcModReady === true";
     private static final String CLIP_SELECTOR = ".card";
     private static final Pattern SHORT_NAME_PATTERN = Pattern.compile("\\[([^\\]]+)]");
