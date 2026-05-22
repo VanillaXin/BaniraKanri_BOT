@@ -44,7 +44,7 @@ public class MuteCommand implements KanriHandler {
 
     @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
-        return context.bot().hasAnyPermissions(context.group(), context.sender(), EnumPermission.MUTE, EnumPermission.MALL);
+        return BaniraUtils.hasKanriOperatorAccess(context.bot(), context.group(), context.sender());
     }
 
     @Nonnull
@@ -59,6 +59,9 @@ public class MuteCommand implements KanriHandler {
 
         // 解析目标
         Set<Long> targets = getUserIdsWithReply(context, args);
+        if (containsWholeGroupTarget(args)) {
+            targets.add(233L);
+        }
 
         // 解析时长
         int duration = (int) (StringUtils.toDouble(CollectionUtils.getLast(args)) * 60d);
@@ -73,24 +76,63 @@ public class MuteCommand implements KanriHandler {
         }
         // 群员禁言
         else {
-            if (duration <= 0) return FAIL;
-            if (!context.bot().hasPermission(context.group(), context.sender(), EnumPermission.MUTE)) {
-                return NO_OP;
+            if (duration <= 0) {
+                return FAIL;
             }
 
+            int muted = 0;
             for (Long targetId : targets) {
-                if (context.bot().isUpper(context.group(), context.sender(), targetId)
-                        && context.bot().isUpperInGroup(context.group(), targetId)
-                ) {
-                    context.bot().setGroupBan(context.group(), targetId, duration);
+                if (tryMuteTarget(context, targetId, duration)) {
+                    muted++;
                 } else {
                     context.noPermissionTargets().add(targetId);
                 }
             }
             executeFail(context);
+            if (muted == 0) {
+                return targets.isEmpty() ? FAIL : NO_OP;
+            }
         }
 
-        return targets.isEmpty() ? FAIL : SUCCESS;
+        return SUCCESS;
     }
 
+    private static boolean tryMuteTarget(@Nonnull KanriContext context, @Nonnull Long targetId, int durationSeconds) {
+        if (targetId.equals(context.sender())
+                && KanriSelfOperationPolicy.canAllowSelfMuteOrLoud(context.bot(), context.group(), context.sender())) {
+            context.bot().setGroupBan(context.group(), targetId, durationSeconds);
+            return true;
+        }
+        if (targetId.equals(context.sender())
+                && BaniraUtils.hasKanriOperatorAccess(context.bot(), context.group(), context.sender())
+                && context.bot().isUpperInGroup(context.group(), targetId)) {
+            context.bot().setGroupBan(context.group(), targetId, durationSeconds);
+            return true;
+        }
+        if (!BaniraUtils.hasKanriOperatorAccess(context.bot(), context.group(), context.sender())) {
+            return false;
+        }
+        if (context.bot().isUpper(context.group(), context.sender(), targetId)
+                && context.bot().isUpperInGroup(context.group(), targetId)) {
+            context.bot().setGroupBan(context.group(), targetId, durationSeconds);
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean containsWholeGroupTarget(@Nonnull String[] args) {
+        for (String arg : args) {
+            String normalized = StringUtils.nullToEmpty(arg).replaceAll("\\s+", "").toLowerCase();
+            if ("all".equals(normalized)
+                    || "@all".equals(normalized)
+                    || "全体".equals(normalized)
+                    || "全员".equals(normalized)
+                    || "@全体".equals(normalized)
+                    || "@全员".equals(normalized)
+                    || "@全体成员".equals(normalized)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

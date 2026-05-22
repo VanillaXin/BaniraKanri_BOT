@@ -1,6 +1,7 @@
 package xin.vanilla.banira.config.entity;
 
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.Accessors;
@@ -34,9 +35,14 @@ public class GlobalConfig {
      */
     private Long owner;
     /**
-     * 机器人昵称
+     * 机器人昵称。第一个作为主昵称，旧版单字符串配置也会被兼容为单元素列表。
      */
-    private String botNick;
+    @JsonFormat(with = JsonFormat.Feature.ACCEPT_SINGLE_VALUE_AS_ARRAY)
+    private List<String> botNick;
+    /**
+     * 主人昵称。非空时 AI 应优先用这个称呼 owner 账号，而不是直接叫“主人”。
+     */
+    private String ownerNick;
     /**
      * 后台群
      */
@@ -48,7 +54,8 @@ public class GlobalConfig {
         this.wsUrl = "ws://127.0.0.1:8080";
         this.env = "prod";
         this.owner = 0L;
-        this.botNick = "香草酱";
+        this.botNick = new ArrayList<>(List.of("香草酱"));
+        this.ownerNick = "";
         this.backGroup = new ArrayList<>();
     }
 

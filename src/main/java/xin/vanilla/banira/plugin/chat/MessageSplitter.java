@@ -1,6 +1,6 @@
 package xin.vanilla.banira.plugin.chat;
 
-import xin.vanilla.banira.config.entity.extended.ChatConfig;
+import xin.vanilla.banira.config.entity.extended.ChatReplySettings;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,50 +12,97 @@ import java.util.stream.Collectors;
  * 长消息拆分器
  */
 public class MessageSplitter {
-    private final ChatConfig cfg;
+    private final ChatReplySettings cfg;
 
-    // 句尾标点
     private static final String PUNCTUATION = "。！？!?…｡\n";
-    // 闭合标点
     private static final Set<Character> CLOSING_QUOTES = Set.of('”', '"', '）', ')', '』', '」', '’', '\'');
-    // 软断点
     private static final Set<Character> SOFT_BREAKS = Set.of('，', ',', '；', ';', '：', ':');
 
-    public MessageSplitter(ChatConfig cfg) {
+    public MessageSplitter(ChatReplySettings cfg) {
         this.cfg = cfg;
     }
 
-    /**
-     * 使用 ChatConfig 的拆分文本为多个片段
-     */
     public List<String> split(String text) {
-        if (cfg == null) throw new IllegalStateException("ChatConfig is null");
+        if (cfg == null) {
+            throw new IllegalStateException("ChatReplySettings is null");
+        }
         return split(text, cfg.maxCharsPerPart(), cfg.maxSplitParts());
     }
 
-    /**
-     * 根据长度拆分文本为多个片段
-     *
-     * @param text            原始文本
-     * @param maxCharsPerPart 每片最大长度
-     * @param maxParts        最多拆分为多少片
-     */
     public static List<String> split(String text, int maxCharsPerPart, int maxParts) {
-        if (text == null) return Collections.emptyList();
-        // 规范换行
+        if (text == null) {
+            return Collections.emptyList();
+        }
         text = text.replace("\r\n", "\n").trim();
-        if (text.isEmpty()) return Collections.emptyList();
-        if (maxCharsPerPart <= 0 || maxParts <= 0) return Collections.emptyList();
-        if (text.length() <= maxCharsPerPart) return Collections.singletonList(text);
+        if (text.isEmpty()) {
+            return Collections.emptyList();
+        }
+        if (maxCharsPerPart <= 0 || maxParts <= 0) {
+            return Collections.emptyList();
+        }
+        if (text.contains("\n")) {
+            List<String> parts = new ArrayList<>();
+            for (String line : normalizeLines(text)) {
+                String trimmed = line.trim();
+                if (trimmed.isEmpty()) {
+                    continue;
+                }
+                parts.addAll(splitSingleLine(trimmed, maxCharsPerPart, maxParts - parts.size()));
+                if (parts.size() >= maxParts) {
+                    break;
+                }
+            }
+            return parts.stream().filter(s -> !s.isEmpty()).collect(Collectors.toList());
+        }
+        return splitSingleLine(text, maxCharsPerPart, maxParts);
+    }
+
+    private static List<String> normalizeLines(String text) {
+        List<String> lines = new ArrayList<>();
+        for (String line : text.split("\\n+")) {
+            String trimmed = line.trim();
+            if (trimmed.isEmpty()) {
+                continue;
+            }
+            if (!lines.isEmpty() && isDanglingClosingFragment(trimmed)) {
+                int last = lines.size() - 1;
+                lines.set(last, lines.get(last) + trimmed);
+                continue;
+            }
+            lines.add(trimmed);
+        }
+        return lines;
+    }
+
+    private static boolean isDanglingClosingFragment(String text) {
+        if (text.length() > 4) {
+            return false;
+        }
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            if (!CLOSING_QUOTES.contains(ch) && "，,。．！？!?…".indexOf(ch) < 0) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static List<String> splitSingleLine(String text, int maxCharsPerPart, int maxParts) {
+        if (maxParts <= 0) {
+            return Collections.emptyList();
+        }
+        if (text.length() <= maxCharsPerPart) {
+            return Collections.singletonList(text);
+        }
 
         List<Integer> cuts = new ArrayList<>();
         for (int i = 0; i < text.length(); i++) {
             char c = text.charAt(i);
             if (PUNCTUATION.indexOf(c) >= 0) {
                 int cut = i + 1;
-                // 把紧跟在句尾标点后的闭合引号/括号也包含进句尾
-                while (cut < text.length() && CLOSING_QUOTES.contains(text.charAt(cut))) cut++;
-                // 避免重复切点
+                while (cut < text.length() && CLOSING_QUOTES.contains(text.charAt(cut))) {
+                    cut++;
+                }
                 if (cuts.isEmpty() || cuts.getLast() != cut) {
                     cuts.add(cut);
                 }
@@ -86,13 +133,14 @@ public class MessageSplitter {
                     parts.add(text.substring(start, cut).trim());
                     start = cut;
                 } else {
-                    // start .. cut 过长，需要在这个区间内分段
                     int pos = start;
                     int regionEnd = cut;
                     while (pos < regionEnd && parts.size() < maxParts) {
                         int nextPos = Math.min(regionEnd, pos + maxCharsPerPart);
                         int breakPos = helper.findBreakBackwards(text, pos, nextPos);
-                        if (breakPos == -1 || breakPos <= pos) breakPos = nextPos; // 无软断点则硬切
+                        if (breakPos == -1 || breakPos <= pos) {
+                            breakPos = nextPos;
+                        }
                         parts.add(text.substring(pos, breakPos).trim());
                         pos = breakPos;
                     }
@@ -100,31 +148,32 @@ public class MessageSplitter {
                 }
             }
 
-            // 处理最后剩余部分（最后一个切点之后的尾巴）
             if (parts.size() < maxParts && start < text.length()) {
                 String tail = text.substring(start);
                 int pos = 0;
                 while (pos < tail.length() && parts.size() < maxParts) {
                     int nextPos = Math.min(tail.length(), pos + maxCharsPerPart);
                     int breakPos = helper.findBreakBackwards(tail, pos, nextPos);
-                    if (breakPos == -1 || breakPos <= pos) breakPos = nextPos;
+                    if (breakPos == -1 || breakPos <= pos) {
+                        breakPos = nextPos;
+                    }
                     parts.add(tail.substring(pos, breakPos).trim());
                     pos = breakPos;
                 }
             }
         } else {
-            // 没有句尾标点：直接按长度分，但优先在软断点处断开以保留单词/短语完整性
             int pos = 0;
             while (pos < text.length() && parts.size() < maxParts) {
                 int nextPos = Math.min(text.length(), pos + maxCharsPerPart);
                 int breakPos = helper.findBreakBackwards(text, pos, nextPos);
-                if (breakPos == -1 || breakPos <= pos) breakPos = nextPos;
+                if (breakPos == -1 || breakPos <= pos) {
+                    breakPos = nextPos;
+                }
                 parts.add(text.substring(pos, breakPos).trim());
                 pos = breakPos;
             }
         }
 
-        // 最多保留 maxParts
         if (parts.size() > maxParts) {
             parts = parts.subList(0, maxParts);
         }

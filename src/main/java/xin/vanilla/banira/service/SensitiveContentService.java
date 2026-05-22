@@ -2,6 +2,8 @@ package xin.vanilla.banira.service;
 
 import com.github.houbb.sensitive.word.bs.SensitiveWordBs;
 import com.github.houbb.sensitive.word.support.check.WordChecks;
+import com.github.houbb.sensitive.word.support.resultcondition.WordResultConditions;
+import com.github.houbb.sensitive.word.support.tag.WordTags;
 import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.enums.MsgTypeEnum;
 import com.mikuac.shiro.model.ArrayMsg;
@@ -27,6 +29,11 @@ import java.util.stream.Collectors;
 public class SensitiveContentService {
 
     private static volatile SensitiveContentService instance;
+    /**
+     * sensitive-word 内置标签：0 政治、1 毒品/违禁品、4 违法犯罪。
+     * 日常脏话、色情擦边、赌博广告和未标注的普通词不做全局替换。
+     */
+    private static final List<String> HIGH_RISK_TAGS = List.of("0", "1", "4");
 
     private final SensitiveWordBs wordBs;
 
@@ -213,6 +220,8 @@ public class SensitiveContentService {
                 .wordCheckUrl(WordChecks.url())
                 .wordCheckIpv4(WordChecks.ipv4())
                 .wordCheckWord(WordChecks.word())
+                .wordTag(WordTags.defaults())
+                .wordResultCondition(WordResultConditions.wordTags(HIGH_RISK_TAGS))
                 .wordReplace(new PlantCipherWordReplace())
                 .init();
     }

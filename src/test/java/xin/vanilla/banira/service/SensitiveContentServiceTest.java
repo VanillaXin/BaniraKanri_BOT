@@ -50,9 +50,15 @@ class SensitiveContentServiceTest {
     @Test
     void shouldEncodeSensitiveWordInTextSegment() {
         String sensitive = SensitiveContentService.getInstance()
-                .replacePlainText("这是一段测试敏感词五星红旗的文字");
-        Assertions.assertNotEquals("五星红旗", sensitive);
-        Assertions.assertTrue(sensitive.contains("五星") || sensitive.length() > 10);
+                .replacePlainText("这是一段测试敏感词08宪章的文字");
+        Assertions.assertFalse(sensitive.contains("08宪"));
+        Assertions.assertTrue(sensitive.length() > 10);
+    }
+
+    @Test
+    void shouldKeepDailyProfanityUntouched() {
+        String text = "他妈的这也太离谱了，卧槽";
+        Assertions.assertEquals(text, service.replacePlainText(text));
     }
 
     @Test

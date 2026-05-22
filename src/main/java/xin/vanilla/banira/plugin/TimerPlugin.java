@@ -2,9 +2,12 @@ package xin.vanilla.banira.plugin;
 
 import com.mikuac.shiro.annotation.AnyMessageHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
+import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
+import com.mikuac.shiro.dto.action.common.ActionList;
 import com.mikuac.shiro.dto.action.common.MsgId;
+import com.mikuac.shiro.dto.action.response.FriendInfoResp;
 import com.mikuac.shiro.dto.action.response.GetForwardMsgResp;
 import com.mikuac.shiro.dto.action.response.LoginInfoResp;
 import com.mikuac.shiro.dto.action.response.MsgResp;
@@ -20,11 +23,14 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.PageResult;
 import xin.vanilla.banira.domain.TimerRecord;
 import xin.vanilla.banira.mapper.param.TimerRecordQueryParam;
+import xin.vanilla.banira.plugin.chat.agent.AgentContext;
+import xin.vanilla.banira.plugin.chat.capability.*;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.plugin.timer.TimerPermissionService;
+import xin.vanilla.banira.plugin.timer.TimerQueryService;
 import xin.vanilla.banira.service.ITimerRecordManager;
 import xin.vanilla.banira.util.*;
 
@@ -38,12 +44,14 @@ import java.util.stream.Collectors;
 @Slf4j
 @Shiro
 @Component
-public class TimerPlugin extends BasePlugin {
+public class TimerPlugin extends BasePlugin implements AiCapabilityProvider {
 
     @Resource
     private ITimerRecordManager timerRecordManager;
     @Resource
     private TimerPermissionService timerPermissionService;
+    @Resource
+    private TimerQueryService timerQueryService;
 
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
@@ -66,6 +74,188 @@ public class TimerPlugin extends BasePlugin {
         topics.add(topic);
     }
 
+    @Override
+    public void registerAiCapabilities(@Nonnull List<AiCapability> capabilities, Long groupId) {
+        capabilities.add(new AiCapability()
+                .name("create_timer")
+                .description("创建定时提醒或定时消息。target=private 表示私聊提醒当前用户；target=group 表示发到当前群；targetUser 为指定要 @ 提醒的 QQ。")
+                .parameterHint("cron=Quartz cron表达式, message=提醒内容, target=private|group, targetUser=可选QQ")
+                .parameters(List.of(
+                        AiCapabilityParameter.required("cron", "Quartz cron 表达式；一次性提醒应包含年份"),
+                        AiCapabilityParameter.required("message", "提醒内容，必须来自当前消息"),
+                        AiCapabilityParameter.optional("target", "private 或 group；用户说提醒他/她且指定了人时用 group"),
+                        AiCapabilityParameter.optional("targetUser", "被提醒人的 QQ；只有当前消息明确 @ 或指定某人时填写")
+                ))
+                .mutationPolicy(AiMutationPolicy.CURRENT_MESSAGE_INTENT)
+                .mutating(true)
+                .executor((ctx, args) -> executeAiCreateTimer(
+                        ctx,
+                        AiCapabilityArgs.require(args, "cron"),
+                        AiCapabilityArgs.require(args, "message"),
+                        args.getOrDefault("target", "private"),
+                        args.getOrDefault("targetUser", "")
+                )));
+        capabilities.add(new AiCapability()
+                .name("list_timers")
+                .description("列出当前群的定时任务（只读）。")
+                .parameterHint("keyword=关键词(可选),page=页码(默认1)")
+                .parameters(List.of(
+                        AiCapabilityParameter.optional("keyword", "筛选关键词"),
+                        AiCapabilityParameter.optional("page", "页码，默认 1")
+                ))
+                .executor((ctx, args) -> timerQueryService.listTimers(
+                        ctx.botId(),
+                        ctx.scopeGroupId(),
+                        args.getOrDefault("keyword", ""),
+                        AiCapabilityArgs.parseLong(args, "page", 1)
+                )));
+    }
+
+    @Nonnull
+    private String executeAiCreateTimer(@Nonnull AgentContext ctx,
+                                        @Nonnull String cron,
+                                        @Nonnull String message,
+                                        @Nonnull String target,
+                                        @Nonnull String targetUser) {
+        if (StringUtils.isNullOrEmptyEx(message)) {
+            return "提醒内容不能为空";
+        }
+        cron = normalizeAiCron(cron);
+        if (!CronUtils.isValidCron(cron)) {
+            return "定时任务创建失败：cron 表达式不合法";
+        }
+        if (CronUtils.hasTooShortInterval(cron, 30, 20)) {
+            return "定时任务创建失败：表达式执行间隔过短";
+        }
+        boolean groupTarget = "group".equalsIgnoreCase(target)
+                || "群".equals(target)
+                || "群聊".equals(target);
+        long targetUserId = StringUtils.toLong(targetUser);
+        boolean hasTargetUser = BaniraUtils.isUserIdValid(targetUserId);
+        boolean privateTarget = !groupTarget;
+        boolean friend = !privateTarget || isFriend(ctx.bot(), ctx.senderId());
+        boolean groupFallback = privateTarget && !friend && BaniraUtils.isGroupIdValid(ctx.scopeGroupId());
+        long groupId = groupTarget || groupFallback || hasTargetUser ? ctx.scopeGroupId() : 0L;
+        if (hasTargetUser && !BaniraUtils.isGroupIdValid(groupId)) {
+            return "定时任务创建失败：当前不是群聊，不能 @ 指定用户提醒";
+        }
+        if (groupTarget && !hasTargetUser) {
+            if (groupId <= 0) {
+                return "定时任务创建失败：当前不是群聊，不能创建群提醒";
+            }
+            if (!BaniraUtils.isAdmin(ctx.bot(), groupId, ctx.senderId())) {
+                return "定时任务创建失败：群提醒需要主人或本群管理权限";
+            }
+        }
+        String reminderContent = optimizeReminderMessage(message);
+        String replyMsg;
+        if (hasTargetUser) {
+            replyMsg = MsgUtils.builder().at(targetUserId).text(" ").text(reminderContent).build();
+        } else if (groupFallback) {
+            replyMsg = MsgUtils.builder().at(ctx.senderId()).text(" ").text(reminderContent).build();
+        } else {
+            replyMsg = reminderContent;
+        }
+        TimerRecord timerRecord = new TimerRecord()
+                .setBotId(ctx.botId())
+                .setGroupId(groupId)
+                .setCreatorId(ctx.senderId())
+                .setTime(System.currentTimeMillis() / 1000)
+                .setCron(cron)
+                .setReplyMsg(BaniraUtils.replaceBaniraFileCode(replyMsg));
+        try {
+            timerRecordManager.addTimerRecord(timerRecord);
+        } catch (Exception e) {
+            return "定时任务创建失败：" + e.getMessage();
+        }
+        if (timerRecord.getId() == null || timerRecord.getId() == 0) {
+            return "定时任务创建失败";
+        }
+        String next = CronUtils.getNextFireTimes(cron, 1).stream()
+                .findFirst()
+                .map(DateUtils::toDateTimeString)
+                .orElse("未知时间");
+        String targetName = hasTargetUser ? StringUtils.orDefault(ctx.bot().getUserNameEx(ctx.scopeGroupId(), targetUserId), String.valueOf(targetUserId)) : "";
+        String channel = hasTargetUser ? "在群里 @ " + targetName : groupFallback ? "在群里 @ 你" : groupTarget ? "发到群里" : "私聊提醒你";
+        return "好，" + next + " " + channel + "：" + reminderContent + "（#" + timerRecord.getId() + "）";
+    }
+
+    @Nonnull
+    private static String normalizeAiCron(@Nonnull String cron) {
+        String normalized = cron.trim().replaceAll("\\s+", " ");
+        String[] fields = normalized.split(" ");
+        if (fields.length != 6 || !looksLikeOneShotCronWithoutYear(fields)) {
+            return normalized;
+        }
+        return CronUtils.getNextFireTimes(normalized, 1).stream()
+                .findFirst()
+                .map(date -> {
+                    Calendar calendar = Calendar.getInstance();
+                    calendar.setTime(date);
+                    return normalized + " " + calendar.get(Calendar.YEAR);
+                })
+                .orElse(normalized);
+    }
+
+    private static boolean looksLikeOneShotCronWithoutYear(String[] fields) {
+        return isConcreteCronField(fields[0])
+                && isConcreteCronField(fields[1])
+                && isConcreteCronField(fields[2])
+                && isConcreteCronField(fields[3])
+                && isConcreteCronField(fields[4])
+                && "?".equals(fields[5]);
+    }
+
+    private static boolean isConcreteCronField(String field) {
+        return field != null && field.matches("\\d{1,4}");
+    }
+
+    private static String optimizeReminderMessage(@Nonnull String message) {
+        String content = message
+                .replaceAll("^提醒[：:，,\\s]*", "")
+                .replaceAll("^(我|一下|下)[：:，,\\s]*", "")
+                .trim();
+        if (StringUtils.isNullOrEmptyEx(content)) {
+            return "该看一下提醒了";
+        }
+        if (content.contains("起床")) {
+            return "该起床了";
+        }
+        if (content.contains("吃饭")) {
+            return "记得吃饭";
+        }
+        if (content.contains("喝水")) {
+            return "记得喝水";
+        }
+        if (content.contains("开会") || content.contains("会议") || content.contains("提交") || content.contains("上课")) {
+            return "请记得" + trimLeadingVerb(content);
+        }
+        if (content.startsWith("记得") || content.startsWith("别忘") || content.startsWith("请")) {
+            return content;
+        }
+        return "别忘了" + content;
+    }
+
+    @Nonnull
+    private static String trimLeadingVerb(@Nonnull String content) {
+        return content.replaceAll("^(去|要|记得|提醒我|提醒)", "").trim();
+    }
+
+    private static boolean isFriend(BaniraBot bot, Long userId) {
+        if (!BaniraUtils.isUserIdValid(userId)) {
+            return false;
+        }
+        try {
+            ActionList<FriendInfoResp> friends = bot.getFriendList();
+            return bot.isActionDataNotEmpty(friends)
+                    && friends.getData().stream()
+                    .filter(Objects::nonNull)
+                    .anyMatch(friend -> Objects.equals(friend.getUserId(), userId));
+        } catch (Exception e) {
+            LOGGER.debug("Failed to check friend relation for timer target user={}", userId, e);
+            return false;
+        }
+    }
 
     @AnyMessageHandler
     public boolean config(BaniraBot bot, AnyMessageEvent event) {

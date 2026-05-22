@@ -26,6 +26,7 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
     public static final String QUERY_MSG_RAW = LambdaUtils.getFiledName(MessageRecord::getMsgRaw);
     public static final String QUERY_MSG_TYPE = LambdaUtils.getFiledName(MessageRecord::getMsgType);
     public static final String QUERY_MSG_RECODE = LambdaUtils.getFiledName(MessageRecord::getMsgRecode);
+    public static final String QUERY_RECALLED = LambdaUtils.getFiledName(MessageRecord::getRecalled);
 
     // endregion
 
@@ -41,6 +42,7 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
     public static final String ORDER_MSG_RAW = LambdaUtils.getFiledName(MessageRecord::getMsgRaw);
     public static final String ORDER_MSG_TYPE = LambdaUtils.getFiledName(MessageRecord::getMsgType);
     public static final String ORDER_MSG_RECODE = LambdaUtils.getFiledName(MessageRecord::getMsgRecode);
+    public static final String ORDER_RECALLED = LambdaUtils.getFiledName(MessageRecord::getRecalled);
 
     // endregion
 
@@ -76,6 +78,7 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
             setTime(data.getTime());
             setMsgRecode(data.getMsgRecode());
             setMsgRaw(data.getMsgRaw());
+            setRecalled(data.getRecalled());
         }
     }
 
@@ -298,6 +301,13 @@ public class MessageRecordQueryParam extends BaniraQueryParam {
 
     public MessageRecordQueryParam setMsgRecode(String... msgRecodes) {
         addParamByArray(QUERY_MSG_RECODE, msgRecodes);
+        return this;
+    }
+
+    public MessageRecordQueryParam setRecalled(Boolean recalled) {
+        if (recalled != null) {
+            put(QUERY_RECALLED, recalled);
+        }
         return this;
     }
 

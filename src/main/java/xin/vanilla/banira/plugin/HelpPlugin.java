@@ -16,6 +16,9 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.coder.common.EventCoder;
 import xin.vanilla.banira.coder.common.MessageCoder;
 import xin.vanilla.banira.domain.BaniraCodeContext;
+import xin.vanilla.banira.plugin.chat.capability.AiCapability;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityParameter;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityProvider;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.help.HelpMessage;
@@ -25,6 +28,7 @@ import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
@@ -34,7 +38,7 @@ import java.util.Map;
 @Slf4j
 @Shiro
 @Component
-public class HelpPlugin extends BasePlugin {
+public class HelpPlugin extends BasePlugin implements AiCapabilityProvider {
 
     private static final List<String> CODE_ALIASES = List.of(
             "BaniraCode", "baniracode", "bkode", "bk", "code", "特殊码", "bk码"
@@ -81,6 +85,50 @@ public class HelpPlugin extends BasePlugin {
                         $void：与 $w 配合($w:xxx,$void:true)，使 Code 结果仅写入运行时变量集而不体现在回复内容中"""
         );
         topics.add(codeTopic);
+    }
+
+    @Override
+    public void registerAiCapabilities(@Nonnull List<AiCapability> capabilities, Long groupId) {
+        capabilities.add(new AiCapability()
+                .name("search_help")
+                .description("搜索机器人功能帮助。可查询功能名称、子功能及用法说明。")
+                .parameterHint("path=功能路径(空格或逗号分隔),page=页码(默认1)")
+                .parameters(List.of(
+                        AiCapabilityParameter.optional("path", "功能路径，多个层级可用空格或逗号分隔"),
+                        AiCapabilityParameter.optional("page", "页码，默认 1")
+                ))
+                .executor((ctx, args) -> {
+                    String pathArg = args.getOrDefault("path", "");
+                    long page = 1;
+                    try {
+                        page = Long.parseLong(args.getOrDefault("page", "1"));
+                    } catch (NumberFormatException ignored) {
+                    }
+                    List<String> path = parseHelpPath(pathArg);
+                    return helpService.buildMessages(groupId, path, page).stream()
+                            .map(HelpMessage::content)
+                            .reduce((a, b) -> a + "\n\n" + b)
+                            .orElse("未找到相关帮助。");
+                }));
+        capabilities.add(new AiCapability()
+                .name("list_help_topics")
+                .description("列出当前群可用的顶层功能主题名称与别名。")
+                .parameterHint("无参数")
+                .executor((ctx, args) -> helpService.listTopicNames(groupId)));
+    }
+
+    @Nonnull
+    private static List<String> parseHelpPath(@Nonnull String pathArg) {
+        if (pathArg.isBlank()) {
+            return List.of();
+        }
+        String[] parts = pathArg.contains(",")
+                ? pathArg.split(",")
+                : pathArg.trim().split("\\s+");
+        return Arrays.stream(parts)
+                .map(String::trim)
+                .filter(part -> !part.isEmpty())
+                .toList();
     }
 
     @AnyMessageHandler

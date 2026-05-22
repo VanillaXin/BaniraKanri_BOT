@@ -31,10 +31,13 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.WifeRecord;
 import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.mapper.param.WifeRecordQueryParam;
+import xin.vanilla.banira.plugin.chat.agent.AgentContext;
+import xin.vanilla.banira.plugin.chat.capability.*;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
+import xin.vanilla.banira.plugin.wife.WifeQueryService;
 import xin.vanilla.banira.service.IWifeRecordManager;
 import xin.vanilla.banira.util.*;
 
@@ -53,10 +56,12 @@ import java.util.stream.Collectors;
 @Slf4j
 @Shiro
 @Component
-public class WifePlugin extends BasePlugin {
+public class WifePlugin extends BasePlugin implements AiCapabilityProvider {
 
     @Resource
     private IWifeRecordManager wifeRecordManager;
+    @Resource
+    private WifeQueryService wifeQueryService;
 
     private static final String SUCCESS_CONTENT = "$atUser 今天你的群友$wifeNick是\n$wifeHead『$wifeName』($wifeId) 喵！";
     private static final String FAIL_CONTENT = "$atUser 今天你已经有$wifeNick了喵！";
@@ -91,6 +96,110 @@ public class WifePlugin extends BasePlugin {
                 prefix + wifeHint + " " + HelpTopics.formatAliasChoices(base.del()) + "\n<正则表达式>\n[<昵称表达式>]\n[<抽取成功提示>]\n[<抽取失败提示>]"));
         topic.child(HelpTopics.opList(base, prefix + wifeHint + " " + HelpTopics.formatAliasChoices(base.list())));
         topics.add(topic);
+    }
+
+    @Override
+    public void registerAiCapabilities(@Nonnull List<AiCapability> capabilities, Long groupId) {
+        capabilities.add(new AiCapability()
+                .name("draw_today_wife")
+                .description("为当前用户主动抽取今天的老婆并直接发送结果（群聊专用）。")
+                .parameterHint("nick=昵称，可空，默认老婆")
+                .parameters(List.of(
+                        AiCapabilityParameter.optional("nick", "抽取昵称，可空，默认老婆")
+                ))
+                .resultMode(AiCapabilityResultMode.DIRECT_SEND)
+                .mutationPolicy(AiMutationPolicy.CURRENT_MESSAGE_INTENT)
+                .mutating(true)
+                .executor((ctx, args) -> executeAiDrawWife(ctx, args.getOrDefault("nick", "老婆"))));
+        capabilities.add(new AiCapability()
+                .name("get_today_wife")
+                .description("查询当前用户在群内今天抽到的老婆（只读，群聊专用）。")
+                .parameterHint("无参数")
+                .executor((ctx, args) -> {
+                    if (ctx.scopeGroupId() == 0) {
+                        return "该能力仅在群聊中可用";
+                    }
+                    return wifeQueryService.describeTodayWife(ctx.scopeGroupId(), ctx.senderId());
+                }));
+    }
+
+    @Nonnull
+    private String executeAiDrawWife(@Nonnull AgentContext ctx, @Nonnull String nick) {
+        if (ctx.scopeGroupId() == 0) {
+            return "这个只能在群里抽";
+        }
+        List<WifeConfig> configs = getWifeConfig(ctx.scopeGroupId());
+        if (CollectionUtils.isNullOrEmpty(configs)) {
+            return "这个群还没启用抽老婆";
+        }
+        String drawNick = StringUtils.isNotNullOrEmpty(nick) ? nick.trim() : "老婆";
+        String syntheticMessage = "抽" + drawNick;
+        WifeConfig config = configs.stream()
+                .filter(item -> getPattern(item).matcher(syntheticMessage).find())
+                .findFirst()
+                .orElse(configs.getFirst());
+
+        WifeRecord wifeRecord = this.getWifeRecord(ctx.scopeGroupId(), ctx.senderId());
+        Matcher matcher = this.getPattern(config).matcher(syntheticMessage);
+        String wifeNick = null;
+        if (matcher.find()) {
+            wifeNick = RegexpHelper.extractParams(matcher, config.nick());
+        }
+        if (wifeNick == null) {
+            wifeNick = StringUtils.isNotNullOrEmpty(drawNick) ? drawNick : config.nick();
+        }
+
+        if (wifeRecord == null) {
+            GroupMemberInfoResp wife = this.getRandomWife(ctx.bot(), ctx.scopeGroupId());
+            if (wife != null) {
+                wifeRecord = new WifeRecord()
+                        .setMsgId(ctx.msgId())
+                        .setGroupId(ctx.scopeGroupId())
+                        .setSenderId(ctx.senderId())
+                        .setTime(System.currentTimeMillis() / 1000)
+                        .setWifeId(wife.getUserId())
+                        .setWifeName(wife.getNickname())
+                        .setWifeNick(wifeNick);
+                wifeRecordManager.addWifeRecord(wifeRecord);
+            }
+        }
+        if (wifeRecord == null) {
+            return "抽取失败";
+        }
+
+        GroupMessageEvent event = buildAiGroupMessageEvent(ctx, syntheticMessage);
+        String content = wifeNick.equals(wifeRecord.getWifeNick())
+                ? this.replaceArgs(this.getSuccessContent(config), event, wifeRecord)
+                : this.replaceArgs(this.getFailContent(config), event, wifeRecord);
+        ActionData<MsgId> msgIdData = ctx.bot().sendGroupMsg(ctx.scopeGroupId(), content, false);
+        if (ctx.bot().isActionDataMsgIdNotEmpty(msgIdData)) {
+            return AiDirectResult.sent(content);
+        }
+        return "发送抽老婆结果失败";
+    }
+
+    @Nonnull
+    private static GroupMessageEvent buildAiGroupMessageEvent(@Nonnull AgentContext ctx, @Nonnull String message) {
+        GroupMessageEvent event = new GroupMessageEvent();
+        event.setArrayMsg(ctx.messageContext() != null && ctx.messageContext().originalMsg() != null
+                ? ctx.messageContext().originalMsg()
+                : List.of());
+        event.setGroupId(ctx.scopeGroupId());
+        event.setUserId(ctx.senderId());
+        event.setMessageId(StringUtils.toInt(ctx.msgId()));
+        event.setMessage(message);
+        event.setRawMessage(message);
+        event.setPlainText(message);
+        event.setTime(ctx.messageContext() != null && ctx.messageContext().time() != null
+                ? ctx.messageContext().time()
+                : System.currentTimeMillis() / 1000);
+        event.setSelfId(ctx.botId());
+        event.setMessageType(com.mikuac.shiro.constant.ActionParams.GROUP);
+        GroupMessageEvent.GroupSender sender = new GroupMessageEvent.GroupSender();
+        sender.setUserId(ctx.senderId());
+        sender.setNickname(ctx.bot().getUserNameEx(ctx.scopeGroupId(), ctx.senderId()));
+        event.setSender(sender);
+        return event;
     }
 
     /**
@@ -710,8 +819,8 @@ public class WifePlugin extends BasePlugin {
 
     private String replaceArgs(String content, GroupMessageEvent event, WifeRecord wifeRecord) {
         return content
-                .replaceAll("\\$atUser|\\$atSender|\\$@user|\\$@sender|\\$atSenderId|\\$@senderId|\\$atUserId|\\$@userId", MsgUtils.builder().at(event.getUserId()).build())
-                .replaceAll("\\$atWife|\\$atWifeId|\\$@wife|\\$@wifeId", MsgUtils.builder().at(wifeRecord.getWifeId()).build())
+                .replaceAll("\\$atUser|\\$atSender|\\$@user|\\$@sender|\\$atSenderId|\\$@senderId|\\$atUserId|\\$@userId", MsgUtils.builder().at(event.getUserId()).text(" ").build())
+                .replaceAll("\\$atWife|\\$atWifeId|\\$@wife|\\$@wifeId", MsgUtils.builder().at(wifeRecord.getWifeId()).text(" ").build())
                 .replaceAll("\\$wifeNick", ShiroUtils.escape2(wifeRecord.getWifeNick()))
                 .replaceAll("\\$wifeName", ShiroUtils.escape2(wifeRecord.getWifeName()))
                 .replaceAll("\\$wifeId", String.valueOf(wifeRecord.getWifeId()))

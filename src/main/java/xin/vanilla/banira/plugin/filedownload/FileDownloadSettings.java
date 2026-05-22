@@ -8,7 +8,6 @@ import xin.vanilla.banira.config.contract.SharedConfig;
 import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * 文件下载插件配置

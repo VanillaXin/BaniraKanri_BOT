@@ -26,6 +26,10 @@ public class FolderInitializer implements SmartInitializingSingleton {
     public void afterSingletonsInstantiated() {
         if (url.startsWith("jdbc:sqlite:")) {
             String path = url.substring("jdbc:sqlite:".length());
+            int queryIndex = path.indexOf('?');
+            if (queryIndex >= 0) {
+                path = path.substring(0, queryIndex);
+            }
             Path dbPath = Paths.get(path).toAbsolutePath();
             try {
                 Files.createDirectories(dbPath.getParent());

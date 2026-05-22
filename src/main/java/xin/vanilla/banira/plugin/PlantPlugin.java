@@ -5,14 +5,19 @@ import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Nonnull;
+import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KeyValue;
+import xin.vanilla.banira.plugin.chat.capability.AiCapability;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityParameter;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityProvider;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
+import xin.vanilla.banira.plugin.plant.PlantCodecService;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.PlantCipher;
@@ -26,7 +31,10 @@ import java.util.List;
 @Slf4j
 @Shiro
 @Component
-public class PlantPlugin extends BasePlugin {
+public class PlantPlugin extends BasePlugin implements AiCapabilityProvider {
+
+    @Resource
+    private PlantCodecService plantCodecService;
 
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
@@ -35,6 +43,28 @@ public class PlantPlugin extends BasePlugin {
         topics.add(HelpTopics.of("花言草语", "将消息内容进行植物编码/解码。", 99, insConfig.get().plant())
                 .detail("用法1（回复消息）：\n" + plantCmd + "（回复要编码/解码的消息）\n\n"
                         + "用法2（跟内容）：\n" + plantCmd + " <要编码/解码的内容>"));
+    }
+
+    @Override
+    public void registerAiCapabilities(@Nonnull List<AiCapability> capabilities, Long groupId) {
+        capabilities.add(new AiCapability()
+                .name("plant_codec")
+                .description("花言草语编码或解码。")
+                .parameterHint("text=要处理的文本")
+                .parameters(List.of(
+                        AiCapabilityParameter.required("text", "要编码或解码的文本")
+                ))
+                .executor((ctx, args) -> {
+                    String text = args.getOrDefault("text", "");
+                    if (text.isBlank()) {
+                        return "缺少参数 text";
+                    }
+                    try {
+                        return plantCodecService.transform(text);
+                    } catch (Exception e) {
+                        return "处理失败：" + e.getMessage();
+                    }
+                }));
     }
 
     @AnyMessageHandler

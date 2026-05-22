@@ -2,13 +2,12 @@ package xin.vanilla.banira.util.html;
 
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.Page;
+import jakarta.annotation.Nonnull;
+import jakarta.annotation.Nullable;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import xin.vanilla.banira.util.BaniraUtils;
-
-import jakarta.annotation.Nonnull;
-import jakarta.annotation.Nullable;
 
 import java.io.File;
 import java.io.IOException;

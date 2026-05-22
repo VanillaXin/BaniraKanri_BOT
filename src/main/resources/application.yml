@@ -5,17 +5,16 @@ spring:
     name: BaniraKanri
   datasource:
     driver-class-name: org.sqlite.JDBC
-    url: jdbc:sqlite:./data/banira_data.db
+    url: jdbc:sqlite:./data/banira_data.db?journal_mode=WAL&busy_timeout=30000&synchronous=NORMAL
     username:
     password:
     hikari:
       minimum-idle: 1
-      maximum-pool-size: 4
+      maximum-pool-size: 1
       idle-timeout: 30000
       pool-name: BaniraHikari
       max-lifetime: 1800000
       connection-timeout: 30000
-      connection-init-sql: PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL; PRAGMA busy_timeout=5000;
   sql:
     init:
       mode: never

@@ -8,7 +8,10 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import xin.vanilla.banira.util.html.HtmlScreenshotUtils;
-import xin.vanilla.banira.util.mcmod.*;
+import xin.vanilla.banira.util.mcmod.McModPageProp;
+import xin.vanilla.banira.util.mcmod.McModSearchResult;
+import xin.vanilla.banira.util.mcmod.McModUserCardResult;
+import xin.vanilla.banira.util.mcmod.McModUserPageDetail;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -67,8 +70,8 @@ public final class McModUserPageParser {
 
     @Nonnull
     private static McModUserPageDetail fromUserCard(@Nonnull McModUserCardResult card, @Nonnull String userId,
-                                                     @Nullable String link, @Nonnull String typeName,
-                                                     @Nullable String fallbackName) {
+                                                    @Nullable String link, @Nonnull String typeName,
+                                                    @Nullable String fallbackName) {
         McModUserPageDetail detail = new McModUserPageDetail()
                 .userId(userId)
                 .link(StringUtils.isNotNullOrEmpty(link) ? link : McModUtils.getUserCenterUrl(userId))

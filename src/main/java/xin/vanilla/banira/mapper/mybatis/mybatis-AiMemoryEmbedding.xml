@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="xin.vanilla.banira.mapper.IAiMemoryEmbeddingDao">
+
+    <resultMap id="resultMap" type="xin.vanilla.banira.domain.AiMemoryEmbedding">
+        <id property="memoryId" column="memory_id"/>
+        <result property="botId" column="bot_id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="modelName" column="model_name"/>
+        <result property="dimension" column="dimension"/>
+        <result property="vectorJson" column="vector_json"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="allColumn">
+        t.memory_id, t.bot_id, t.group_id, t.user_id, t.model_name, t.dimension, t.vector_json, t.updated_at
+    </sql>
+
+    <sql id="whereSql">
+        <trim prefix="WHERE" prefixOverrides="AND | OR ">
+            <if test="bot_id != null">
+                AND t.bot_id = #{bot_id}
+            </if>
+            <if test="group_id_in_global != null">
+                AND (t.group_id = #{group_id_in_global} OR t.group_id = 0)
+            </if>
+            <if test="user_id_in_global != null">
+                AND (t.user_id = #{user_id_in_global} OR t.user_id = 0)
+            </if>
+            <if test="model_name != null">
+                AND t.model_name = #{model_name}
+            </if>
+        </trim>
+    </sql>
+
+    <select id="selectByParam" resultMap="resultMap">
+        SELECT
+        <include refid="allColumn"/>
+        FROM ai_memory_embedding t
+        <include refid="whereSql"/>
+    </select>
+
+    <insert id="upsert">
+        INSERT INTO ai_memory_embedding(memory_id, bot_id, group_id, user_id, model_name, dimension, vector_json, updated_at)
+        VALUES (#{memoryId}, #{botId}, #{groupId}, #{userId}, #{modelName}, #{dimension}, #{vectorJson}, #{updatedAt})
+        ON CONFLICT(memory_id) DO UPDATE SET
+            bot_id = excluded.bot_id,
+            group_id = excluded.group_id,
+            user_id = excluded.user_id,
+            model_name = excluded.model_name,
+            dimension = excluded.dimension,
+            vector_json = excluded.vector_json,
+            updated_at = excluded.updated_at
+    </insert>
+
+</mapper>

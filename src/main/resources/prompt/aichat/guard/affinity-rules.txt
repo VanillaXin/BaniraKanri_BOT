@@ -1,0 +1,51 @@
+# 好感度轻量词表
+
+[strongNegativeWords]
+滚
+闭嘴
+爬
+死开
+傻逼
+煞笔
+弱智
+废物
+垃圾
+别说话
+吵死了
+shut up
+fuck off
+stupid
+idiot
+
+[negativeWords]
+烦你
+讨厌你
+不喜欢你
+没用
+真笨
+笨蛋
+蠢
+错了
+坏
+拉倒
+annoying
+useless
+bad bot
+
+[positiveWords]
+谢谢
+谢啦
+辛苦
+喜欢你
+可爱
+乖
+真好
+厉害
+好棒
+靠谱
+爱你
+thanks
+thank you
+good bot
+nice
+cute

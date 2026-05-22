@@ -147,8 +147,35 @@ public final class BaniraUtils {
     }
 
     public static String getBotNick() {
-        String nick = getGlobalConfig().botNick();
-        return StringUtils.isNotNullOrEmpty(nick) ? nick : "香草酱";
+        List<String> nicks = getBotNicks();
+        return !nicks.isEmpty() ? nicks.getFirst() : "香草酱";
+    }
+
+    public static List<String> getBotNicks() {
+        List<String> configured = getGlobalConfig().botNick();
+        if (CollectionUtils.isNullOrEmpty(configured)) {
+            return List.of("香草酱");
+        }
+        List<String> result = new ArrayList<>();
+        for (String nick : configured) {
+            if (StringUtils.isNotNullOrEmpty(nick)) {
+                String trimmed = nick.trim();
+                if (StringUtils.isNotNullOrEmpty(trimmed) && !result.contains(trimmed)) {
+                    result.add(trimmed);
+                }
+            }
+        }
+        return result.isEmpty() ? List.of("香草酱") : result;
+    }
+
+    public static String getOwnerNick() {
+        String ownerNick = getGlobalConfig().ownerNick();
+        return StringUtils.isNotNullOrEmpty(ownerNick) ? ownerNick.trim() : "";
+    }
+
+    public static String getOwnerDisplayName() {
+        String ownerNick = getOwnerNick();
+        return StringUtils.isNotNullOrEmpty(ownerNick) ? ownerNick : "那位熟人";
     }
 
     /**
@@ -417,16 +444,7 @@ public final class BaniraUtils {
                 .orElse(0L);
         Long replyId = getReplyId(arrayMsg);
         if (qq == 0 && replyId != null) {
-            IMessageRecordManager messageRecordManager = getMessageRecordManager();
-            List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
-                    .setMsgId(String.valueOf(replyId))
-                    .setBotId(bot.getSelfId())
-                    .setTargetId(groupId)
-            );
-            qq = records.stream()
-                    .findFirst()
-                    .map(MessageRecord::getSenderId)
-                    .orElse(0L);
+            qq = resolveReplyUserId(bot, groupId, replyId, qq, getMessageRecordManager());
         }
         if (qq == 0 && replyId != null) {
             ActionData<MsgResp> msgData = bot.getMsg(replyId.intValue());
@@ -466,20 +484,47 @@ public final class BaniraUtils {
                     .map(m -> m.group("qq"))
                     .map(Long::parseLong)
                     .findFirst().orElse(0L);
-            if (qq == 0) {
-                IMessageRecordManager messageRecordManager = getMessageRecordManager();
-                List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
-                        .setMsgId(String.valueOf(getReplyId(msg)))
-                        .setBotId(bot.getSelfId())
-                        .setTargetId(groupId)
-                );
-                return records.stream()
-                        .findFirst()
-                        .map(MessageRecord::getSenderId)
-                        .orElse(0L);
+            Long replyId = getReplyId(msg);
+            if (qq == 0 && replyId != null) {
+                qq = resolveReplyUserId(bot, groupId, replyId, qq, getMessageRecordManager());
+            }
+            if (qq == 0 && replyId != null) {
+                ActionData<MsgResp> msgData = bot.getMsg(replyId.intValue());
+                if (bot.isActionDataNotEmpty(msgData)) {
+                    qq = StringUtils.toLong(msgData.getData().getSender().getUserId());
+                }
             }
         }
         return qq;
+    }
+
+    static long resolveReplyUserId(BaniraBot bot
+            , Long groupId
+            , Long replyId
+            , long segmentQq
+            , IMessageRecordManager messageRecordManager
+    ) {
+        if (segmentQq > 0 || replyId == null || messageRecordManager == null) {
+            return segmentQq;
+        }
+        MessageRecord record = null;
+        int msgId = replyId.intValue();
+        try {
+            if (isGroupIdValid(groupId)) {
+                record = messageRecordManager.getGroupMessageRecord(groupId, msgId);
+            } else if (isUserIdValid(groupId)) {
+                record = messageRecordManager.getPrivateMessageRecord(groupId, msgId);
+            }
+            if (record == null) {
+                List<MessageRecord> records = messageRecordManager.getMessageRecordList(new MessageRecordQueryParam()
+                        .setMsgId(String.valueOf(replyId))
+                        .setBotId(bot.getSelfId())
+                );
+                record = records.stream().findFirst().orElse(null);
+            }
+        } catch (Exception ignored) {
+        }
+        return record != null && record.getSenderId() != null ? record.getSenderId() : 0L;
     }
 
     public static String replaceReply(String msg) {
@@ -938,10 +983,22 @@ public final class BaniraUtils {
     }
 
     /**
+     * 是否具备群管操作者身份：QQ 群主、QQ 群管、配置主人、配置管家、配置女仆。
+     * 与群管禁言指令认的可操作身份一致。
+     */
+    public static boolean hasKanriOperatorAccess(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq) {
+        return isOwner(qq)
+                || isButler(qq)
+                || isMaid(groupId, qq)
+                || isGroupOwner(bot, groupId, qq)
+                || isGroupAdmin(bot, groupId, qq);
+    }
+
+    /**
      * 判断是否管理员
      */
     public static boolean isAdmin(@Nullable BaniraBot bot, @Nullable Long groupId, @Nonnull Long qq) {
-        return isGlobalOp(qq) || isGroupOwner(bot, groupId, qq) || isGroupAdmin(bot, groupId, qq) || isMaid(groupId, qq);
+        return hasKanriOperatorAccess(bot, groupId, qq);
     }
 
     /**

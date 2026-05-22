@@ -87,11 +87,13 @@ public class RecorderPlugin extends BasePlugin {
 
     @GroupMsgDeleteNoticeHandler
     public void deleted(BaniraBot bot, GroupMsgDeleteNoticeEvent event) {
+        messageRecordManager.markGroupMessageRecalled(event.getGroupId(), event.getMessageId());
         notice(bot, event.getOperatorId(), messageRecordManager.getGroupMessageRecord(event.getGroupId(), event.getMessageId()));
     }
 
     @PrivateMsgDeleteNoticeHandler
     public void deleted(BaniraBot bot, PrivateMsgDeleteNoticeEvent event) {
+        messageRecordManager.markPrivateMessageRecalled(event.getUserId(), event.getMessageId());
         notice(bot, event.getUserId(), messageRecordManager.getPrivateMessageRecord(event.getUserId(), event.getMessageId()));
     }
 

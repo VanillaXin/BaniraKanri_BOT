@@ -13,10 +13,7 @@ import com.mikuac.shiro.common.utils.ShiroUtils;
 import com.mikuac.shiro.dto.action.common.ActionData;
 import com.mikuac.shiro.dto.action.common.ActionList;
 import com.mikuac.shiro.dto.action.common.MsgId;
-import com.mikuac.shiro.dto.action.response.FriendInfoResp;
-import com.mikuac.shiro.dto.action.response.GroupInfoResp;
-import com.mikuac.shiro.dto.action.response.LoginInfoResp;
-import com.mikuac.shiro.dto.action.response.VersionInfoResp;
+import com.mikuac.shiro.dto.action.response.*;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
@@ -32,10 +29,15 @@ import xin.vanilla.banira.config.entity.basic.PluginConfig;
 import xin.vanilla.banira.config.entity.group.StatusGroupConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
+import xin.vanilla.banira.plugin.chat.capability.AiCapability;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityAccess;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityParameter;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityProvider;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
+import xin.vanilla.banira.plugin.status.StatusService;
 import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.*;
 import xin.vanilla.banira.util.html.HtmlScreenshotConfig;
@@ -46,7 +48,6 @@ import java.io.File;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.time.Duration;
 import java.util.*;
@@ -59,7 +60,7 @@ import java.util.stream.Stream;
 @Slf4j
 @Shiro
 @Component
-public class StatusPlugin extends BasePlugin {
+public class StatusPlugin extends BasePlugin implements AiCapabilityProvider {
 
     @Resource
     private ApplicationContext applicationContext;
@@ -69,6 +70,8 @@ public class StatusPlugin extends BasePlugin {
     private IMessageRecordManager messageRecordManager;
     @Resource
     private Supplier<PluginConfig> pluginConfig;
+    @Resource
+    private StatusService statusService;
 
     private volatile long lastRenderTime = 0;
     private static final Random RANDOM = new Random();
@@ -92,6 +95,119 @@ public class StatusPlugin extends BasePlugin {
         topic.child(HelpTopics.sub("存活检测", "确认机器人在线。", 2, aliveAliases,
                 prefix + aliveAliases.getFirst() + "\n\n群内回复表情 66，私聊回复带表情 66 的消息。"));
         topics.add(topic);
+    }
+
+    @Override
+    public void registerAiCapabilities(@Nonnull List<AiCapability> capabilities, Long groupId) {
+        capabilities.add(new AiCapability()
+                .name("get_bot_status")
+                .description("获取机器人与宿主机的运行状态摘要。")
+                .parameterHint("无参数")
+                .access(AiCapabilityAccess.ADMIN)
+                .sensitive(true)
+                .executor((ctx, args) -> statusService.getStatusSummaryForAi(ctx.bot())));
+        capabilities.add(new AiCapability()
+                .name("get_group_owner")
+                .description("查询当前 QQ 群真实群主，来自框架群成员列表；不要把配置文件中的主人当成群主。")
+                .parameterHint("无参数")
+                .access(AiCapabilityAccess.PUBLIC)
+                .executor((ctx, args) -> getGroupOwnerForAi(ctx.bot(), ctx.scopeGroupId())));
+        capabilities.add(new AiCapability()
+                .name("get_group_summary")
+                .description("查询当前 QQ 群基础信息，包括群号、群名、群主和管理员数量。")
+                .parameterHint("无参数")
+                .access(AiCapabilityAccess.PUBLIC)
+                .executor((ctx, args) -> getGroupSummaryForAi(ctx.bot(), ctx.scopeGroupId())));
+        capabilities.add(new AiCapability()
+                .name("search_group_member")
+                .description("按群昵称或 QQ 关键词搜索群成员，返回匹配成员的 QQ 与群名片；禁言前先用来确认目标。")
+                .parameterHint("keyword=昵称关键词或 QQ 片段")
+                .parameters(List.of(
+                        AiCapabilityParameter.required("keyword", "群昵称关键词或 QQ 号片段")
+                ))
+                .access(AiCapabilityAccess.ADMIN)
+                .executor((ctx, args) -> searchGroupMemberForAi(ctx.bot(), ctx.scopeGroupId(),
+                        args.getOrDefault("keyword", ""))));
+    }
+
+    @Nonnull
+    private String searchGroupMemberForAi(@Nonnull BaniraBot bot, long groupId, @Nonnull String keyword) {
+        if (!BaniraUtils.isGroupIdValid(groupId)) {
+            return "当前不是群聊，查不到群成员";
+        }
+        if (StringUtils.isNullOrEmptyEx(keyword)) {
+            return "请提供要搜索的昵称关键词";
+        }
+        ActionList<GroupMemberInfoResp> members = bot.getGroupMemberList(groupId);
+        if (!bot.isActionDataNotEmpty(members)) {
+            return "暂时查不到群成员列表";
+        }
+        String needle = keyword.trim().toLowerCase(Locale.ROOT);
+        List<String> lines = new ArrayList<>();
+        for (GroupMemberInfoResp member : members.getData()) {
+            if (member == null) {
+                continue;
+            }
+            String display = groupMemberDisplay(member).toLowerCase(Locale.ROOT);
+            String qq = String.valueOf(member.getUserId());
+            if (display.contains(needle) || qq.contains(needle)) {
+                lines.add(groupMemberDisplay(member));
+            }
+        }
+        if (lines.isEmpty()) {
+            return "没找到昵称包含「" + keyword.trim() + "」的成员";
+        }
+        return String.join("\n", lines);
+    }
+
+    private String getGroupOwnerForAi(BaniraBot bot, long groupId) {
+        if (!BaniraUtils.isGroupIdValid(groupId)) {
+            return "当前不是群聊，查不到群主";
+        }
+        ActionList<GroupMemberInfoResp> members = bot.getGroupMemberList(groupId);
+        if (!bot.isActionDataNotEmpty(members)) {
+            return "暂时查不到群成员列表";
+        }
+        return members.getData().stream()
+                .filter(Objects::nonNull)
+                .filter(member -> "owner".equalsIgnoreCase(member.getRole()))
+                .findFirst()
+                .map(member -> "群主是 " + groupMemberDisplay(member))
+                .orElse("暂时没在成员列表里找到群主");
+    }
+
+    private String getGroupSummaryForAi(BaniraBot bot, long groupId) {
+        if (!BaniraUtils.isGroupIdValid(groupId)) {
+            return "当前不是群聊，查不到群信息";
+        }
+        String groupName = bot.getGroupNameEx(groupId);
+        ActionList<GroupMemberInfoResp> members = bot.getGroupMemberList(groupId);
+        if (!bot.isActionDataNotEmpty(members)) {
+            return "群号：" + groupId + "\n群名：" + StringUtils.orDefault(groupName, "未知") + "\n群成员列表暂时查不到";
+        }
+        List<GroupMemberInfoResp> data = members.getData();
+        String owner = data.stream()
+                .filter(Objects::nonNull)
+                .filter(member -> "owner".equalsIgnoreCase(member.getRole()))
+                .findFirst()
+                .map(StatusPlugin::groupMemberDisplay)
+                .orElse("未知");
+        long adminCount = data.stream()
+                .filter(Objects::nonNull)
+                .filter(member -> "admin".equalsIgnoreCase(member.getRole()))
+                .count();
+        return "群号：" + groupId
+                + "\n群名：" + StringUtils.orDefault(groupName, "未知")
+                + "\n群主：" + owner
+                + "\n管理员数量：" + adminCount
+                + "\n成员数量：" + data.size();
+    }
+
+    private static String groupMemberDisplay(GroupMemberInfoResp member) {
+        String card = StringUtils.nullToEmpty(member.getCard()).trim();
+        String nickname = StringUtils.nullToEmpty(member.getNickname()).trim();
+        String name = StringUtils.orDefault(card, StringUtils.orDefault(nickname, String.valueOf(member.getUserId())));
+        return name + "（QQ " + member.getUserId() + "）";
     }
 
     @AnyMessageHandler

@@ -75,6 +75,9 @@ public class RecallCommand implements KanriHandler {
         }
 
         MessageRecord startMessage = messageRecordManager.getGroupMessageRecord(context.group(), start);
+        if (startMessage == null || startMessage.recalled()) {
+            return FAIL;
+        }
 
         for (String arg : args) {
             String[] split = arg.replaceAll("[-：_~+]", ":")
@@ -83,6 +86,7 @@ public class RecallCommand implements KanriHandler {
             if (split.length > 2) return FAIL;
             MessageRecordQueryParam param = new MessageRecordQueryParam();
             param.setGroupId(context.group());
+            param.setRecalled(false);
             param.setIdByLt(startMessage.getId());
             // 撤回指定第几条
             if (split.length == 1) {
@@ -115,6 +119,7 @@ public class RecallCommand implements KanriHandler {
             }
             param.addOrderBy(MessageRecordQueryParam.ORDER_ID, false);
             messageRecordManager.getMessageRecordList(param).stream()
+                    .filter(data -> data != null && !data.recalled())
                     .map(data -> StringUtils.toInt(data.getMsgId()))
                     .filter(data -> data > 0)
                     .forEach(targets::add);
@@ -122,6 +127,7 @@ public class RecallCommand implements KanriHandler {
 
         for (Integer targetId : targets) {
             context.bot().deleteMsg(targetId);
+            messageRecordManager.markGroupMessageRecalled(context.group(), targetId);
         }
 
         return targets.isEmpty() ? FAIL : SUCCESS;

@@ -27,10 +27,15 @@ import xin.vanilla.banira.domain.KeyValue;
 import xin.vanilla.banira.domain.MinecraftRecord;
 import xin.vanilla.banira.domain.PageResult;
 import xin.vanilla.banira.mapper.param.MinecraftRecordQueryParam;
+import xin.vanilla.banira.plugin.chat.capability.AiCapability;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityArgs;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityParameter;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityProvider;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
+import xin.vanilla.banira.plugin.mcquery.McQueryService;
 import xin.vanilla.banira.service.IMinecraftRecordManager;
 import xin.vanilla.banira.util.*;
 import xin.vanilla.banira.util.html.HtmlScreenshotConfig;
@@ -46,10 +51,12 @@ import java.util.*;
 @Slf4j
 @Shiro
 @Component
-public class McQueryPlugin extends BasePlugin {
+public class McQueryPlugin extends BasePlugin implements AiCapabilityProvider {
 
     @Resource
     private IMinecraftRecordManager minecraftRecordManager;
+    @Resource
+    private McQueryService mcQueryService;
 
     private static final File HTML_FILE = new File("config/plugin/mc_query_plugin/index.html");
     private static final String CLIP_SELECTOR = ".card";
@@ -89,6 +96,47 @@ public class McQueryPlugin extends BasePlugin {
                         + slashCmd + " " + ins.mcQueryImg().getFirst() + " 我的服务器");
         topic.child(direct);
         topics.add(topic);
+    }
+
+    @Override
+    public void registerAiCapabilities(@Nonnull List<AiCapability> capabilities, Long groupId) {
+        capabilities.add(new AiCapability()
+                .name("query_mc_server")
+                .description("查询 Minecraft 服务器在线状态与玩家列表。")
+                .parameterHint("host=地址,port=端口(默认25565),name=显示名称(可选)")
+                .parameters(List.of(
+                        AiCapabilityParameter.required("host", "服务器地址"),
+                        AiCapabilityParameter.optional("port", "端口，默认 25565"),
+                        AiCapabilityParameter.optional("name", "显示名称")
+                ))
+                .executor((ctx, args) -> {
+                    try {
+                        String host = AiCapabilityArgs.require(args, "host");
+                        int port = AiCapabilityArgs.parseInt(args, "port", 25565);
+                        return mcQueryService.queryServer(args.get("name"), host, port);
+                    } catch (IllegalArgumentException e) {
+                        return e.getMessage();
+                    }
+                }));
+        capabilities.add(new AiCapability()
+                .name("query_mc_server_by_name")
+                .description("按已保存的名称查询 MC 服务器。")
+                .parameterHint("name=服务器名称")
+                .parameters(List.of(
+                        AiCapabilityParameter.required("name", "已保存的服务器名称")
+                ))
+                .executor((ctx, args) -> {
+                    String name = args.get("name");
+                    if (name == null || name.isBlank()) {
+                        return "缺少参数 name";
+                    }
+                    return mcQueryService.querySavedByName(ctx.botId(), ctx.scopeGroupId(), name);
+                }));
+        capabilities.add(new AiCapability()
+                .name("list_mc_servers")
+                .description("列出当前群已保存的 MC 服务器。")
+                .parameterHint("无参数")
+                .executor((ctx, args) -> mcQueryService.listSavedServers(ctx.botId(), ctx.scopeGroupId())));
     }
 
     @AnyMessageHandler

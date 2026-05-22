@@ -1,164 +1,114 @@
 package xin.vanilla.banira.plugin.chat;
 
-import com.mikuac.shiro.common.utils.MessageConverser;
-import com.mikuac.shiro.common.utils.ShiroUtils;
-import com.mikuac.shiro.dto.action.response.LoginInfoResp;
-import com.mikuac.shiro.model.ArrayMsg;
-import dev.langchain4j.data.message.*;
-import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.chat.response.ChatResponse;
-import dev.langchain4j.model.openai.OpenAiChatModel;
 import lombok.extern.slf4j.Slf4j;
 import xin.vanilla.banira.config.entity.extended.ChatConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
-import xin.vanilla.banira.domain.MessageRecord;
-import xin.vanilla.banira.enums.EnumMessageType;
-import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityRegistry;
+import xin.vanilla.banira.plugin.chat.memory.MemoryEmbeddingService;
+import xin.vanilla.banira.plugin.chat.memory.MemoryExtractor;
+import xin.vanilla.banira.plugin.chat.memory.MemoryRetriever;
+import xin.vanilla.banira.plugin.chat.model.ChatModelRouter;
+import xin.vanilla.banira.plugin.chat.model.ChatQuotaService;
 import xin.vanilla.banira.plugin.common.BaniraBot;
+import xin.vanilla.banira.plugin.kanri.KanriService;
+import xin.vanilla.banira.service.IAiMemoryManager;
 import xin.vanilla.banira.service.IMessageRecordManager;
-import xin.vanilla.banira.util.DateUtils;
-import xin.vanilla.banira.util.StringUtils;
 
-import java.time.Duration;
-import java.util.*;
+import java.util.Objects;
 
 @Slf4j
 public class AIChatService {
 
     private final ChatConfig cfg;
-    private final ChatModel chatModel;
-    private final ReplyDecisionMaker decisionMaker;
-    private final MessageSplitter splitter;
-    private final IMessageRecordManager messageRecordManager;
+    private final ChatTurnPipeline pipeline;
+    private final ChatGroupTurnCoordinator turnCoordinator;
+    private final ChatModelRouter modelRouter;
 
-    public AIChatService(ChatConfig cfg, IMessageRecordManager messageRecordManager) {
-        this.cfg = Objects.requireNonNull(cfg, "cfg");
-        this.messageRecordManager = Objects.requireNonNull(messageRecordManager, "messageRecordManager");
-        this.chatModel = OpenAiChatModel.builder()
-                .apiKey(cfg.apiKey())
-                .modelName(StringUtils.isNullOrEmptyEx(cfg.modelName()) ? "gpt-4o" : cfg.modelName())
-                .temperature(cfg.temperature())
-                .timeout(Duration.ofSeconds(cfg.timeout()))
-                .maxRetries(cfg.maxRetries())
-                .baseUrl(cfg.baseUrl())
-                .build();
-        this.decisionMaker = new ReplyDecisionMaker(cfg);
-        this.splitter = new MessageSplitter(cfg);
+    public AIChatService(ChatConfig cfg
+            , IMessageRecordManager messageRecordManager
+            , AiCapabilityRegistry capabilityRegistry
+            , MemoryRetriever memoryRetriever
+            , MemoryExtractor memoryExtractor
+            , MemoryEmbeddingService memoryEmbeddingService
+            , IAiMemoryManager aiMemoryManager
+            , ChatAffinityService affinityService
+            , ChatQuotaService chatQuotaService
+            , ChatEngagementService engagementService
+            , ChatGroupTurnCoordinator turnCoordinator
+            , KanriService kanriService
+    ) {
+        this.cfg = ChatConfigSupport.normalize(Objects.requireNonNull(cfg, "cfg"));
+        this.turnCoordinator = Objects.requireNonNull(turnCoordinator, "turnCoordinator");
+        Objects.requireNonNull(messageRecordManager, "messageRecordManager");
+        Objects.requireNonNull(capabilityRegistry, "capabilityRegistry");
+        Objects.requireNonNull(memoryRetriever, "memoryRetriever");
+        Objects.requireNonNull(memoryExtractor, "memoryExtractor");
+        Objects.requireNonNull(memoryEmbeddingService, "memoryEmbeddingService");
+        Objects.requireNonNull(aiMemoryManager, "aiMemoryManager");
+        Objects.requireNonNull(affinityService, "affinityService");
+        Objects.requireNonNull(chatQuotaService, "chatQuotaService");
+        Objects.requireNonNull(engagementService, "engagementService");
+        Objects.requireNonNull(kanriService, "kanriService");
+
+        this.modelRouter = new ChatModelRouter(this.cfg);
+        ReplyDecisionMaker decisionMaker = new ReplyDecisionMaker(this.cfg.reply(), this.cfg.affinity());
+        ChatEngagementGate engagementGate = new ChatEngagementGate(
+                this.cfg.engagement(),
+                this.cfg.reply(),
+                engagementService,
+                decisionMaker
+        );
+        ChatGuardService guard = ChatGuardService.from(this.cfg);
+        ChatHistoryProvider historyProvider = new ChatHistoryProvider(this.cfg, messageRecordManager);
+        ChatPromptAssembler promptAssembler = new ChatPromptAssembler(this.cfg, memoryRetriever, capabilityRegistry);
+        ChatResponseSanitizer responseSanitizer = new ChatResponseSanitizer(this.cfg, guard);
+        this.pipeline = new ChatTurnPipeline(
+                this.cfg,
+                this.modelRouter,
+                decisionMaker,
+                capabilityRegistry,
+                memoryRetriever,
+                memoryExtractor,
+                memoryEmbeddingService,
+                aiMemoryManager,
+                affinityService,
+                chatQuotaService,
+                guard,
+                historyProvider,
+                promptAssembler,
+                responseSanitizer,
+                engagementGate,
+                engagementService,
+                kanriService,
+                messageRecordManager
+        );
     }
 
-    /**
-     * @param ctx 消息上下文
-     * @return LLM 生成的纯文本回复
-     */
-    public String generateReply(BaniraBot bot, BaniraCodeContext ctx) {
-        if (!decisionMaker.shouldReply(ctx, bot.isMentioned(ctx.originalMsg()))) return null;
-        LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
-        Date now = new Date();
-        List<ChatMessage> prompt = new ArrayList<>();
-        for (String sysPrompt : cfg.systemPrompt()) {
-            prompt.add(SystemMessage.from(sysPrompt));
+    public StructuredReply generateReply(BaniraBot bot, BaniraCodeContext ctx) {
+        ChatTurnCoalesceOutcome outcome = turnCoordinator.run(bot, ctx, cfg, pipeline::generateReply);
+        if (outcome instanceof ChatTurnCoalesceOutcome.Follower) {
+            return null;
         }
-        // 让模型保持更“有人味”的口吻与语境
-        prompt.add(SystemMessage.systemMessage("你是一位轻松友善的聊天伙伴，语气自然、口语化，允许适度表情符号和感叹（不要过度），使用第一人称，尽量简短且避免机械感。"));
-        prompt.add(SystemMessage.systemMessage("如果问题简单，可随性用一句话回应；遇到不确定可反问或给出简单思考，而不是生硬的模板化回答。"));
-        prompt.add(SystemMessage.systemMessage("请参考最近对话上下文，避免重复用户原话；能给出直接答案就不要堆砌前后缀；如果上下文模糊，可先澄清再回答。"));
-        prompt.add(SystemMessage.systemMessage("当前时间是：" + DateUtils.toDateTimeString(now)));
-        prompt.add(SystemMessage.systemMessage("你的昵称为：" + loginInfoEx.getNickname()));
-        prompt.add(SystemMessage.systemMessage("回复应尽量简短"));
-        List<MessageRecord> records = normalizeHistoryRecords(getHistoryRecords(bot, ctx));
-        for (MessageRecord record : records) {
-            ChatMessage message = convertMessage(record.getMsgRecode(), bot, record.getGroupId(), record.getSenderId());
-            if (message != null) prompt.add(message);
-        }
-        ChatMessage message = convertMessage(ctx.msg(), bot, ctx.group(), ctx.sender());
-        if (message == null) return null;
-        prompt.add(message);
-        ChatResponse chatResponse = this.chatModel.chat(prompt);
-        return chatResponse.aiMessage().text();
+        return ((ChatTurnCoalesceOutcome.Leader) outcome).reply();
     }
 
     public boolean generateAndSendReply(BaniraBot bot, BaniraCodeContext ctx) {
-        String reply = generateReply(bot, ctx);
-        if (reply == null) return false;
-        // 消息过长，合并转发
-        if (reply.length() > cfg.maxForwardLength()) {
-            List<String> split = MessageSplitter.split(reply, cfg.maxCharsPerPart(), 99);
-            LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
-            List<Map<String, Object>> forwardMsg = new ArrayList<>();
-            forwardMsg.add(ShiroUtils.generateSingleMsg(ctx.sender(), bot.getUserNameEx(ctx.group(), ctx.sender()), ctx.msg()));
-            for (String msg : split) {
-                forwardMsg.add(ShiroUtils.generateSingleMsg(bot.getSelfId(), loginInfoEx.getNickname(), msg));
-            }
-            if (ctx.msgType() == EnumMessageType.GROUP) {
-                bot.sendGroupForwardMsg(ctx.group(), forwardMsg);
-            } else {
-                bot.sendPrivateForwardMsg(ctx.sender(), forwardMsg);
-            }
-        } else {
-            for (String msg : splitter.split(reply)) {
-                if (ctx.msgType() == EnumMessageType.GROUP) {
-                    bot.sendGroupMsg(ctx.group(), msg, false);
-                } else {
-                    bot.sendPrivateMsg(ctx.sender(), msg, false);
-                }
-            }
+        ChatTurnCoalesceOutcome outcome;
+        try (ChatThinkingFeedbackService.FeedbackHandle ignored =
+                     ChatThinkingFeedbackService.arm(bot, ctx, cfg, modelRouter)) {
+            outcome = turnCoordinator.run(bot, ctx, cfg, pipeline::generateReply);
         }
-        return true;
+        if (outcome instanceof ChatTurnCoalesceOutcome.Follower) {
+            return false;
+        }
+        ChatTurnCoalesceOutcome.Leader leader = (ChatTurnCoalesceOutcome.Leader) outcome;
+        StructuredReply reply = leader.reply();
+        if (reply == null) {
+            return false;
+        }
+        if (reply.directHandled()) {
+            return true;
+        }
+        return ReplyDeliveryService.deliver(bot, leader.replyContext(), reply, cfg.reply());
     }
-
-    private static ChatMessage convertMessage(String msgRecode, BaniraBot bot, Long groupId, Long senderId) {
-        ChatMessage result = null;
-        String senderName = bot.getUserNameEx(groupId, senderId);
-        if (bot.getSelfId() == senderId) {
-            result = AiMessage.aiMessage(msgRecode);
-        } else {
-            List<ArrayMsg> arrayMsgList = MessageConverser.stringToArray(msgRecode);
-            List<Content> contents = new ArrayList<>();
-            for (ArrayMsg arrayMsg : arrayMsgList) {
-                Content content = MessageConvert.toContent(bot, groupId, arrayMsg, true);
-                if (content != null) {
-                    contents.add(content);
-                }
-            }
-            if (!contents.isEmpty()) {
-                result = UserMessage.userMessage(senderName, contents);
-            }
-        }
-        return result;
-    }
-
-    private List<MessageRecord> getHistoryRecords(BaniraBot bot, BaniraCodeContext ctx) {
-        MessageRecordQueryParam msgRecordParam = new MessageRecordQueryParam(true, 1, cfg.historyLimit());
-        msgRecordParam.setBotId(bot.getSelfId());
-        msgRecordParam.setMsgType(ctx.msgType().name());
-        if (ctx.msgType() == EnumMessageType.GROUP) {
-            msgRecordParam.setGroupId(ctx.group());
-        } else if (ctx.msgType() == EnumMessageType.MEMBER) {
-            msgRecordParam.setGroupId(ctx.group());
-            msgRecordParam.setTargetId(ctx.sender());
-        } else {
-            msgRecordParam.setTargetId(ctx.sender());
-        }
-        msgRecordParam.addOrderBy(MessageRecordQueryParam.ORDER_ID, false);
-        return messageRecordManager.getMessageRecordList(msgRecordParam);
-    }
-
-    /**
-     * 清洗并按时间顺序整理历史记录
-     */
-    private List<MessageRecord> normalizeHistoryRecords(List<MessageRecord> records) {
-        if (records == null || records.isEmpty()) return Collections.emptyList();
-        List<MessageRecord> cleaned = new ArrayList<>();
-        for (MessageRecord record : records) {
-            if (record == null) continue;
-            if (StringUtils.isNullOrEmptyEx(record.getMsgRecode())) continue;
-            cleaned.add(record);
-        }
-        cleaned.sort(Comparator.comparing(MessageRecord::getTime, Comparator.nullsLast(Long::compareTo)));
-        if (cleaned.size() > cfg.historyLimit()) {
-            return cleaned.subList(cleaned.size() - cfg.historyLimit(), cleaned.size());
-        }
-        return cleaned;
-    }
-
 }

@@ -61,7 +61,7 @@ public interface KanriHandler {
      * 提示没有权限
      */
     default void executeFail(@Nonnull KanriContext context) {
-        if (!context.noPermissionTargets().isEmpty() && !context.coder()) {
+        if (!context.noPermissionTargets().isEmpty() && !context.coder() && !context.aiInvoked()) {
             MsgUtils builder = MsgUtils.builder();
             if (context.msgId() > 0) {
                 builder.reply(context.msgId());

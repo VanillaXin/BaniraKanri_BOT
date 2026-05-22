@@ -8,8 +8,8 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import xin.vanilla.banira.domain.KeyValue;
-import xin.vanilla.banira.util.http.HttpResponse;
 import xin.vanilla.banira.util.html.HtmlScreenshotUtils;
+import xin.vanilla.banira.util.http.HttpResponse;
 import xin.vanilla.banira.util.mcmod.*;
 
 import java.util.HashSet;

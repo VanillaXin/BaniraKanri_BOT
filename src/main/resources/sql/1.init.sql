@@ -10,7 +10,8 @@ CREATE TABLE IF NOT EXISTS "message_record"
     `time`       INTEGER NOT NULL,
     `msg_raw`    TEXT    NOT NULL,
     `msg_type`   TEXT    NOT NULL,
-    `msg_recode` TEXT    NOT NULL
+    `msg_recode` TEXT    NOT NULL,
+    `recalled`   BOOLEAN NOT NULL DEFAULT FALSE
 );
 CREATE INDEX IF NOT EXISTS id_index ON "message_record" (`id`);
 CREATE INDEX IF NOT EXISTS msg_id_index ON "message_record" (`msg_id`);
@@ -19,6 +20,7 @@ CREATE INDEX IF NOT EXISTS msg_id_bot_id_index ON "message_record" (`msg_id`, `b
 CREATE INDEX IF NOT EXISTS msg_raw_index ON "message_record" (`msg_raw`);
 CREATE INDEX IF NOT EXISTS msg_type_index ON "message_record" (`msg_type`);
 CREATE INDEX IF NOT EXISTS msg_recode_index ON "message_record" (`msg_recode`);
+CREATE INDEX IF NOT EXISTS recalled_index ON "message_record" (`recalled`);
 
 
 -- 抽老婆记录
@@ -127,3 +129,64 @@ CREATE INDEX IF NOT EXISTS bot_id_group_id_name_index ON "minecraft_record" (`bo
 CREATE INDEX IF NOT EXISTS enable_index ON "minecraft_record" (`enable`);
 CREATE INDEX IF NOT EXISTS bot_id_enable_index ON "minecraft_record" (`bot_id`, `enable`);
 CREATE INDEX IF NOT EXISTS bot_id_group_id_enable_index ON "minecraft_record" (`bot_id`, `group_id`, `enable`);
+
+
+-- AI 长期记忆
+CREATE TABLE IF NOT EXISTS "ai_memory"
+(
+    `id`            INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    `bot_id`        INTEGER NOT NULL,
+    `group_id`      INTEGER NOT NULL DEFAULT 0,
+    `user_id`       INTEGER NOT NULL DEFAULT 0,
+    `content`       TEXT    NOT NULL,
+    `tags`          TEXT    NOT NULL DEFAULT '',
+    `source_msg_id` TEXT    NOT NULL DEFAULT '',
+    `created_at`    INTEGER NOT NULL,
+    `last_used_at`  INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ai_memory_bot_id_index ON "ai_memory" (`bot_id`);
+CREATE INDEX IF NOT EXISTS ai_memory_group_id_index ON "ai_memory" (`group_id`);
+CREATE INDEX IF NOT EXISTS ai_memory_user_id_index ON "ai_memory" (`user_id`);
+CREATE INDEX IF NOT EXISTS ai_memory_bot_group_user_index ON "ai_memory" (`bot_id`, `group_id`, `user_id`);
+CREATE INDEX IF NOT EXISTS ai_memory_last_used_index ON "ai_memory" (`last_used_at`);
+
+CREATE TABLE IF NOT EXISTS "ai_memory_embedding"
+(
+    `memory_id`  INTEGER NOT NULL PRIMARY KEY,
+    `bot_id`     INTEGER NOT NULL,
+    `group_id`   INTEGER NOT NULL DEFAULT 0,
+    `user_id`    INTEGER NOT NULL DEFAULT 0,
+    `model_name` TEXT    NOT NULL,
+    `dimension`  INTEGER NOT NULL,
+    `vector_json` TEXT   NOT NULL,
+    `updated_at` INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ai_memory_embedding_scope_index ON "ai_memory_embedding" (`bot_id`, `group_id`, `user_id`);
+CREATE INDEX IF NOT EXISTS ai_memory_embedding_model_index ON "ai_memory_embedding" (`model_name`);
+
+
+-- AI 用户好感度
+CREATE TABLE IF NOT EXISTS "ai_affinity"
+(
+    `id`         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    `bot_id`     INTEGER NOT NULL,
+    `group_id`   INTEGER NOT NULL DEFAULT 0,
+    `user_id`    INTEGER NOT NULL DEFAULT 0,
+    `score`      INTEGER NOT NULL DEFAULT 50,
+    `updated_at` INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ai_affinity_unique_index ON "ai_affinity" (`bot_id`, `group_id`, `user_id`);
+CREATE INDEX IF NOT EXISTS ai_affinity_bot_group_user_index ON "ai_affinity" (`bot_id`, `group_id`, `user_id`);
+
+
+-- AI 群对话兴趣值
+CREATE TABLE IF NOT EXISTS "ai_group_engagement"
+(
+    `id`         INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    `bot_id`     INTEGER NOT NULL,
+    `group_id`   INTEGER NOT NULL DEFAULT 0,
+    `interest`   INTEGER NOT NULL DEFAULT 0,
+    `updated_at` INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ai_group_engagement_unique_index ON "ai_group_engagement" (`bot_id`, `group_id`);
+CREATE INDEX IF NOT EXISTS ai_group_engagement_bot_group_index ON "ai_group_engagement" (`bot_id`, `group_id`);

@@ -1,8 +1,10 @@
 package xin.vanilla.banira.plugin.chat;
 
 import lombok.extern.slf4j.Slf4j;
-import xin.vanilla.banira.config.entity.extended.ChatConfig;
+import xin.vanilla.banira.config.entity.extended.ChatAffinitySettings;
+import xin.vanilla.banira.config.entity.extended.ChatReplySettings;
 import xin.vanilla.banira.domain.BaniraCodeContext;
+import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.StringUtils;
 
 import java.time.Clock;
@@ -10,97 +12,112 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Deque;
 import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * 决策器：是否回复
+ * 决策器：是否回复（按发送者限频）
  */
 @Slf4j
 public class ReplyDecisionMaker {
 
-    private final ChatConfig cfg;
+    private final ChatReplySettings cfg;
+    private final ChatAffinitySettings affinityCfg;
     private final Clock clock;
+    private final ConcurrentHashMap<Long, UserReplyState> userStates = new ConcurrentHashMap<>();
 
-    // 最近回复时间
-    private Instant lastReply = Instant.EPOCH;
-
-    // 最近 60 秒内的回复时间戳（用于限制每实例每分钟上限）
-    private final Deque<Instant> recentTimestamps = new ConcurrentLinkedDeque<>();
-
-    public ReplyDecisionMaker(ChatConfig cfg) {
-        this(cfg, Clock.systemUTC());
+    public ReplyDecisionMaker(ChatReplySettings cfg) {
+        this(cfg, new ChatAffinitySettings(), Clock.systemUTC());
     }
 
-    public ReplyDecisionMaker(ChatConfig cfg, Clock clock) {
+    public ReplyDecisionMaker(ChatReplySettings cfg, ChatAffinitySettings affinityCfg) {
+        this(cfg, affinityCfg, Clock.systemUTC());
+    }
+
+    public ReplyDecisionMaker(ChatReplySettings cfg, ChatAffinitySettings affinityCfg, Clock clock) {
         this.cfg = Objects.requireNonNull(cfg, "cfg");
+        this.affinityCfg = Objects.requireNonNull(affinityCfg, "affinityCfg");
         this.clock = Objects.requireNonNull(clock, "clock");
     }
 
-    public boolean shouldReply(BaniraCodeContext ctx, boolean isMentioned) {
+    public boolean shouldReply(BaniraCodeContext ctx, boolean isMentioned, boolean isNameMentioned, int affinityScore) {
         if (ctx == null || StringUtils.isNullOrEmptyEx(ctx.msg())) {
             return false;
         }
-        if (!cfg.enabled()) {
-            LOGGER.debug("reply disabled in config");
+        if (!passesRateLimit(ctx, isMentioned)) {
             return false;
         }
-
-        final Instant now = clock.instant();
-
-        // per-instance cooldown（避免刷屏）
-        long elapsedSinceLast = Duration.between(lastReply, now).getSeconds();
-        if (elapsedSinceLast < cfg.perTargetCooldownSeconds()) {
-            LOGGER.debug("skip reply due per-instance cooldown elapsed={}s need={}s",
-                    elapsedSinceLast, cfg.perTargetCooldownSeconds());
-            return false;
-        }
-
-        // 滑动窗口：清理 60 秒之前的时间戳，并检查当前窗口是否已满
-        final int limitPerMinute = cfg.perTargetRateLimitPerMinute();
-        cleanOldTimestamps(now);
-        synchronized (recentTimestamps) {
-            if (recentTimestamps.size() >= limitPerMinute) {
-                LOGGER.warn("per-target rate limit hit: {}/min", limitPerMinute);
-                return false;
-            }
-        }
-
-        // 计算概率并 roll（纯逻辑）
-        double p = computeReplyProbability(ctx, isMentioned);
+        double p = computeReplyProbability(ctx, isMentioned, isNameMentioned, affinityScore,
+                userStates.computeIfAbsent(ctx.sender(), id -> new UserReplyState()));
         double roll = ThreadLocalRandom.current().nextDouble();
         boolean decision = roll <= p;
-        LOGGER.debug("decide reply p={} roll={} => {}", String.format("%.4f", p),
-                String.format("%.4f", roll), decision);
-
+        LOGGER.debug("decide reply sender={} p={} roll={} => {}", ctx.sender(),
+                String.format("%.4f", p), String.format("%.4f", roll), decision);
         if (!decision) {
             return false;
         }
-
-        // 命中：记录时间戳并更新 lastReply
-        synchronized (recentTimestamps) {
-            // 再次清理以减少 race 导致的超额（防守式）
-            cleanOldTimestamps(now);
-            if (recentTimestamps.size() >= limitPerMinute) {
-                LOGGER.warn("per-target rate limit hit after race-check: {}/min", limitPerMinute);
-                return false;
-            }
-            recentTimestamps.addLast(now);
-        }
-        lastReply = now;
+        markReplySent(ctx.sender());
         return true;
     }
 
     /**
-     * 清理 recentTimestamps 中超过 60 秒的旧条目
+     * 仅检查并占用回复频控名额（供 LLM 决策模式下实际发送前使用）。
      */
-    private void cleanOldTimestamps(Instant now) {
+    public boolean tryAcquireReplySlot(BaniraCodeContext ctx, boolean bypassCooldown) {
+        if (ctx == null || ctx.sender() <= 0) {
+            return false;
+        }
+        if (!passesRateLimit(ctx, bypassCooldown)) {
+            return false;
+        }
+        markReplySent(ctx.sender());
+        return true;
+    }
+
+    private boolean passesRateLimit(BaniraCodeContext ctx, boolean bypassCooldown) {
+        long senderId = ctx.sender();
+        UserReplyState state = userStates.computeIfAbsent(senderId, id -> new UserReplyState());
+        final Instant now = clock.instant();
+
+        long elapsedSinceLast = Duration.between(state.lastReply, now).getSeconds();
+        if (!bypassCooldown && elapsedSinceLast < cfg.perTargetCooldownSeconds()) {
+            LOGGER.debug("skip reply due per-user cooldown sender={} elapsed={}s need={}s",
+                    senderId, elapsedSinceLast, cfg.perTargetCooldownSeconds());
+            return false;
+        }
+
+        int limitPerMinute = cfg.perTargetRateLimitPerMinute();
+        if (bypassCooldown) {
+            limitPerMinute = Math.max(limitPerMinute, limitPerMinute * 3);
+        }
+        cleanOldTimestamps(state, now);
+        synchronized (state.recentTimestamps) {
+            if (state.recentTimestamps.size() >= limitPerMinute) {
+                LOGGER.warn("per-user rate limit hit: sender={} {}/min", senderId, limitPerMinute);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private void markReplySent(long senderId) {
+        UserReplyState state = userStates.computeIfAbsent(senderId, id -> new UserReplyState());
+        final Instant now = clock.instant();
+        synchronized (state.recentTimestamps) {
+            cleanOldTimestamps(state, now);
+            state.recentTimestamps.addLast(now);
+        }
+        state.lastReply = now;
+    }
+
+    private void cleanOldTimestamps(UserReplyState state, Instant now) {
         Instant cutoff = now.minusSeconds(60);
-        synchronized (recentTimestamps) {
-            while (!recentTimestamps.isEmpty()) {
-                Instant first = recentTimestamps.peekFirst();
+        synchronized (state.recentTimestamps) {
+            while (!state.recentTimestamps.isEmpty()) {
+                Instant first = state.recentTimestamps.peekFirst();
                 if (first == null || first.isBefore(cutoff)) {
-                    recentTimestamps.pollFirst();
+                    state.recentTimestamps.pollFirst();
                 } else {
                     break;
                 }
@@ -108,69 +125,132 @@ public class ReplyDecisionMaker {
         }
     }
 
-    /**
-     * 改进后的概率计算：考虑配额占用比例（used/limit），并用平滑函数惩罚
-     */
-    private double computeReplyProbability(BaniraCodeContext ctx, boolean isMentioned) {
-        // 基础概率
-        double p = cfg.baseReplyProbability();
-
-        String msg = ctx == null || ctx.msg() == null ? "" : ctx.msg();
-        int len = msg.length();
-        boolean question = isQuestion(msg);
-
-        // 直接被点名/回复时应明显提升
-        if (isMentioned) p = Math.min(1.0, p + cfg.mentionBoost() + 0.35);
-        if (question) p = Math.min(1.0, p + 0.20);
-
-        // 简短问候类消息略加权，极长内容降低触发
-        if (len < 12) p = Math.min(1.0, p + 0.15);
-        if (len > 400) p = Math.max(0.02, p - 0.25);
-
-        // 基于配额占用的缩放因子
-        int limit = cfg.perTargetRateLimitPerMinute();
-        int used;
-        synchronized (recentTimestamps) {
-            cleanOldTimestamps(clock.instant()); // 保证 recentTimestamps 最近状态
-            used = recentTimestamps.size();
-        }
-
-        if (limit <= 0) limit = 1;
-        double ratio = (double) used / (double) limit; // 0..inf，越接近 1 表示配额快用完
-
-        // 平滑惩罚函数：scale = 1 / (1 + alpha * ratio)
-        // alpha 控制敏感度（越大惩罚越强）
-        final double alpha = 5.0; // 可调：5 为中等惩罚
-        double scale = 1.0 / (1.0 + alpha * ratio);
-
-        // 对超高占用（ratio > 1）采用更强的惩罚（避免瞬间超额导致仍然高概率）
-        if (ratio > 1.0) {
-            scale *= 0.5; // 进一步减半
-        }
-
-        // 最终结合
-        double floor = 0.0;
-        if (isMentioned) floor = 0.70;
-        else if (question) floor = 0.45;
-
-        double finalP = Math.max(p, floor) * scale;
-
-        // clamp
-        if (finalP < 0.0) finalP = 0.0;
-        if (finalP > 1.0) finalP = 1.0;
-        return finalP;
+    double computeReplyProbabilityForTest(BaniraCodeContext ctx, boolean isMentioned, boolean isNameMentioned, int affinityScore) {
+        UserReplyState state = userStates.computeIfAbsent(ctx.sender(), id -> new UserReplyState());
+        return computeReplyProbability(ctx, isMentioned, isNameMentioned, affinityScore, state);
     }
 
-    // 返回最近窗口内已使用的回复数
-    public int currentWindowCount() {
-        synchronized (recentTimestamps) {
-            return recentTimestamps.size();
+    private double computeReplyProbability(BaniraCodeContext ctx, boolean isMentioned, boolean isNameMentioned, int affinityScore, UserReplyState state) {
+        double p = cfg.baseReplyProbability();
+
+        String msg = ctx.msg() == null ? "" : ctx.msg();
+        int len = msg.length();
+        boolean question = isQuestion(msg);
+        boolean owner = BaniraUtils.isOwner(ctx.sender());
+        boolean asksQuota = asksQuota(msg);
+
+        if (isMentioned) {
+            return 1.0;
+        }
+        if (isNameMentioned) {
+            p = Math.max(p, cfg.nameMentionReplyProbability());
+        }
+        if (!isNameMentioned && isLowInformationMessage(msg)) {
+            p = 0.0;
+        } else if (question || asksQuota) {
+            p = Math.min(1.0, p + 0.10);
+        }
+        if (!isNameMentioned && len < 12 && !question && !asksQuota) {
+            p = Math.max(0.0, p - 0.06);
+        }
+        if (len > 400) {
+            p = Math.max(0.02, p - 0.25);
+        }
+
+        int limit = cfg.perTargetRateLimitPerMinute();
+        if (limit <= 0) {
+            limit = 1;
+        }
+        int used;
+        synchronized (state.recentTimestamps) {
+            cleanOldTimestamps(state, clock.instant());
+            used = state.recentTimestamps.size();
+        }
+        double ratio = (double) used / (double) limit;
+        final double alpha = 5.0;
+        double scale = 1.0 / (1.0 + alpha * ratio);
+        if (ratio > 1.0) {
+            scale *= 0.5;
+        }
+
+        double floor = 0.0;
+        if (owner && (question || asksQuota || isMentioned || isNameMentioned)) {
+            floor = 0.95;
+        } else if (isMentioned) {
+            floor = cfg.directMentionReplyProbability();
+        } else if (isNameMentioned) {
+            floor = cfg.nameMentionReplyProbability();
+        } else if (question || asksQuota) {
+            floor = 0.18;
+        }
+
+        double finalP = Math.max(p, floor) * scale * affinityMultiplier(affinityScore);
+        return Math.clamp(finalP, 0.0, 1.0);
+    }
+
+    public int currentWindowCount(long senderId) {
+        UserReplyState state = userStates.get(senderId);
+        if (state == null) {
+            return 0;
+        }
+        synchronized (state.recentTimestamps) {
+            return state.recentTimestamps.size();
         }
     }
 
     private boolean isQuestion(String msg) {
-        if (msg == null) return false;
+        if (msg == null) {
+            return false;
+        }
         String trimmed = msg.trim();
-        return trimmed.endsWith("?") || trimmed.endsWith("？") || trimmed.contains("吗") || trimmed.toLowerCase().contains("what") || trimmed.toLowerCase().contains("how");
+        return trimmed.endsWith("?") || trimmed.endsWith("？") || trimmed.contains("吗")
+                || trimmed.toLowerCase().contains("what") || trimmed.toLowerCase().contains("how");
     }
+
+    private boolean isLowInformationMessage(String msg) {
+        if (msg == null) {
+            return true;
+        }
+        String normalized = msg
+                .replaceAll("\\[CQ:[^]]+]", "")
+                .replaceAll("[\\p{Punct}！？。。，、~～…·\\s]", "")
+                .trim()
+                .toLowerCase();
+        if (normalized.length() <= 1) {
+            return true;
+        }
+        return normalized.matches("^(哈+|哈哈+|笑死|草+|艹+|乐+|绷+|确实|是|对|嗯+|啊+|哦+|6+|w+|www+|牛+|牛逼|离谱|好家伙|什么鬼)$");
+    }
+
+    private boolean asksQuota(String msg) {
+        if (msg == null) {
+            return false;
+        }
+        String lower = msg.toLowerCase();
+        return lower.contains("额度")
+                || lower.contains("余额")
+                || lower.contains("quota")
+                || lower.contains("balance")
+                || lower.contains("api 用量")
+                || lower.contains("api用量");
+    }
+
+    private double affinityMultiplier(int affinityScore) {
+        if (!affinityCfg.enabled()) {
+            return 1.0;
+        }
+        if (affinityScore <= affinityCfg.veryLowThreshold()) {
+            return affinityCfg.veryLowReplyMultiplier();
+        }
+        if (affinityScore <= affinityCfg.lowThreshold()) {
+            return affinityCfg.lowReplyMultiplier();
+        }
+        return 1.0;
+    }
+
+    private static final class UserReplyState {
+        private Instant lastReply = Instant.EPOCH;
+        private final Deque<Instant> recentTimestamps = new ConcurrentLinkedDeque<>();
+    }
+
 }

@@ -66,7 +66,7 @@ public class AtBotCode implements MessageCoder {
     public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
         if (notMatch(code)) return "";
         String atMsg = context.bot() != null && context.bot().getSelfId() > 0
-                ? MsgUtils.builder().at(context.bot().getSelfId()).build()
+                ? MsgUtils.builder().at(context.bot().getSelfId()).text(" ").build()
                 : "";
         context.msg(context.msg().replace(placeholder, replaceResult(code, atMsg)));
         return atMsg;

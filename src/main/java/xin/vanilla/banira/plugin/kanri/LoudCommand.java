@@ -9,6 +9,7 @@ import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
+import xin.vanilla.banira.util.StringUtils;
 
 import java.util.List;
 import java.util.Objects;
@@ -42,7 +43,7 @@ public class LoudCommand implements KanriHandler {
 
     @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
-        return context.bot().hasAnyPermissions(context.group(), context.sender(), EnumPermission.LOUD, EnumPermission.LALL);
+        return BaniraUtils.hasKanriOperatorAccess(context.bot(), context.group(), context.sender());
     }
 
     @Nonnull
@@ -55,6 +56,9 @@ public class LoudCommand implements KanriHandler {
     public int execute(@Nonnull KanriContext context, @Nonnull String[] args) {
         // 解析目标
         Set<Long> targets = getUserIdsWithReply(context, args);
+        if (containsWholeGroupTarget(args)) {
+            targets.add(233L);
+        }
 
         // 全体解禁
         if (targets.contains(233L)) {
@@ -66,23 +70,49 @@ public class LoudCommand implements KanriHandler {
         }
         // 群员解禁
         else {
-            if (!context.bot().hasPermission(context.group(), context.sender(), EnumPermission.LOUD)) {
-                return NO_OP;
-            }
-
             for (Long targetId : targets) {
-                if (context.bot().isUpper(context.group(), context.sender(), targetId)
-                        && context.bot().isUpperInGroup(context.group(), targetId)
-                ) {
-                    context.bot().setGroupBan(context.group(), targetId, 0);
-                } else {
-                    context.noPermissionTargets().add(targetId);
+                if (tryLoudTarget(context, targetId)) {
+                    continue;
                 }
+                context.noPermissionTargets().add(targetId);
             }
             executeFail(context);
         }
 
         return targets.isEmpty() ? FAIL : SUCCESS;
+    }
+
+    private static boolean tryLoudTarget(@Nonnull KanriContext context, @Nonnull Long targetId) {
+        if (targetId.equals(context.sender())
+                && KanriSelfOperationPolicy.canAllowSelfMuteOrLoud(context.bot(), context.group(), context.sender())) {
+            context.bot().setGroupBan(context.group(), targetId, 0);
+            return true;
+        }
+        if (!BaniraUtils.hasKanriOperatorAccess(context.bot(), context.group(), context.sender())) {
+            return false;
+        }
+        if (context.bot().isUpper(context.group(), context.sender(), targetId)
+                && context.bot().isUpperInGroup(context.group(), targetId)) {
+            context.bot().setGroupBan(context.group(), targetId, 0);
+            return true;
+        }
+        return false;
+    }
+
+    private static boolean containsWholeGroupTarget(@Nonnull String[] args) {
+        for (String arg : args) {
+            String normalized = StringUtils.nullToEmpty(arg).replaceAll("\\s+", "").toLowerCase();
+            if ("all".equals(normalized)
+                    || "@all".equals(normalized)
+                    || "全体".equals(normalized)
+                    || "全员".equals(normalized)
+                    || "@全体".equals(normalized)
+                    || "@全员".equals(normalized)
+                    || "@全体成员".equals(normalized)) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

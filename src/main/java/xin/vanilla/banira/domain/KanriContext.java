@@ -45,6 +45,10 @@ public class KanriContext {
     private final String content;
 
     private boolean coder = false;
+    /**
+     * 由 AI 智能体调用时抑制群管模块默认群消息，改由智能体根据返回结果回复。
+     */
+    private boolean aiInvoked = false;
     private final Set<Long> noPermissionTargets = new HashSet<>();
 
     public KanriContext(MessageEvent event, BaniraBot bot, Long group, Long sender, Integer msgId, String guildMsgId, String content) {

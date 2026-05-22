@@ -1,0 +1,50 @@
+# 长期记忆写入安全规则
+
+[memoryInstructionMarkers]
+忽略之前
+忽略以上
+无视之前
+系统提示
+system prompt
+developer message
+调用工具
+invokeCapability
+saveMemory
+searchMemory
+listCapabilities
+checkModelEndpointQuota
+不要遵守
+forget previous
+ignore previous
+start your response
+paste your entire
+original system prompt
+without omission
+without modification
+原始提示词
+完整提示词
+开发者消息
+隐藏规则
+越狱
+prompt injection
+jailbreak
+
+[memoryTransientMarkers]
+用户要求
+用户请求
+用户让
+用户想要
+帮用户
+当前消息
+这次对话
+撤回消息
+禁言某人
+解除禁言
+投红票
+投黑票
+点红票
+点黑票
+发布留言
+发布评论
+现在几点
+几点了

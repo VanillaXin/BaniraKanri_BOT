@@ -58,12 +58,14 @@ public class MessageRecordManager implements IMessageRecordManager {
 
     @Override
     public MessageRecord getMessageRecord(long id) {
+        flushPendingRecords();
         return messageRecordDao.selectById(id);
     }
 
     @Nonnull
     @Override
     public List<MessageRecord> getMessageRecordList(MessageRecordQueryParam param) {
+        flushPendingRecords();
         if (param == null) param = new MessageRecordQueryParam();
         List<MessageRecord> records = messageRecordDao.selectByParam(param);
         return CollectionUtils.isNotNullOrEmpty(records) ? records : new ArrayList<>();
@@ -71,6 +73,7 @@ public class MessageRecordManager implements IMessageRecordManager {
 
     @Override
     public PageResult<MessageRecord> getMessageRecordPagedList(MessageRecordQueryParam param) {
+        flushPendingRecords();
         if (param == null) param = new MessageRecordQueryParam();
         PageResult<MessageRecord> result = new PageResult<>(messageRecordDao.selectByParam(param));
         if (!result.isEmpty()) {
@@ -81,12 +84,14 @@ public class MessageRecordManager implements IMessageRecordManager {
 
     @Override
     public long getMessageRecordCount(MessageRecordQueryParam param) {
+        flushPendingRecords();
         if (param == null) param = new MessageRecordQueryParam();
         return messageRecordDao.selectCountByParam(param);
     }
 
     @Override
     public MessageRecord getGroupMessageRecord(long groupId, int msgId) {
+        flushPendingRecords();
         MessageRecordQueryParam param = new MessageRecordQueryParam(true);
         param.setGroupId(groupId);
         param.setMsgId(String.valueOf(msgId));
@@ -96,12 +101,33 @@ public class MessageRecordManager implements IMessageRecordManager {
 
     @Override
     public MessageRecord getPrivateMessageRecord(long friendId, int msgId) {
+        flushPendingRecords();
         MessageRecordQueryParam param = new MessageRecordQueryParam(true);
         param.setSenderId(friendId);
         param.setMsgId(String.valueOf(msgId));
         param.setMsgType(EnumMessageType.FRIEND.name(), EnumMessageType.MEMBER.name(), EnumMessageType.STRANGER.name());
         List<MessageRecord> messageRecords = messageRecordDao.selectByParam(param);
         return CollectionUtils.isNotNullOrEmpty(messageRecords) ? messageRecords.getFirst() : null;
+    }
+
+    @Override
+    public int markGroupMessageRecalled(long groupId, int msgId) {
+        MessageRecord record = getGroupMessageRecord(groupId, msgId);
+        return markRecalled(record);
+    }
+
+    @Override
+    public int markPrivateMessageRecalled(long friendId, int msgId) {
+        MessageRecord record = getPrivateMessageRecord(friendId, msgId);
+        return markRecalled(record);
+    }
+
+    private int markRecalled(MessageRecord record) {
+        if (record == null || record.getId() == null || record.recalled()) {
+            return 0;
+        }
+        record.setRecalled(true);
+        return messageRecordDao.updateById(record);
     }
 
     private void flushPendingRecords() {

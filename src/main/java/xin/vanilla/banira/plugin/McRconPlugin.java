@@ -24,10 +24,12 @@ import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.MinecraftRecord;
 import xin.vanilla.banira.domain.PageResult;
 import xin.vanilla.banira.mapper.param.MinecraftRecordQueryParam;
+import xin.vanilla.banira.plugin.chat.capability.*;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
+import xin.vanilla.banira.plugin.mcrcon.McRconService;
 import xin.vanilla.banira.service.IMinecraftRecordManager;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
@@ -45,12 +47,14 @@ import java.util.stream.Collectors;
 @Slf4j
 @Shiro
 @Component
-public class McRconPlugin extends BasePlugin {
+public class McRconPlugin extends BasePlugin implements AiCapabilityProvider {
 
     private static final int DEFAULT_RCON_PORT = 25575;
 
     @Resource
     private IMinecraftRecordManager minecraftRecordManager;
+    @Resource
+    private McRconService mcRconService;
 
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
@@ -90,6 +94,43 @@ public class McRconPlugin extends BasePlugin {
         topic.child(HelpTopics.sub("撤销执行", "撤销用户的 RCON 执行权限（仅创建者）。", 7, ins.mcRconRevoke(),
                 "用法：\n" + rconCmd + " " + revokeCmd + " <编号> <QQ|艾特> ..."));
         topics.add(topic);
+    }
+
+    @Override
+    public void registerAiCapabilities(@Nonnull List<AiCapability> capabilities, Long groupId) {
+        capabilities.add(new AiCapability()
+                .name("list_rcon_servers")
+                .description("列出当前用户有权查看的、已配置 RCON 的 MC 服务器。")
+                .parameterHint("无参数")
+                .access(AiCapabilityAccess.ADMIN)
+                .executor((ctx, args) -> mcRconService.listRconServers(
+                        ctx.bot(), ctx.botId(), ctx.scopeGroupId(), ctx.senderId())));
+        capabilities.add(new AiCapability()
+                .name("execute_rcon")
+                .description("向已授权的 MC 服务器发送 RCON 命令。首次调用仅返回待确认信息，用户同意后再设 confirm=true 执行。")
+                .parameterHint("server=编号或名称, command=要执行的命令, confirm=true|false(默认false)")
+                .parameters(List.of(
+                        AiCapabilityParameter.required("server", "服务器编号或名称，必须来自当前消息"),
+                        AiCapabilityParameter.required("command", "要执行的 RCON 命令，必须来自当前消息"),
+                        AiCapabilityParameter.optional("confirm", "用户明确确认后才可填 true")
+                ))
+                .access(AiCapabilityAccess.ADMIN)
+                .mutationPolicy(AiMutationPolicy.EXPLICIT_CONFIRMATION)
+                .confirmationPolicy(AiConfirmationPolicy.ALWAYS)
+                .mutating(true)
+                .sensitive(true)
+                .requireConfirmation(true)
+                .executor((ctx, args) -> {
+                    try {
+                        String server = AiCapabilityArgs.require(args, "server");
+                        String command = AiCapabilityArgs.require(args, "command");
+                        boolean confirm = AiCapabilityArgs.parseBoolean(args, "confirm", false);
+                        return mcRconService.executeCommand(
+                                ctx.bot(), ctx.botId(), ctx.scopeGroupId(), ctx.senderId(), server, command, confirm);
+                    } catch (IllegalArgumentException e) {
+                        return e.getMessage();
+                    }
+                }));
     }
 
     @AnyMessageHandler
@@ -313,7 +354,7 @@ public class McRconPlugin extends BasePlugin {
         );
         List<MinecraftRecord> rconRecords = pageList.getRecords().stream()
                 .filter(this::hasRconConfig)
-                .filter(record -> canViewRecord(bot, event.getGroupId(), event.getUserId(), record))
+                .filter(record -> mcRconService.canViewRecord(bot, event.getGroupId(), event.getUserId(), record))
                 .toList();
         if (rconRecords.isEmpty()) {
             forwardMsg.add(ShiroUtils.generateSingleMsg(loginInfoEx.getUserId(), loginInfoEx.getNickname(), "未查询到可见的 RCON 配置"));
@@ -481,11 +522,7 @@ public class McRconPlugin extends BasePlugin {
     }
 
     private boolean canViewRecord(BaniraBot bot, Long groupId, Long userId, MinecraftRecord record) {
-        if (isCreator(userId, record)) return true;
-        return BaniraUtils.isGroupAdmin(bot, groupId, userId)
-                || BaniraUtils.isGroupOwner(bot, groupId, userId)
-                || BaniraUtils.isMaid(groupId, userId)
-                || BaniraUtils.isButler(userId);
+        return mcRconService.canViewRecord(bot, groupId, userId, record);
     }
 
     // endregion 权限

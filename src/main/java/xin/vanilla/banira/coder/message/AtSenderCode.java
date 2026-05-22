@@ -66,7 +66,7 @@ public class AtSenderCode implements MessageCoder {
     public String execute(BaniraCodeContext context, BaniraCode code, String placeholder) {
         if (notMatch(code)) return "";
         String atMsg = context.sender() != null && context.sender() > 0
-                ? MsgUtils.builder().at(context.sender()).build()
+                ? MsgUtils.builder().at(context.sender()).text(" ").build()
                 : "";
         context.msg(context.msg().replace(placeholder, replaceResult(code, atMsg)));
         return atMsg;

@@ -11,6 +11,7 @@ import xin.vanilla.banira.util.StringUtils;
 
 import java.util.*;
 import java.util.function.Supplier;
+import java.util.stream.Collectors;
 
 /**
  * 帮助查询与格式化服务
@@ -27,6 +28,20 @@ public class HelpService {
     private HelpTopicRegistry registry;
     @Resource
     private Supplier<InstructionsConfig> insConfig;
+
+    /**
+     * 列出顶层功能主题名称与别名（不含详细用法）
+     */
+    @Nonnull
+    public String listTopicNames(@Nullable Long groupId) {
+        List<HelpTopic> topics = registry.list(groupId);
+        if (topics.isEmpty()) {
+            return "暂无可用功能。";
+        }
+        return topics.stream()
+                .map(this::formatTopicEntry)
+                .collect(Collectors.joining("\n\n"));
+    }
 
     /**
      * 构建帮助合并转发消息，每条对应合并转发中的一条消息

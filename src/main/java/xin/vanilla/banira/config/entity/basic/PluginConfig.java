@@ -32,7 +32,7 @@ public class PluginConfig implements SharedConfig {
         this.capability.put(HelpPlugin.class.getName(), 2);
         this.capability.put(TimerPlugin.class.getName(), 2);
         this.capability.put(StatusPlugin.class.getName(), 2);
-        this.capability.put(KeywordPlugin.class.getName(), 2);
+        this.capability.put(KeywordPlugin.class.getName(), 0);
 
         this.capability.put(ExamplePlugin.class.getName(), 0);
         this.capability.put(WifePlugin.class.getName(), 99);

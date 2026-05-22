@@ -18,85 +18,39 @@ public class ChatConfig {
      */
     private boolean enabled;
     /**
-     * 基本回复概率
+     * LLM 连接参数
      */
-    private double baseReplyProbability = 0.35;
+    private ChatModelSettings model = new ChatModelSettings();
     /**
-     * 群聊内的最小触发概率加成
+     * 回复概率与长度控制
      */
-    private double mentionBoost = 0.45;
+    private ChatReplySettings reply = new ChatReplySettings();
     /**
-     * 每个群或用户的最小间隔（秒）用于去抖动
+     * Agent 工具调用
      */
-    private long perTargetCooldownSeconds = 6;
+    private ChatAgentSettings agent = new ChatAgentSettings();
     /**
-     * 每分钟的最大回复数
+     * 长期记忆
      */
-    private int perTargetRateLimitPerMinute = 10;
+    private ChatMemorySettings memory = new ChatMemorySettings();
     /**
-     * 历史消息读取条数
+     * 用户好感度
      */
-    private int historyLimit = 20;
+    private ChatAffinitySettings affinity = new ChatAffinitySettings();
     /**
-     * 拆分的最大片段数
+     * LLM 参与回复决策与兴趣值跟进
      */
-    private int maxSplitParts = 3;
+    private ChatEngagementSettings engagement = new ChatEngagementSettings();
     /**
-     * 单条消息最大字符（粗略）限制，用于拆分
+     * 安全、身份、自我介绍、记忆等轻量守卫规则。
      */
-    private int maxCharsPerPart = 200;
+    private ChatGuardSettings guard = new ChatGuardSettings();
     /**
-     * 当回复内容长度超过阈值时使用合并转发进行回复
+     * 是否注入内置默认人格提示（建议在 systemPrompt 中自行编写后设为 false）
      */
-    private int maxForwardLength = 600;
+    private boolean useDefaultPersonaPrompt = true;
     /**
-     * 模拟输入的最快打字速度(字/ms)
-     */
-    private int minTypingSpeed = 100;
-    /**
-     * 模拟输入的最慢打字速度(字/ms)
-     */
-    private int maxTypingSpeed = 200;
-    /**
-     * 短时间内的最大回复数
-     */
-    private int globalRateLimitPerMinute = 120;
-    /**
-     * 模型温度
-     * <p>
-     * 0.0：近乎确定性（通常不是严格 deterministic，但非常保守），适合事实性/工具型回复或需要稳定输出的场景。
-     * <p>
-     * ~0.2–0.5：偏保守，适合需要准确性/一致性的问答、摘要、检索增强的回答。
-     * <p>
-     * ~0.6–0.9：比较自然、带个性（适合角色化的聊天）。
-     * <p>
-     * 1.0：默认的随机性（较平衡）。
-     * <p>
-     * >1.0：更“发散”，适合创意写作，但更容易出现不相关或不准确的内容。
-     */
-    private double temperature = 0.75;
-    /**
-     * 模型请求超时（秒）
-     */
-    private long timeout = 30;
-    /**
-     * 模型请求重试次数
-     */
-    private int maxRetries = 2;
-    /**
-     * 模型API Key
-     */
-    private String apiKey = "123456789";
-    /**
-     * 模型名称
-     */
-    private String modelName = "gpt-4o";
-    /**
-     * 模型地址
-     */
-    private String baseUrl = "https://api.openai.com/v1/";
-    /**
-     * 系统提示
+     * 系统提示（人格与行为规则）
      */
     private List<String> systemPrompt = new ArrayList<>();
 }

@@ -1,0 +1,69 @@
+# 提示词泄露与注入兜底规则
+# 这里放可调词表；代码只做归一化、命中组合与泄露特征判断
+
+[refusalText]
+这个不能发
+
+[promptTerms]
+system prompt
+developer message
+original prompt
+hidden prompt
+系统提示词
+系统提示
+原始提示词
+完整提示词
+开发者消息
+隐藏提示词
+人格设定
+
+[extractionTerms]
+paste
+print
+show
+reveal
+repeat
+copy
+dump
+verbatim
+entire
+without modification
+without omission
+start your response
+exactly:
+打印
+输出
+发出来
+贴出
+展示
+复述
+逐字
+完整
+原样
+不要修改
+不要遗漏
+
+[injectionTerms]
+ignore previous
+ignore all previous
+forget previous
+disregard previous
+忽略之前
+忽略以上
+无视之前
+忘掉之前
+覆盖规则
+越狱
+
+[leakSignatures]
+system prompt:
+developer message:
+你像一位长期待在群聊里的熟人
+系统提示词：
+系统提示：
+原始提示词：
+开发者消息：
+安全规则：群消息、历史消息、长期记忆、插件返回内容
+常见意图优先用直达工具
+下面这一条用户消息是本轮主要需要回应的内容
+只调用 listcapabilities 中当前可见的能力

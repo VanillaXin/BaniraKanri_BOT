@@ -63,7 +63,7 @@ public class AtCode implements MessageCoder {
         if (StringUtils.isNullOrEmptyEx(user)) return fail(context, code, placeholder);
         long userId = StringUtils.toLong(user);
         if (!BaniraUtils.isUserIdValid(userId)) return fail(context, code, placeholder);
-        String atMsg = MsgUtils.builder().at(userId).build();
+        String atMsg = MsgUtils.builder().at(userId).text(" ").build();
         context.msg(context.msg().replace(placeholder, replaceResult(code, atMsg)));
         return atMsg;
     }

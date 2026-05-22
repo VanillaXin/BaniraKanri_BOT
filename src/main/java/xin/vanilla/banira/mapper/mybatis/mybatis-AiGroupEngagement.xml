@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="xin.vanilla.banira.mapper.IAiGroupEngagementDao">
+
+    <resultMap id="resultMap" type="xin.vanilla.banira.domain.AiGroupEngagement">
+        <id property="id" column="id"/>
+        <result property="botId" column="bot_id"/>
+        <result property="groupId" column="group_id"/>
+        <result property="interest" column="interest"/>
+        <result property="updatedAt" column="updated_at"/>
+    </resultMap>
+
+    <sql id="allColumn">
+        t.id, t.bot_id, t.group_id, t.interest, t.updated_at
+    </sql>
+
+    <sql id="whereSql">
+        <trim prefix="WHERE" prefixOverrides="AND | OR ">
+            <if test="botId != null">
+                AND t.bot_id = #{botId}
+            </if>
+            <if test="groupId != null">
+                AND t.group_id = #{groupId}
+            </if>
+        </trim>
+    </sql>
+
+    <sql id="limitSql">
+        <if test="_LIMIT_ != null">
+            LIMIT #{_LIMIT_}
+        </if>
+    </sql>
+
+    <select id="selectByParam" resultMap="resultMap">
+        SELECT
+        <include refid="allColumn"/>
+        FROM ai_group_engagement t
+        <include refid="whereSql"/>
+        ORDER BY t.id DESC
+        <include refid="limitSql"/>
+    </select>
+
+    <delete id="deleteByScope">
+        DELETE FROM ai_group_engagement
+        WHERE bot_id = #{botId}
+          AND group_id = #{groupId}
+    </delete>
+
+    <select id="upsertInterest" resultType="java.lang.Integer">
+        INSERT INTO ai_group_engagement (bot_id, group_id, interest, updated_at)
+        VALUES (#{botId},
+                #{groupId},
+                MIN(100, MAX(0, #{interest})),
+                #{updatedAt})
+        ON CONFLICT (bot_id, group_id) DO UPDATE SET
+            interest = MIN(100, MAX(0, #{interest})),
+            updated_at = #{updatedAt}
+        RETURNING interest
+    </select>
+
+    <select id="adjustInterest" resultType="java.lang.Integer">
+        INSERT INTO ai_group_engagement (bot_id, group_id, interest, updated_at)
+        VALUES (#{botId},
+                #{groupId},
+                MIN(100, MAX(0, #{delta})),
+                #{updatedAt})
+        ON CONFLICT (bot_id, group_id) DO UPDATE SET
+            interest = MIN(100, MAX(0, interest + #{delta})),
+            updated_at = #{updatedAt}
+        RETURNING interest
+    </select>
+
+</mapper>

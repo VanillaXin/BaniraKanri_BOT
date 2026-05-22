@@ -27,4 +27,8 @@ public interface IMessageRecordManager {
 
     MessageRecord getPrivateMessageRecord(long friendId, int msgId);
 
+    int markGroupMessageRecalled(long groupId, int msgId);
+
+    int markPrivateMessageRecalled(long friendId, int msgId);
+
 }

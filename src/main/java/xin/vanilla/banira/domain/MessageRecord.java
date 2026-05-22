@@ -53,6 +53,10 @@ public class MessageRecord {
      * 消息内容 (CQCode)
      */
     private String msgRecode = "";
+    /**
+     * Whether the platform has recalled this message.
+     */
+    private Boolean recalled = false;
 
 
     public MessageRecord setMsgId(String msgId) {
@@ -83,6 +87,15 @@ public class MessageRecord {
     public MessageRecord setMsgRecode(String msgRecode) {
         this.msgRecode = msgRecode != null ? msgRecode : "";
         return this;
+    }
+
+    public MessageRecord setRecalled(Boolean recalled) {
+        this.recalled = Boolean.TRUE.equals(recalled);
+        return this;
+    }
+
+    public boolean recalled() {
+        return Boolean.TRUE.equals(recalled);
     }
 
 }

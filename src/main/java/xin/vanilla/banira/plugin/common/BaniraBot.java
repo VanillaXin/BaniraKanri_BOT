@@ -68,6 +68,7 @@ public class BaniraBot extends Bot {
                     .setTargetId(userId)
                     .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(msg)
+                    .setMsgRecode(msg)
                     .setMsgType(EnumMessageType.FRIEND);
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
@@ -93,6 +94,7 @@ public class BaniraBot extends Bot {
                     .setTargetId(userId)
                     .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(MessageConverser.arraysToString(msg))
+                    .setMsgRecode(MessageConverser.arraysToString(msg))
                     .setMsgType(EnumMessageType.FRIEND);
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
@@ -126,6 +128,7 @@ public class BaniraBot extends Bot {
                     .setTargetId(userId)
                     .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(msg)
+                    .setMsgRecode(msg)
                     .setMsgType(EnumMessageType.MEMBER);
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
@@ -153,6 +156,7 @@ public class BaniraBot extends Bot {
                     .setTargetId(userId)
                     .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(MessageConverser.arraysToString(msg))
+                    .setMsgRecode(MessageConverser.arraysToString(msg))
                     .setMsgType(EnumMessageType.MEMBER);
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
@@ -184,6 +188,7 @@ public class BaniraBot extends Bot {
                     .setGroupId(groupId)
                     .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(msg)
+                    .setMsgRecode(msg)
                     .setMsgType(EnumMessageType.GROUP);
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
@@ -209,6 +214,7 @@ public class BaniraBot extends Bot {
                     .setGroupId(groupId)
                     .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(MessageConverser.arraysToString(msg))
+                    .setMsgRecode(MessageConverser.arraysToString(msg))
                     .setMsgType(EnumMessageType.GROUP);
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
@@ -241,6 +247,7 @@ public class BaniraBot extends Bot {
                     .setGroupId(groupId)
                     .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(msg)
+                    .setMsgRecode(msg)
                     .setMsgType(EnumMessageType.GROUP);
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }
@@ -267,6 +274,7 @@ public class BaniraBot extends Bot {
                     .setGroupId(groupId)
                     .setTime(System.currentTimeMillis() / 1000)
                     .setMsgRaw(MessageConverser.arraysToString(msg))
+                    .setMsgRecode(MessageConverser.arraysToString(msg))
                     .setMsgType(EnumMessageType.GROUP);
             getMessageRecordManager().addMessageRecord(setMsgRecordTime(record));
         }

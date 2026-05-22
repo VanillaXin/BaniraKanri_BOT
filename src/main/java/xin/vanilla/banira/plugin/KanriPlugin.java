@@ -7,7 +7,6 @@ import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import com.mikuac.shiro.dto.event.message.MessageEvent;
 import com.mikuac.shiro.dto.event.message.PrivateMessageEvent;
 import jakarta.annotation.Nonnull;
-import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,16 +17,21 @@ import xin.vanilla.banira.coder.message.ToGroupCode;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.enums.EnumMessageType;
+import xin.vanilla.banira.plugin.chat.capability.*;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.plugin.kanri.KanriHandler;
+import xin.vanilla.banira.plugin.kanri.KanriHandlerRegistry;
+import xin.vanilla.banira.plugin.kanri.KanriService;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
-import xin.vanilla.banira.util.StringUtils;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * 群管指令
@@ -35,39 +39,18 @@ import java.util.*;
 @Slf4j
 @Shiro
 @Component
-public class KanriPlugin extends BasePlugin {
+public class KanriPlugin extends BasePlugin implements AiCapabilityProvider {
+
     @Autowired(required = false)
     private List<KanriHandler> handlers = new ArrayList<>();
-    private final Map<String, KanriHandler> handlerByAction = new HashMap<>();
+    @Resource
+    private KanriHandlerRegistry handlerRegistry;
+    @Resource
+    private KanriService kanriService;
     @Resource
     private ToGroupCode toGroupCode;
 
     private static final List<String> KANRI_ALIASES = List.of("kanri", "群管");
-
-    @PostConstruct
-    public void initHandlerMap() {
-        handlerByAction.clear();
-        for (KanriHandler handler : handlers) {
-            for (String action : handler.getAction()) {
-                String actionKey = action == null ? "" : action.trim().toLowerCase(Locale.ROOT);
-                if (StringUtils.isNullOrEmptyEx(actionKey)) {
-                    continue;
-                }
-                KanriHandler existed = handlerByAction.putIfAbsent(actionKey, handler);
-                if (existed != null) {
-                    if (existed == handler) {
-                        LOGGER.warn("Duplicate action '{}' found in handler '{}', ignored", action, handler.getClass().getSimpleName());
-                        continue;
-                    }
-                    LOGGER.warn("Duplicate kanri action '{}' between handlers '{}' and '{}', keep '{}'",
-                            action,
-                            existed.getClass().getSimpleName(),
-                            handler.getClass().getSimpleName(),
-                            existed.getClass().getSimpleName());
-                }
-            }
-        }
-    }
 
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
@@ -76,6 +59,40 @@ public class KanriPlugin extends BasePlugin {
                 .map(KanriHandler::getHelpSubTopic)
                 .forEach(kanri::child);
         topics.add(kanri);
+    }
+
+    @Override
+    public void registerAiCapabilities(@Nonnull List<AiCapability> capabilities, Long groupId) {
+        capabilities.add(new AiCapability()
+                .name("list_kanri_actions")
+                .description("列出 AI 可调用的群管动作（禁言/解禁/名片/头衔/精华/群名等，不含踢人、管理员名单与权限类操作）。")
+                .parameterHint("无参数")
+                .access(AiCapabilityAccess.ADMIN)
+                .executor((ctx, args) -> kanriService.listAiActions()));
+        capabilities.add(new AiCapability()
+                .name("execute_kanri")
+                .description("执行允许的群管动作。以当前对话发起者为操作者，权限与群管指令一致。")
+                .parameterHint("action=动作别名,args=参数字符串(空格分隔，如 QQ号、时长、add/del 等)")
+                .parameters(List.of(
+                        AiCapabilityParameter.required("action", "群管动作别名，必须是 list_kanri_actions 返回的允许动作"),
+                        AiCapabilityParameter.required("args", "动作参数字符串，目标和参数必须来自当前消息"),
+                        AiCapabilityParameter.optional("confirm", "用户明确确认后才可填 true")
+                ))
+                .access(AiCapabilityAccess.ADMIN)
+                .mutationPolicy(AiMutationPolicy.EXPLICIT_CONFIRMATION)
+                .confirmationPolicy(AiConfirmationPolicy.ALWAYS)
+                .mutating(true)
+                .sensitive(true)
+                .requireConfirmation(true)
+                .executor((ctx, args) -> {
+                    try {
+                        String action = AiCapabilityArgs.require(args, "action");
+                        String argLine = args.getOrDefault("args", "");
+                        return kanriService.execute(ctx, action, kanriService.parseArgs(argLine));
+                    } catch (IllegalArgumentException e) {
+                        return e.getMessage();
+                    }
+                }));
     }
 
     @GroupMessageHandler
@@ -142,7 +159,7 @@ public class KanriPlugin extends BasePlugin {
         );
 
         int result = KanriHandler.NIL;
-        KanriHandler handler = handlerByAction.get(kanriAction);
+        KanriHandler handler = handlerRegistry.resolve(kanriAction);
         if (handler != null) {
             if (!handler.botHasPermission(context)) {
                 result = KanriHandler.BOT_NO_OP;
@@ -161,13 +178,9 @@ public class KanriPlugin extends BasePlugin {
 
         Integer emoji;
         switch (result) {
-            // no
             case KanriHandler.NO_OP -> emoji = 123;
-            // sleep
             case KanriHandler.BOT_NO_OP -> emoji = 8;
-            // broken heart
             case KanriHandler.FAIL -> emoji = 67;
-            // ok
             case KanriHandler.SUCCESS -> emoji = 124;
             default -> emoji = null;
         }

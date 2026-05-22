@@ -14,20 +14,21 @@
         <result property="msgRaw" column="msg_raw"/>
         <result property="msgType" column="msg_type"/>
         <result property="msgRecode" column="msg_recode"/>
+        <result property="recalled" column="recalled"/>
     </resultMap>
 
     <sql id="allColumn">
         t
         .
         id
-        , t.msg_id, t.bot_id, t.sender_id, t.target_id, t.group_id, t.time, t.msg_raw, t.msg_type, t.msg_recode
+        , t.msg_id, t.bot_id, t.sender_id, t.target_id, t.group_id, t.time, t.msg_raw, t.msg_type, t.msg_recode, t.recalled
     </sql>
 
     <sql id="baseColumn">
         t
         .
         id
-        , t.msg_id, t.bot_id, t.sender_id, t.target_id, t.group_id, t.time, t.msg_raw, t.msg_type
+        , t.msg_id, t.bot_id, t.sender_id, t.target_id, t.group_id, t.time, t.msg_raw, t.msg_type, t.recalled
     </sql>
 
     <sql id="whereSql">
@@ -379,6 +380,10 @@
             </foreach>
         </if>
 
+        <if test="recalled != null">
+            AND t.recalled = #{recalled}
+        </if>
+
         <if test="_KEY_WORD_ != null">
             AND (
             t.msg_raw LIKE #{_KEY_WORD_}
@@ -420,6 +425,8 @@
         <if test="item == 'msgType_desc'">t.msg_type DESC</if>
         <if test="item == 'msgRecode_asc'">t.msg_recode ASC</if>
         <if test="item == 'msgRecode_desc'">t.msg_recode DESC</if>
+        <if test="item == 'recalled_asc'">t.recalled ASC</if>
+        <if test="item == 'recalled_desc'">t.recalled DESC</if>
     </sql>
 
     <delete id="deleteByParam" parameterType="java.util.Map">

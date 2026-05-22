@@ -18,14 +18,14 @@ import org.springframework.stereotype.Component;
 import xin.vanilla.banira.config.entity.basic.BaseInstructionsConfig;
 import xin.vanilla.banira.config.entity.group.SocialMediaGroupConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
+import xin.vanilla.banira.plugin.chat.capability.AiCapability;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityParameter;
+import xin.vanilla.banira.plugin.chat.capability.AiCapabilityProvider;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.plugin.common.BasePlugin;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
-import xin.vanilla.banira.plugin.socialmedia.SocialMediaApiService;
-import xin.vanilla.banira.plugin.socialmedia.SocialMediaContent;
-import xin.vanilla.banira.plugin.socialmedia.SocialMediaGroupSettings;
-import xin.vanilla.banira.plugin.socialmedia.SocialMediaParser;
+import xin.vanilla.banira.plugin.socialmedia.*;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.StringUtils;
@@ -38,7 +38,7 @@ import java.util.*;
 @Slf4j
 @Shiro
 @Component
-public class SocialMediaPlugin extends BasePlugin {
+public class SocialMediaPlugin extends BasePlugin implements AiCapabilityProvider {
     private static final String REPLY_MODE_FORWARD = "forward";
     private static final String REPLY_MODE_DETAIL = "detail";
     private static final String REPLY_MODE_VIDEO = "video";
@@ -48,6 +48,8 @@ public class SocialMediaPlugin extends BasePlugin {
     private List<SocialMediaParser> parsers = new ArrayList<>();
     @Autowired
     private SocialMediaApiService socialMediaApiService;
+    @Autowired
+    private SocialMediaResolveService socialMediaResolveService;
     private final LinkedHashSet<Integer> processedMsgIds = new LinkedHashSet<>();
     private final Object processedLock = new Object();
 
@@ -85,6 +87,24 @@ public class SocialMediaPlugin extends BasePlugin {
                         + "video：视频直链"));
 
         topics.add(topic);
+    }
+
+    @Override
+    public void registerAiCapabilities(@Nonnull List<AiCapability> capabilities, Long groupId) {
+        capabilities.add(new AiCapability()
+                .name("parse_social_media")
+                .description("解析消息中的 B 站/抖音等社交媒体链接并返回摘要。")
+                .parameterHint("message=包含链接的文本")
+                .parameters(List.of(
+                        AiCapabilityParameter.required("message", "包含链接的文本；没有显式链接时不要调用")
+                ))
+                .executor((ctx, args) -> {
+                    if (!isEnable(ctx.scopeGroupId())) {
+                        return "本群未启用社交媒体解析。";
+                    }
+                    String message = args.getOrDefault("message", ctx.userMessage());
+                    return socialMediaResolveService.parseMessage(message);
+                }));
     }
 
     /**

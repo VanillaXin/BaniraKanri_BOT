@@ -1,0 +1,39 @@
+use_default_settings: true
+
+general:
+  instance_name: "BaniraKanri Search"
+
+search:
+  safe_search: 2
+  formats:
+    - html
+    - json
+
+server:
+  secret_key: "banira-kanri-local-search-change-me"
+  limiter: false
+  image_proxy: true
+
+outgoing:
+  request_timeout: 10
+  max_request_timeout: 20
+  extra_proxy_timeout: 10
+  proxies:
+    http:
+      - http://192.168.0.1:7890
+    https:
+      - http://192.168.0.1:7890
+
+engines:
+  - name: ahmia
+    disabled: true
+    inactive: true
+  - name: torch
+    disabled: true
+    inactive: true
+  - name: radio browser
+    disabled: true
+    inactive: true
+  - name: wikidata
+    disabled: true
+    inactive: true
