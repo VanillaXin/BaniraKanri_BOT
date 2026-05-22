@@ -41,7 +41,23 @@ public final class McModUtils {
     }
 
     private static final Map<Long, ReentrantLock> groupLocks = new LinkedHashMap<>();
+    private static final Map<String, ReentrantLock> accountLocks = new LinkedHashMap<>();
     private static final ReentrantLock locksMapLock = new ReentrantLock();
+
+    /**
+     * 同账号凭证缓存快照（用于跨群同步 Cookie）
+     */
+    private static final class AccountCookieSnapshot {
+        private final String cookie;
+        private final Long expireTime;
+        private final String userId;
+
+        private AccountCookieSnapshot(@Nonnull String cookie, @Nullable Long expireTime, @Nullable String userId) {
+            this.cookie = cookie;
+            this.expireTime = expireTime;
+            this.userId = userId;
+        }
+    }
 
     // region private
 
@@ -55,6 +71,32 @@ public final class McModUtils {
         } finally {
             locksMapLock.unlock();
         }
+    }
+
+    @Nonnull
+    private static ReentrantLock getAccountLock(@Nonnull String accountKey) {
+        locksMapLock.lock();
+        try {
+            return accountLocks.computeIfAbsent(accountKey, k -> new ReentrantLock());
+        } finally {
+            locksMapLock.unlock();
+        }
+    }
+
+    @Nonnull
+    private static String buildAccountKey(@Nonnull String username, @Nonnull String password) {
+        return username + "\u0000" + password;
+    }
+
+    private static boolean hasConfiguredCredentials(@Nonnull McModCookieConfig cookieConfig) {
+        return StringUtils.isNotNullOrEmpty(cookieConfig.username())
+                && StringUtils.isNotNullOrEmpty(cookieConfig.password());
+    }
+
+    private static boolean hasSameCredentials(@Nonnull McModCookieConfig cookieConfig,
+                                              @Nonnull String username,
+                                              @Nonnull String password) {
+        return username.equals(cookieConfig.username()) && password.equals(cookieConfig.password());
     }
 
     private static long normalizeRequestGroupId(@Nullable Long groupId) {
@@ -103,61 +145,140 @@ public final class McModUtils {
 
     /**
      * 获取 Cookie，支持缓存、全局配置回退，以及用户名密码自动登录刷新。
+     * 相同账号密码的多个群配置会共用一次登录结果，避免重复登录导致 token 互相顶掉。
      *
      * @param groupId 群号
      */
     private static @Nullable String getCookie(@Nullable Long groupId) {
         long storageGroupId = resolveStorageGroupId(groupId);
-        ReentrantLock lock = getGroupLock(storageGroupId);
-        lock.lock();
-        try {
-            McModCookieConfig cookieConfig = readCookieConfig(groupId);
+        McModCookieConfig cookieConfig = readCookieConfig(groupId);
 
-            // 若配置中有 Cookie 且未过期，直接使用
-            if (StringUtils.isNotNullOrEmpty(cookieConfig.cookie()) && !cookieConfig.isExpired()) {
-                LOGGER.debug("Using cookie from config, groupId: {}, storageGroupId: {}", groupId, storageGroupId);
-                if (StringUtils.isNullOrEmpty(cookieConfig.userId())) {
-                    String userId = getLoginUserId(cookieConfig.cookie());
-                    if (userId != null) {
-                        writeCookieConfig(groupId).userId(userId);
-                        BaniraUtils.saveGroupConfig();
-                    }
+        if (StringUtils.isNotNullOrEmpty(cookieConfig.cookie()) && !cookieConfig.isExpired()) {
+            LOGGER.debug("Using cookie from config, groupId: {}, storageGroupId: {}", groupId, storageGroupId);
+            if (StringUtils.isNullOrEmpty(cookieConfig.userId())) {
+                String userId = getLoginUserId(cookieConfig.cookie());
+                if (userId != null) {
+                    syncCookieToAllSameAccountGroups(cookieConfig, cookieConfig.cookie(), cookieConfig.expireTime(), userId);
                 }
+            }
+            return cookieConfig.cookie();
+        }
+
+        if (!hasConfiguredCredentials(cookieConfig)) {
+            LOGGER.debug("Username or password not set in config, cannot login, groupId: {}, storageGroupId: {}",
+                    groupId, storageGroupId);
+            return null;
+        }
+
+        String username = cookieConfig.username();
+        String password = cookieConfig.password();
+        ReentrantLock accountLock = getAccountLock(buildAccountKey(username, password));
+        accountLock.lock();
+        try {
+            cookieConfig = readCookieConfig(groupId);
+            if (StringUtils.isNotNullOrEmpty(cookieConfig.cookie()) && !cookieConfig.isExpired()) {
+                LOGGER.debug("Using cookie refreshed by another thread, groupId: {}, storageGroupId: {}",
+                        groupId, storageGroupId);
                 return cookieConfig.cookie();
             }
 
-            // 通过用户名密码登录
-            String username = cookieConfig.username();
-            String password = cookieConfig.password();
-
-            if (StringUtils.isNullOrEmpty(username) || StringUtils.isNullOrEmpty(password)) {
-                LOGGER.debug("Username or password not set in config, cannot login, groupId: {}, storageGroupId: {}",
+            AccountCookieSnapshot shared = findValidCookieFromSameAccount(username, password);
+            if (shared != null) {
+                syncCookieToAllSameAccountGroups(username, password, shared.cookie, shared.expireTime, shared.userId);
+                LOGGER.info("Synced cookie from another group config, groupId: {}, storageGroupId: {}",
                         groupId, storageGroupId);
-                return null;
+                return shared.cookie;
             }
 
             LOGGER.info("Cookie expired or not found, logging in with username and password, groupId: {}, storageGroupId: {}",
                     groupId, storageGroupId);
-            KeyValue<String, String> cookie = login(username, password);
-
-            if (cookie != null && cookie.getKey() != null) {
-                McModCookieConfig writable = writeCookieConfig(groupId);
-                writable.setCookieWithExpire(cookie.getKey());
-                String userId = getLoginUserId(cookie.getKey());
-                if (userId != null) {
-                    writable.userId(userId);
-                }
-                BaniraUtils.saveGroupConfig();
-                LOGGER.info("Login successful, cookie saved to config, groupId: {}, storageGroupId: {}",
-                        groupId, storageGroupId);
-                return cookie.getKey();
-            } else {
+            KeyValue<String, String> loginResult = login(username, password);
+            if (loginResult == null || loginResult.getKey() == null) {
                 LOGGER.error("Login failed, cannot get cookie, groupId: {}, storageGroupId: {}", groupId, storageGroupId);
-                clearCookieCache(groupId);
+                clearCookieCacheForSameAccount(username, password);
                 return null;
             }
+
+            String cookie = loginResult.getKey();
+            String userId = getLoginUserId(cookie);
+            McModCookieConfig refreshed = new McModCookieConfig().setCookieWithExpire(cookie);
+            syncCookieToAllSameAccountGroups(username, password, cookie, refreshed.expireTime(), userId);
+            LOGGER.info("Login successful, cookie synced to all groups with same account, groupId: {}, storageGroupId: {}",
+                    groupId, storageGroupId);
+            return cookie;
         } finally {
-            lock.unlock();
+            accountLock.unlock();
+        }
+    }
+
+    @Nullable
+    private static AccountCookieSnapshot findValidCookieFromSameAccount(@Nonnull String username, @Nonnull String password) {
+        for (McModGroupConfig groupConfig : BaniraUtils.getGroupConfigSnapshot(McModGroupConfig.class).values()) {
+            McModCookieConfig cfg = ensureCookieConfig(groupConfig);
+            if (!hasSameCredentials(cfg, username, password)) {
+                continue;
+            }
+            if (StringUtils.isNotNullOrEmpty(cfg.cookie()) && !cfg.isExpired()) {
+                return new AccountCookieSnapshot(cfg.cookie(), cfg.expireTime(), cfg.userId());
+            }
+        }
+        return null;
+    }
+
+    private static void syncCookieToAllSameAccountGroups(@Nonnull McModCookieConfig sourceConfig,
+                                                         @Nonnull String cookie,
+                                                         @Nullable Long expireTime,
+                                                         @Nullable String userId) {
+        if (!hasConfiguredCredentials(sourceConfig)) {
+            return;
+        }
+        syncCookieToAllSameAccountGroups(sourceConfig.username(), sourceConfig.password(), cookie, expireTime, userId);
+    }
+
+    private static void syncCookieToAllSameAccountGroups(@Nonnull String username,
+                                                         @Nonnull String password,
+                                                         @Nonnull String cookie,
+                                                         @Nullable Long expireTime,
+                                                         @Nullable String userId) {
+        boolean changed = false;
+        for (Long configGroupId : BaniraUtils.getGroupConfigSnapshot(McModGroupConfig.class).keySet()) {
+            McModGroupConfig groupConfig = BaniraUtils.getGroupConfigForEdit(McModGroupConfig.class, configGroupId);
+            McModCookieConfig cfg = ensureCookieConfig(groupConfig);
+            if (!hasSameCredentials(cfg, username, password)) {
+                continue;
+            }
+            if (expireTime != null) {
+                cfg.setCookieWithExpire(cookie, expireTime);
+            } else {
+                cfg.setCookieWithExpire(cookie);
+            }
+            if (StringUtils.isNotNullOrEmpty(userId)) {
+                cfg.userId(userId);
+            }
+            clearVoteCache(configGroupId == 0L ? null : configGroupId);
+            changed = true;
+        }
+        if (changed) {
+            BaniraUtils.saveGroupConfig();
+            LOGGER.info("Synced MCMod cookie to all groups with same account, username: {}", username);
+        }
+    }
+
+    private static void clearCookieCacheForSameAccount(@Nonnull String username, @Nonnull String password) {
+        boolean changed = false;
+        for (Long configGroupId : BaniraUtils.getGroupConfigSnapshot(McModGroupConfig.class).keySet()) {
+            McModGroupConfig groupConfig = BaniraUtils.getGroupConfigForEdit(McModGroupConfig.class, configGroupId);
+            McModCookieConfig cfg = ensureCookieConfig(groupConfig);
+            if (!hasSameCredentials(cfg, username, password)) {
+                continue;
+            }
+            cfg.cookie(null).expireTime(null).userId(null);
+            clearVoteCache(configGroupId == 0L ? null : configGroupId);
+            changed = true;
+        }
+        if (changed) {
+            BaniraUtils.saveGroupConfig();
+            LOGGER.info("Cleared MCMod cookie for all groups with same account, username: {}", username);
         }
     }
 
@@ -881,8 +1002,7 @@ public final class McModUtils {
         }
         String userId = getLoginUserId(cookie);
         if (userId != null) {
-            writeCookieConfig(groupId).userId(userId);
-            BaniraUtils.saveGroupConfig();
+            syncCookieToAllSameAccountGroups(cookieConfig, cookie, cookieConfig.expireTime(), userId);
         }
         return userId;
     }
@@ -1475,6 +1595,12 @@ public final class McModUtils {
      * @param groupId 群号
      */
     public static void clearCookieCache(@Nullable Long groupId) {
+        McModCookieConfig cookieConfig = readCookieConfig(groupId);
+        if (hasConfiguredCredentials(cookieConfig)) {
+            clearCookieCacheForSameAccount(cookieConfig.username(), cookieConfig.password());
+            return;
+        }
+
         long storageGroupId = resolveStorageGroupId(groupId);
         ReentrantLock lock = getGroupLock(storageGroupId);
         lock.lock();
@@ -2186,7 +2312,7 @@ public final class McModUtils {
     private static boolean isVoteResponseTooFrequent(@Nullable McModCardVoteResponse response) {
         return response != null
                 && response.getState() != null
-                && response.getState() == McModCardVoteEnsureResult.STATE_TOO_FREQUENT;
+                && response.getState() == EnumStateCode.C109.code();
     }
 
     private static boolean isVoteResponseValid(@Nullable McModCardVoteResponse response) {

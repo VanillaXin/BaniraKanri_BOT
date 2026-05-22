@@ -410,7 +410,9 @@ public class McModPlugin extends BasePlugin {
         if (response != null && response.isSuccess()) {
             return bot.setMsgEmojiLikeHeart(msgId);
         }
-        LOGGER.error("Failed to push {}, id: {}", target.label(), targetId);
+        Integer state = response != null ? response.getState() : null;
+        LOGGER.error("Failed to push {}, id: {}, state: {}", target.label(), targetId, state);
+        sendMcModFailure(bot, event, groupId, "推荐", state);
         return bot.setMsgEmojiLikeBrokenHeart(msgId);
     }
 
@@ -429,35 +431,31 @@ public class McModPlugin extends BasePlugin {
                 ? McModUtils.ensureModVote(groupId, targetId, voteType)
                 : McModUtils.ensureModpackVote(groupId, targetId, voteType);
         if (result != null && result.isCooldownBlocked()) {
-            sendMessage(bot, event, groupId, "操作频繁，请稍后再试");
+            sendMessage(bot, event, groupId, EnumStateCode.C109.message());
             return bot.setMsgEmojiLikeBrokenHeart(msgId);
         }
         if (result != null && result.isFromCache()) {
-            sendMessage(bot, event, groupId, "请勿重复投票");
+            sendMessage(bot, event, groupId, EnumStateCode.C106.message());
             return bot.setMsgEmojiLikeBrokenHeart(msgId);
         }
         if (result != null && result.isLoginRequired()) {
-            sendMessage(bot, event, groupId, "投票失败，未登录");
+            sendMcModFailure(bot, event, groupId, "投票", EnumStateCode.C108.code());
             return bot.setMsgEmojiLikeBrokenHeart(msgId);
         }
         if (result != null && result.isTooFrequent()) {
-            sendMessage(bot, event, groupId, "投票操作过于频繁，请稍后再试");
+            sendMcModFailure(bot, event, groupId, "投票", EnumStateCode.C109.code());
             return bot.setMsgEmojiLikeBrokenHeart(msgId);
         }
         if (result != null && result.isSuccess()) {
             if (result.isUnchanged() && !result.isFromCache()) {
-                sendMessage(bot, event, groupId, "请勿重复投票");
+                sendMessage(bot, event, groupId, EnumStateCode.C106.message());
                 return bot.setMsgEmojiLikeBrokenHeart(msgId);
             }
             return bot.setMsgEmojiLikeHeart(msgId);
         }
         Integer errorState = result != null ? result.getErrorState() : null;
         LOGGER.error("Failed to vote {}, id: {}, type: {}, errorState: {}", target.label(), targetId, voteType, errorState);
-        if (result != null && errorState != null) {
-            sendMessage(bot, event, groupId, "投票失败，" + errorState);
-        } else {
-            sendMessage(bot, event, groupId, "投票失败，请稍后重试");
-        }
+        sendMcModFailure(bot, event, groupId, "投票", errorState);
         return bot.setMsgEmojiLikeBrokenHeart(msgId);
     }
 
@@ -655,6 +653,16 @@ public class McModPlugin extends BasePlugin {
         } else {
             bot.sendPrivateMsg(event.getUserId(), message, false);
         }
+    }
+
+    private static void sendMcModFailure(BaniraBot bot, AnyMessageEvent event, Long groupId, String action,
+                                         @Nullable Integer state) {
+        sendMessage(bot, event, groupId, action + "失败，" + EnumStateCode.messageOf(state));
+    }
+
+    private static void sendMcModFailure(BaniraBot bot, GroupMessageEvent event, String action,
+                                         @Nullable Integer state) {
+        bot.sendGroupMsg(event.getGroupId(), action + "失败，" + EnumStateCode.messageOf(state), false);
     }
 
     @Nullable
@@ -861,7 +869,9 @@ public class McModPlugin extends BasePlugin {
         if (response != null && response.isSuccess()) {
             return bot.setMsgEmojiLikeHeart(event.getMessageId());
         }
-        LOGGER.error("Failed to post comment");
+        Integer state = response != null ? response.getState() : null;
+        LOGGER.error("Failed to post comment, state: {}", state);
+        sendMcModFailure(bot, event, "发布评论", state);
         return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
     }
 
@@ -927,10 +937,11 @@ public class McModPlugin extends BasePlugin {
                 parsedInfo.containerId(), parsedInfo.commentId(), replyContent);
         if (response != null && response.isSuccess()) {
             return bot.setMsgEmojiLikeHeart(event.getMessageId());
-        } else {
-            LOGGER.error("Failed to reply comment");
-            return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
         }
+        Integer state = response != null ? response.getState() : null;
+        LOGGER.error("Failed to reply comment, state: {}", state);
+        sendMcModFailure(bot, event, "回复评论", state);
+        return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
     }
 
     /**
@@ -1058,10 +1069,11 @@ public class McModPlugin extends BasePlugin {
                             .anyMatch(reply -> reply.getId().equals(commentId))))
             );
             return bot.setMsgEmojiLikeHeart(event.getMessageId());
-        } else {
-            LOGGER.error("Failed to delete comment");
-            return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
         }
+        Integer state = response != null ? response.getState() : null;
+        LOGGER.error("Failed to delete comment, state: {}", state);
+        sendMcModFailure(bot, event, "删除评论", state);
+        return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
     }
 
 

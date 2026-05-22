@@ -176,6 +176,13 @@ public final class BaniraUtils {
     }
 
     /**
+     * 获取某类群配置的快照（包含群 0 全局配置）。
+     */
+    public static <T extends xin.vanilla.banira.config.contract.GroupConfig> Map<Long, T> getGroupConfigSnapshot(Class<T> clazz) {
+        return getOtherConfigRegistry().getGroupedSnapshot(clazz);
+    }
+
+    /**
      * 仅获取指定群配置，不回退全局配置。
      */
     public static <T extends xin.vanilla.banira.config.contract.GroupConfig> Optional<T> getOnlyGroupConfig(Class<T> clazz, Long groupId) {
