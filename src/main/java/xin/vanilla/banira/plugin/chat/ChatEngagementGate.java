@@ -21,6 +21,9 @@ import java.util.regex.Pattern;
 public class ChatEngagementGate {
 
     private static final Pattern CQ_CODE = Pattern.compile("\\[CQ:[^]]+]");
+    private static final Pattern AMBIGUOUS_UNTARGETED_IDENTITY_LABEL = Pattern.compile(
+            "(?i)^(?:ai|aigc|gpt|chatgpt|llm|bot|robot|\\u4eba\\u5de5\\u667a\\u80fd|\\u673a\\u5668\\u4eba|\\u6a5f\\u5668\\u4eba|\\u5927\\u6a21\\u578b|\\u8bed\\u8a00\\u6a21\\u578b|\\u8a9e\\u8a00\\u6a21\\u578b|\\u6a21\\u578b)[?？!！。.,，、~～]*$"
+    );
     private static final Pattern EMOJI_AND_SYMBOLS = Pattern.compile("[\\p{So}\\p{Sk}\\x{1F000}-\\x{1FAFF}\\x{2600}-\\x{27BF}\\s~～!！?？。,.，、…]+");
 
     private final ChatEngagementSettings engagementCfg;
@@ -68,6 +71,11 @@ public class ChatEngagementGate {
             LOGGER.debug("engagement follow invoke bot={} group={} interest={}",
                     botId, groupId, engagementService.currentInterest(botId, groupId, engagementCfg));
             return true;
+        }
+        if (!directMentioned && !nameMentioned && !botNamePrefixMentioned
+                && isAmbiguousUntargetedIdentityLabel(ctx.msg())) {
+            LOGGER.debug("engagement skip ambiguous untargeted identity label group={} sender={}", groupId, ctx.sender());
+            return false;
         }
         if (nameMentioned) {
             return true;
@@ -131,6 +139,17 @@ public class ChatEngagementGate {
             return false;
         }
         return true;
+    }
+
+    private static boolean isAmbiguousUntargetedIdentityLabel(String text) {
+        if (StringUtils.isNullOrEmptyEx(text)) {
+            return false;
+        }
+        String compact = CQ_CODE.matcher(text)
+                .replaceAll(" ")
+                .replaceAll("\\s+", "")
+                .trim();
+        return AMBIGUOUS_UNTARGETED_IDENTITY_LABEL.matcher(compact).matches();
     }
 
     private static boolean isShortNoise(@Nonnull String text, int maxChars) {

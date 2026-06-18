@@ -45,6 +45,40 @@ class ChatEngagementGateTest {
         Assertions.assertFalse(gate.shouldInvokeModel(10000L, groupMessage("。"), false, false, false, 50));
     }
 
+    @Test
+    void shouldSkipUntargetedBareIdentityLabel() {
+        ChatEngagementSettings engagement = new ChatEngagementSettings()
+                .ownerAlwaysInvoke(false)
+                .randomBubbleEnabled(false);
+        ChatEngagementService service = Mockito.mock(ChatEngagementService.class);
+        ChatEngagementGate gate = new ChatEngagementGate(
+                engagement,
+                new ChatReplySettings(),
+                service,
+                Mockito.mock(ReplyDecisionMaker.class)
+        );
+
+        Assertions.assertFalse(gate.shouldInvokeModel(10000L, groupMessage("AI?"), false, false, false, 50));
+        Assertions.assertFalse(gate.shouldInvokeModel(10000L, groupMessage("\u673a\u5668\u4eba?"), false, false, false, 50));
+    }
+
+    @Test
+    void shouldKeepDirectIdentityLabelAddressable() {
+        ChatEngagementSettings engagement = new ChatEngagementSettings()
+                .ownerAlwaysInvoke(false)
+                .randomBubbleEnabled(false);
+        ChatEngagementService service = Mockito.mock(ChatEngagementService.class);
+        ChatEngagementGate gate = new ChatEngagementGate(
+                engagement,
+                new ChatReplySettings(),
+                service,
+                Mockito.mock(ReplyDecisionMaker.class)
+        );
+
+        Assertions.assertTrue(gate.shouldInvokeModel(10000L, groupMessage("AI?"), true, false, false, 50));
+        Assertions.assertTrue(gate.shouldInvokeModel(10000L, groupMessage("AI?"), false, true, false, 50));
+    }
+
     private static BaniraCodeContext groupMessage(String text) {
         return new BaniraCodeContext(null, java.util.List.of(), 1L, 2L, 2L)
                 .msg(text)
