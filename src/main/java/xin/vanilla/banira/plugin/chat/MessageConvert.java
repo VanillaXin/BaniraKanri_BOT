@@ -16,9 +16,13 @@ import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.HttpUtils;
 import xin.vanilla.banira.util.StringUtils;
 
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
+import java.util.Locale;
 
 public final class MessageConvert {
 
@@ -284,13 +288,41 @@ public final class MessageConvert {
             return imageLinkContent(arrayMsg, url);
         }
         try {
-            ImageContent content = imageContentFromBytes(HttpUtils.downloadBytes(url));
+            ImageContent content = imageContentFromBytes(downloadImageBytes(url));
             if (content != null) {
                 return content;
             }
         } catch (Exception ignored) {
         }
         return imageLinkContent(arrayMsg, url);
+    }
+
+    private static byte[] downloadImageBytes(@Nonnull String url) {
+        String trimmed = url.trim();
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        if (lower.startsWith("data:image/")) {
+            int comma = trimmed.indexOf(',');
+            if (comma > 0 && trimmed.substring(0, comma).toLowerCase(Locale.ROOT).contains(";base64")) {
+                try {
+                    return Base64.getDecoder().decode(trimmed.substring(comma + 1));
+                } catch (Exception ignored) {
+                    return null;
+                }
+            }
+            return null;
+        }
+        if (lower.startsWith("file:")) {
+            try {
+                Path path = Path.of(URI.create(trimmed));
+                if (Files.isRegularFile(path) && Files.size(path) <= MAX_INLINE_IMAGE_BYTES) {
+                    return Files.readAllBytes(path);
+                }
+            } catch (Exception ignored) {
+                return null;
+            }
+            return null;
+        }
+        return HttpUtils.downloadBytes(trimmed);
     }
 
     static ImageContent imageContentFromBytes(byte[] bytes) {

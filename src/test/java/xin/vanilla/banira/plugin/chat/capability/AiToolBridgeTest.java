@@ -3,6 +3,8 @@ package xin.vanilla.banira.plugin.chat.capability;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import dev.langchain4j.data.message.ImageContent;
+import dev.langchain4j.data.message.UserMessage;
 import xin.vanilla.banira.config.entity.extended.ChatConfig;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumMessageType;
@@ -12,7 +14,15 @@ import xin.vanilla.banira.plugin.chat.model.ChatQuotaService;
 import xin.vanilla.banira.service.IAiMemoryManager;
 import xin.vanilla.banira.service.IMessageRecordManager;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Base64;
+
 class AiToolBridgeTest {
+
+    private static final byte[] ONE_PIXEL_PNG = Base64.getDecoder().decode(
+            "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+    );
 
     @Test
     void shouldBlockHistoryDrivenMcmodSearchWhenCurrentMessageChangedTopic() {
@@ -502,6 +512,45 @@ class AiToolBridgeTest {
         Assertions.assertTrue(result.contains("msgId=1622503723"));
         Assertions.assertTrue(result.contains("是否你自己发送=是"));
         Assertions.assertTrue(result.contains("确实不知道，我搜了也没搜到"));
+    }
+
+    @Test
+    void shouldLoadMessageImagesOnDemand() throws Exception {
+        Path image = Files.createTempFile("banira-tool-image", ".png");
+        Files.write(image, ONE_PIXEL_PNG);
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        IMessageRecordManager recordManager = Mockito.mock(IMessageRecordManager.class);
+        Mockito.when(recordManager.getGroupMessageRecord(20000L, 77))
+                .thenReturn(new MessageRecord()
+                        .setMsgId("77")
+                        .setGroupId(20000L)
+                        .setSenderId(40000L)
+                        .setMsgRecode("[CQ:image,file=test.png,url=" + image.toUri() + "]"));
+        AgentContext ctx = context("[CQ:at,qq=10000] 看看前面那张图");
+        ChatConfig config = new ChatConfig();
+        config.model().imageInputEnabled(true);
+        AiToolBridge bridge = new AiToolBridge(
+                ctx,
+                config,
+                registry,
+                Mockito.mock(MemoryRetriever.class),
+                Mockito.mock(IAiMemoryManager.class),
+                Mockito.mock(ChatQuotaService.class),
+                3,
+                new java.util.ArrayList<>(),
+                null,
+                recordManager
+        );
+
+        String result = bridge.loadMessageImages("77");
+
+        Assertions.assertTrue(result.contains("图片内容已加载"));
+        java.util.List<dev.langchain4j.data.message.ChatMessage> media = bridge.drainPendingMediaMessages();
+        Assertions.assertEquals(1, media.size());
+        Assertions.assertTrue(media.getFirst() instanceof UserMessage);
+        UserMessage message = (UserMessage) media.getFirst();
+        Assertions.assertTrue(message.contents().stream().anyMatch(ImageContent.class::isInstance));
+        Assertions.assertTrue(bridge.drainPendingMediaMessages().isEmpty());
     }
 
     @Test

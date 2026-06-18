@@ -2,8 +2,10 @@ package xin.vanilla.banira.plugin.chat;
 
 import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.dto.action.response.MsgResp;
+import com.mikuac.shiro.enums.MsgTypeEnum;
 import com.mikuac.shiro.model.ArrayMsg;
 import dev.langchain4j.data.message.Content;
+import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -12,8 +14,12 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.util.BaniraUtils;
 
 import java.util.List;
+import java.util.Map;
 
 class MessageConvertTest {
+
+    private static final String ONE_PIXEL_PNG_DATA_URL = "data:image/png;base64,"
+            + "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=";
 
     @Test
     void shouldExpandForwardImagesAsQuotedContent() {
@@ -51,5 +57,18 @@ class MessageConvertTest {
 
         Assertions.assertTrue(text.contains("合并转发内容"));
         Assertions.assertTrue(text.contains("[图片链接] https://example.com/test.jpg"));
+    }
+
+    @Test
+    void shouldConvertDataUrlImageToImageContentWhenMediaRetained() {
+        BaniraBot bot = Mockito.mock(BaniraBot.class);
+        Mockito.when(bot.getSelfId()).thenReturn(999L);
+        ArrayMsg image = new ArrayMsg()
+                .setType(MsgTypeEnum.image)
+                .setData(Map.of("file", "test.png", "url", ONE_PIXEL_PNG_DATA_URL));
+
+        List<Content> contents = MessageConvert.toContents(bot, 10001L, image, true, new ChatMessageContextFormatter.UserInfoCache());
+
+        Assertions.assertTrue(contents.stream().anyMatch(ImageContent.class::isInstance));
     }
 }

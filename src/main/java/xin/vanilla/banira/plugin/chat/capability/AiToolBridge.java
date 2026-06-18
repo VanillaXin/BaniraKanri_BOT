@@ -4,6 +4,11 @@ import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.model.ArrayMsg;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.data.message.ChatMessage;
+import dev.langchain4j.data.message.Content;
+import dev.langchain4j.data.message.ImageContent;
+import dev.langchain4j.data.message.TextContent;
+import dev.langchain4j.data.message.UserMessage;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -55,6 +60,7 @@ public class AiToolBridge {
     private final IMessageRecordManager messageRecordManager;
     private final int memoryRetrieveLimit;
     private final List<String> toolReferences;
+    private final List<ChatMessage> pendingMediaMessages = new ArrayList<>();
 
     public AiToolBridge(@Nonnull AgentContext ctx
             , @Nonnull ChatConfig chatConfig
@@ -590,6 +596,46 @@ public class AiToolBridge {
         return formatHistoryRecord(record);
     }
 
+    @Tool("按消息 ID 加载当前群内某条历史消息里的图片，让你在本轮后续可以实际查看图片内容。只有用户要求你看之前/上面/引用的图片，且当前 prompt 没有直接给出图片内容时使用；一次只加载一条消息。")
+    public String loadMessageImages(@P("消息 ID") String msgId) {
+        if (!chatConfig.model().imageInputEnabled()) {
+            return "当前配置未启用图片输入，不能加载图片内容。";
+        }
+        if (messageRecordManager == null || ctx.bot() == null) {
+            return "消息记录暂不可用";
+        }
+        int id = StringUtils.toInt(msgId, 0);
+        if (id <= 0) {
+            return "消息 ID 无效，不能加载图片。";
+        }
+        MessageRecord record;
+        if (ctx.msgType() == EnumMessageType.GROUP && ctx.scopeGroupId() > 0) {
+            record = messageRecordManager.getGroupMessageRecord(ctx.scopeGroupId(), id);
+        } else {
+            record = messageRecordManager.getPrivateMessageRecord(ctx.senderId() != null ? ctx.senderId() : 0L, id);
+        }
+        if (record == null || record.recalled()) {
+            return "未找到可读取的图片消息，可能已撤回或不在当前会话。";
+        }
+        ChatMessage mediaMessage = buildMediaMessage(record);
+        if (mediaMessage == null) {
+            return "这条消息没有可加载的图片内容，或图片下载失败。";
+        }
+        pendingMediaMessages.add(mediaMessage);
+        LOGGER.debug("AI loaded message images group={} user={} msgId={}", ctx.scopeGroupId(), ctx.senderId(), msgId);
+        return "图片内容已加载到本轮上下文。下一步请直接观察图片并回答，不要再说只能看到链接。";
+    }
+
+    @Nonnull
+    public List<ChatMessage> drainPendingMediaMessages() {
+        if (pendingMediaMessages.isEmpty()) {
+            return List.of();
+        }
+        List<ChatMessage> drained = new ArrayList<>(pendingMediaMessages);
+        pendingMediaMessages.clear();
+        return drained;
+    }
+
     @Tool("保存值得长期记住的信息。content 为记忆内容，tags 为可选标签（逗号分隔）")
     public String saveMemory(@P("记忆内容") String content, @P("标签，逗号分隔，可空") String tags) {
         if (!chatConfig.memory().allowToolSave()) {
@@ -764,6 +810,43 @@ public class AiToolBridge {
             result = source.trim();
         }
         return AiTextLimits.truncate(result, 500);
+    }
+
+    @Nullable
+    private ChatMessage buildMediaMessage(@Nonnull MessageRecord record) {
+        String source = recordTextSource(record);
+        if (StringUtils.isNullOrEmptyEx(source) || ctx.bot() == null) {
+            return null;
+        }
+        Long groupId = record.getGroupId() != null && record.getGroupId() > 0 ? record.getGroupId() : ctx.scopeGroupId();
+        ChatMessageContextFormatter.UserInfoCache cache = new ChatMessageContextFormatter.UserInfoCache();
+        List<Content> contents = new ArrayList<>();
+        contents.add(new TextContent("按工具请求加载的历史图片："
+                + ChatMessageContextFormatter.describeUser(ctx.bot(), groupId, record.getSenderId(), cache)
+                + "，消息ID=" + StringUtils.nullToEmpty(record.getMsgId())
+                + "。这是刚加载的真实图片内容。\n"));
+        boolean hasImage = false;
+        for (ArrayMsg arrayMsg : MessageConverser.stringToArray(source)) {
+            List<Content> converted = MessageConvert.toContents(ctx.bot(), groupId, arrayMsg, true, cache);
+            if (containsImageContent(converted)) {
+                hasImage = true;
+            }
+            contents.addAll(converted);
+        }
+        if (!hasImage) {
+            return null;
+        }
+        long sender = record.getSenderId() != null ? record.getSenderId() : 0L;
+        return UserMessage.userMessage("qq_" + sender, contents);
+    }
+
+    private static boolean containsImageContent(@Nonnull List<Content> contents) {
+        for (Content content : contents) {
+            if (content instanceof ImageContent) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Nonnull

@@ -18,6 +18,7 @@ import xin.vanilla.banira.plugin.chat.AiTextLimits;
 import xin.vanilla.banira.plugin.chat.ChatSafetyRejectionTracker;
 import xin.vanilla.banira.plugin.chat.StructuredReplyPipeline;
 import xin.vanilla.banira.plugin.chat.capability.AiDirectResult;
+import xin.vanilla.banira.plugin.chat.capability.AiToolBridge;
 import xin.vanilla.banira.plugin.chat.model.ChatModelRouter;
 import xin.vanilla.banira.util.StringUtils;
 
@@ -36,7 +37,8 @@ public class ChatAgentRunner {
     private static final Set<String> HISTORY_TOOLS = Set.of(
             "getMessageById",
             "getRecentChatHistory",
-            "searchChatHistory"
+            "searchChatHistory",
+            "loadMessageImages"
     );
     private static final Set<String> NON_REFERENCE_TOOLS = Set.of(
             "listCapabilities",
@@ -52,6 +54,7 @@ public class ChatAgentRunner {
             "getMessageById",
             "getRecentChatHistory",
             "searchChatHistory",
+            "loadMessageImages",
             "saveMemory",
             "recallLastAiReply",
             "muteSelf",
@@ -137,6 +140,14 @@ public class ChatAgentRunner {
                     return new AgentRunResult("", List.copyOf(toolReferences), true);
                 }
                 conversation.add(ToolExecutionResultMessage.toolExecutionResultMessage(request, result));
+                if (toolSource instanceof AiToolBridge bridge) {
+                    List<ChatMessage> mediaMessages = bridge.drainPendingMediaMessages();
+                    if (!mediaMessages.isEmpty()) {
+                        conversation.addAll(mediaMessages);
+                        LOGGER.debug("AI agent appended media messages from tool name={} count={}",
+                                request.name(), mediaMessages.size());
+                    }
+                }
             }
         }
         ChatMessage last = conversation.getLast();

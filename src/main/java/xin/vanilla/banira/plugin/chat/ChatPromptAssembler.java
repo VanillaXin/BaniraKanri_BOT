@@ -72,12 +72,9 @@ public class ChatPromptAssembler {
                     + " 不要列 QQ、不要教用户下命令、不要照搬上面原文。"));
         }
         prompt.add(PromptBuilder.buildCurrentMessageFocusMessage());
-        ChatMessage current = convertMessage(
-                ctx.msg(),
+        ChatMessage current = convertCurrentMessage(
+                ctx,
                 bot,
-                ctx.group(),
-                ctx.sender(),
-                messageIdText(ctx.msgId()),
                 cfg.model().imageInputEnabled(),
                 userInfoCache
         );
@@ -196,6 +193,42 @@ public class ChatPromptAssembler {
     @Nullable
     private static ChatMessage convertMessage(String msgRecode, BaniraBot bot, Long groupId, Long senderId, String msgId, boolean retainMedia) {
         return convertMessage(msgRecode, bot, groupId, senderId, msgId, retainMedia, null);
+    }
+
+    @Nullable
+    private static ChatMessage convertCurrentMessage(@Nonnull BaniraCodeContext ctx
+            , @Nonnull BaniraBot bot
+            , boolean retainMedia
+            , ChatMessageContextFormatter.UserInfoCache userInfoCache
+    ) {
+        if (ctx.originalMsg() != null && !ctx.originalMsg().isEmpty()) {
+            String msgId = messageIdText(ctx.msgId());
+            if (bot.getSelfId() == ctx.sender()) {
+                String messageIdText = StringUtils.isNotNullOrEmpty(msgId) ? "，消息ID=" + msgId : "";
+                return AiMessage.aiMessage("这是你自己之前发送的历史回复" + messageIdText + "：\n"
+                        + ChatInputSanitizer.sanitizeUserText(StringUtils.nullToEmpty(ctx.msg())));
+            }
+            List<Content> contents = new ArrayList<>();
+            String senderPrefix = ChatMessageContextFormatter.senderPrefix(bot, ctx.group(), ctx.sender(), msgId, userInfoCache);
+            if (StringUtils.isNotNullOrEmpty(senderPrefix)) {
+                contents.add(new TextContent(senderPrefix));
+            }
+            for (ArrayMsg arrayMsg : ctx.originalMsg()) {
+                contents.addAll(MessageConvert.toContents(bot, ctx.group(), arrayMsg, retainMedia, userInfoCache));
+            }
+            if (!contents.isEmpty()) {
+                return UserMessage.userMessage("qq_" + ctx.sender(), contents);
+            }
+        }
+        return convertMessage(
+                ctx.msg(),
+                bot,
+                ctx.group(),
+                ctx.sender(),
+                messageIdText(ctx.msgId()),
+                retainMedia,
+                userInfoCache
+        );
     }
 
     @Nullable
