@@ -121,6 +121,18 @@ class StructuredReplyPipelineTest {
     }
 
     @Test
+    void shouldDropUploadedCodeFileNoticeReferences() {
+        StructuredReply reply = StructuredReplyPipeline.parseAndProcess(
+                "done",
+                List.of("代码文件\n\n已上传：TeleportMod.java\n内容较长，正文不要重复贴代码"),
+                new ChatReplySettings()
+        );
+
+        Assertions.assertEquals("done", reply.speech());
+        Assertions.assertTrue(reply.references().isEmpty());
+    }
+
+    @Test
     void shouldDropRawSearchReferenceBlocks() {
         StructuredReply reply = StructuredReplyPipeline.parseAndProcess(
                 "我大概知道了\n[REF]查询：夏生先生 高性能萝卜子\n1. 亚托莉\n摘要：角色资料\n链接：https://example.com[/REF]",

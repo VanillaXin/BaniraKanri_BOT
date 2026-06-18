@@ -272,6 +272,57 @@ class AiToolBridgeTest {
     }
 
     @Test
+    void shouldUploadLongHtmlReferenceAsFileInsteadOfForwardText() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        java.util.List<String> references = new java.util.ArrayList<>();
+        AgentContext ctx = context("@bot build this page as html");
+        AiToolBridge bridge = new AiToolBridge(
+                ctx,
+                new ChatConfig(),
+                registry,
+                Mockito.mock(MemoryRetriever.class),
+                Mockito.mock(IAiMemoryManager.class),
+                Mockito.mock(ChatQuotaService.class),
+                3,
+                references
+        );
+        String html = """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                    body { margin: 0; font-family: sans-serif; background: #111; color: #eee; }
+                    .panel { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 24px; }
+                    .card { border: 1px solid #333; border-radius: 6px; padding: 16px; }
+                    </style>
+                </head>
+                <body>
+                    <main class="panel">
+                        <section class="card">token input</section>
+                        <section class="card">quota output</section>
+                    </main>
+                    <script>
+                    const items = Array.from({ length: 20 }, (_, i) => i);
+                    function render() { return items.map(i => `<div>${i}</div>`).join(""); }
+                    </script>
+                </body>
+                </html>
+                """ + "/* filler */\n".repeat(120);
+
+        String result = bridge.addForwardReference("token panel html", html);
+
+        Assertions.assertTrue(result.contains("代码文件"));
+        Assertions.assertTrue(references.isEmpty());
+        Mockito.verify(ctx.bot()).uploadGroupFile(
+                Mockito.eq(20000L),
+                Mockito.anyString(),
+                Mockito.endsWith(".html"),
+                Mockito.eq("")
+        );
+    }
+
+    @Test
     void shouldNotAddInternalPolicyTextAsForwardReference() {
         AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
         java.util.List<String> references = new java.util.ArrayList<>();

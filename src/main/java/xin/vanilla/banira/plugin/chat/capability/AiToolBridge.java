@@ -161,7 +161,7 @@ public class AiToolBridge {
         return executeWithPolicy(name, parsedArgs, true);
     }
 
-    @Tool("把长内容加入本次回复的合并转发资料。用户要求输出代码、模板、长文、配置、日志、列表时优先使用；调用后最终回复只保留一句短台词。")
+    @Tool("把长内容加入本次回复的合并转发资料。用户要求输出普通长文、列表、资料整理时使用；完整代码文件或很长代码应使用 uploadCodeTextFile。调用后最终回复只保留一句短台词。")
     public String addForwardReference(@P("合并转发标题或简短说明") String title, @P("完整长内容，可包含代码块") String content) {
         if (StringUtils.isNullOrEmptyEx(content)) {
             return "合并转发内容为空。";
@@ -170,6 +170,11 @@ public class AiToolBridge {
         if (xin.vanilla.banira.plugin.chat.StructuredReplyPipeline.isUnsuitableForwardReferenceText(cleanedContent)) {
             LOGGER.debug("AI ignored unsuitable forward reference title={} chars={}", title, content.length());
             return "这段不是可发送资料，已忽略。";
+        }
+        if (shouldUploadAsCodeFile(title, cleanedContent)) {
+            LOGGER.debug("AI forward reference converted to code file upload title={} chars={}",
+                    title, cleanedContent.length());
+            return uploadCodeTextFile(suggestCodeFileName(title, cleanedContent), cleanedContent);
         }
         String refTitle = StringUtils.isNotNullOrEmpty(title) ? title.trim() : "完整内容";
         String ref = refTitle + "\n\n" + AiTextLimits.truncate(
@@ -181,7 +186,7 @@ public class AiToolBridge {
         return "已加入合并转发。最终回复用一句短话说明即可，不要再把完整内容发在普通消息里。";
     }
 
-    @Tool("把很长的代码保存为文本文件并上传，同时在本次回复的合并转发资料里放一条文件说明。用户要求编写大量代码、完整项目文件、长模板时使用；正常长度代码仍用 addForwardReference。")
+    @Tool("把很长的代码保存为文本文件并上传。用户要求编写大量代码、完整项目文件、完整 HTML/CSS/JS/Java/配置文件时使用；上传后普通台词只说一句，不要再贴完整代码，也不要再加合并转发说明。")
     public String uploadCodeTextFile(@P("文件名，建议带后缀，例如 Main.java 或 dfs_template.txt") String fileName,
                                      @P("完整代码文本，不要省略") String content) {
         if (StringUtils.isNullOrEmptyEx(content)) {
@@ -199,12 +204,11 @@ public class AiToolBridge {
             } else if (ctx.senderId() != null && ctx.senderId() > 0) {
                 ctx.bot().uploadPrivateFile(ctx.senderId(), absolutePath, safeName);
             }
-            toolReferences.add("代码文件\n\n已上传：" + safeName + "\n内容较长，正文不要重复贴代码");
             LOGGER.debug("AI uploaded code text file name={} chars={} path={}", safeName, content.length(), absolutePath);
-            return "代码文件已上传，并已加入合并转发说明。最终回复只用一句短话，不要再贴完整代码。";
+            return "代码文件已上传：" + safeName;
         } catch (Exception e) {
             LOGGER.warn("AI upload code text file failed name={}", safeName, e);
-            return "代码文件上传失败；如果内容不算太长，改用 addForwardReference 放进合并转发。";
+            return "代码文件上传失败";
         }
     }
 
@@ -1072,6 +1076,87 @@ public class AiToolBridge {
             name = name + ".txt";
         }
         return name.length() > 80 ? name.substring(name.length() - 80) : name;
+    }
+
+    private static boolean shouldUploadAsCodeFile(@Nullable String title, @Nonnull String content) {
+        String trimmed = content.trim();
+        if (trimmed.length() < 1200) {
+            return false;
+        }
+        String lower = trimmed.toLowerCase(java.util.Locale.ROOT);
+        String titleLower = StringUtils.nullToEmpty(title).toLowerCase(java.util.Locale.ROOT);
+        if (titleLower.contains("代码") || titleLower.contains("html") || titleLower.contains("css")
+                || titleLower.contains("javascript") || titleLower.contains("java") || titleLower.contains("gradle")) {
+            return true;
+        }
+        return lower.contains("<!doctype html")
+                || lower.contains("<html")
+                || lower.contains("<style")
+                || lower.contains("<script")
+                || lower.contains("package ")
+                || lower.contains("public class ")
+                || lower.contains("import java.")
+                || lower.contains("plugins {")
+                || lower.contains("dependencies {")
+                || lower.contains("function ")
+                || lower.contains("const ")
+                || lower.contains("let ")
+                || lower.contains("class ");
+    }
+
+    @Nonnull
+    private static String suggestCodeFileName(@Nullable String title, @Nonnull String content) {
+        String existing = extractExplicitFileName(title);
+        if (StringUtils.isNotNullOrEmpty(existing)) {
+            return existing;
+        }
+        String lowerTitle = StringUtils.nullToEmpty(title).toLowerCase(java.util.Locale.ROOT);
+        String lowerContent = content.trim().toLowerCase(java.util.Locale.ROOT);
+        String base = StringUtils.nullToEmpty(title)
+                .replaceAll("[^\\p{IsAlphabetic}\\p{IsDigit}._-]+", "_")
+                .replaceAll("_+", "_")
+                .replaceAll("^_+|_+$", "");
+        if (StringUtils.isNullOrEmptyEx(base) || base.length() > 40) {
+            base = "code";
+        }
+        if (lowerContent.contains("<!doctype html") || lowerContent.contains("<html") || lowerTitle.contains("html")) {
+            return base + ".html";
+        }
+        if (lowerContent.contains("plugins {") || lowerContent.contains("dependencies {") || lowerTitle.contains("gradle")) {
+            return "build.gradle";
+        }
+        if (lowerContent.contains("public class ") || lowerContent.contains("package ") || lowerTitle.contains("java")) {
+            String className = extractJavaClassName(content);
+            return StringUtils.isNotNullOrEmpty(className) ? className + ".java" : base + ".java";
+        }
+        if (lowerContent.contains("function ") || lowerContent.contains("const ") || lowerContent.contains("let ")
+                || lowerTitle.contains("javascript") || lowerTitle.contains("js")) {
+            return base + ".js";
+        }
+        if (lowerContent.contains("{") && lowerContent.contains("}") && lowerTitle.contains("css")) {
+            return base + ".css";
+        }
+        return base + ".txt";
+    }
+
+    @Nullable
+    private static String extractExplicitFileName(@Nullable String title) {
+        if (StringUtils.isNullOrEmptyEx(title)) {
+            return null;
+        }
+        Matcher matcher = Pattern.compile("([A-Za-z0-9_.-]+\\.(?:java|kt|html|css|js|ts|json|xml|toml|gradle|mcmeta|txt|md|yml|yaml))",
+                Pattern.CASE_INSENSITIVE).matcher(title);
+        return matcher.find() ? matcher.group(1) : null;
+    }
+
+    @Nullable
+    private static String extractJavaClassName(@Nonnull String content) {
+        Matcher matcher = Pattern.compile("\\bpublic\\s+class\\s+([A-Za-z_$][A-Za-z0-9_$]*)").matcher(content);
+        if (matcher.find()) {
+            return matcher.group(1);
+        }
+        matcher = Pattern.compile("\\bclass\\s+([A-Za-z_$][A-Za-z0-9_$]*)").matcher(content);
+        return matcher.find() ? matcher.group(1) : null;
     }
 
     @Nonnull
