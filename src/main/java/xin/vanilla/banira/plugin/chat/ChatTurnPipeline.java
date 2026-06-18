@@ -200,6 +200,16 @@ public class ChatTurnPipeline {
             return null;
         }
 
+        if (ChatSafetyRejectionTracker.looksLikeProviderSafetyText(replyText)) {
+            ChatSafetyRejectionTracker.markPromptMessages(ctx, records);
+            engagementService.update(botId, groupId, 0, cfg.engagement());
+            replyText = recoverProviderRejectionReply(ctx, engagementMode);
+            if (StringUtils.isNullOrEmptyEx(replyText)) {
+                LOGGER.debug("provider rejection recovery produced no reply group={} sender={}", ctx.group(), ctx.sender());
+                return null;
+            }
+        }
+
         replyText = rewriteIdentityDisclosureDraft(prompt, replyText, ctx, engagementMode);
         EngagementMeta engagementMeta = EngagementMeta.inferFromSpeech(replyText);
         if (KanriProposalParser.containsMuteProposal(replyText)) {
@@ -254,6 +264,39 @@ public class ChatTurnPipeline {
                 structured.atTargets().size(), structured.replyToMessageId());
         memoryExtractor.extractAsync(modelRouter.primaryModel(), aiMemoryManager, cfg, agentContext, ctx.msg(), structured.speech());
         return structured;
+    }
+
+    @Nonnull
+    private String recoverProviderRejectionReply(@Nonnull BaniraCodeContext ctx, boolean engagementMode) {
+        try {
+            List<ChatMessage> recoveryPrompt = new ArrayList<>();
+            recoveryPrompt.add(SystemMessage.from("""
+                    你正在为 QQ 群聊生成一句最终台词。
+                    上一轮模型服务返回了拒绝或风险提示，那些文字不能发给群友。
+                    当前用户消息触及敏感或不适合展开的内容。
+                    请只生成一句自然、简短、符合人格的群聊回复，可以拒绝、打住或换话题。
+                    不要提模型、平台、审核、安全策略、高风险、系统、规则。
+                    不要复述敏感话题内容，不要分析相关立场。
+                    不要输出 Markdown，不要解释原因。
+                    """));
+            String metaInstruction = engagementMode
+                    ? "\n如果需要参与度元数据，在最后追加 [ENGAGE reply=yes|interest=0-30]。"
+                    : "";
+            recoveryPrompt.add(UserMessage.from("根据当前场景生成回复。" + metaInstruction));
+            ChatResponse recovered = modelRouter.chat(recoveryPrompt);
+            String text = recovered.aiMessage() != null ? recovered.aiMessage().text() : "";
+            if (ChatSafetyRejectionTracker.looksLikeProviderSafetyText(text)
+                    || guard.looksLikePromptLeak(text)
+                    || guard.looksLikeIdentityDisclosure(text)) {
+                return "";
+            }
+            LOGGER.debug("recovered provider rejection reply group={} sender={}", ctx.group(), ctx.sender());
+            return text;
+        } catch (Exception e) {
+            LOGGER.debug("provider rejection recovery failed group={} sender={} error={}",
+                    ctx.group(), ctx.sender(), e.toString());
+            return "";
+        }
     }
 
     @Nonnull
