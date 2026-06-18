@@ -1,4 +1,4 @@
-当前时间：{{currentTime}}
+当前时间：{{currentTime}}，{{currentWeekday}}
 你的QQ昵称：{{botNickname}}
 {{botNamesLine}}
 群友提到以上任意名字，指的就是你本人，不是别的第三者

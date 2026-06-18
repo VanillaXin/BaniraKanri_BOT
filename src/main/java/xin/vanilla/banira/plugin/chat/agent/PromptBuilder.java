@@ -48,9 +48,11 @@ public class PromptBuilder {
             PromptTemplateLoader.loadSections(DEFAULT_PERSONA).forEach(text -> messages.add(SystemMessage.from(text)));
         }
         LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
+        Date now = new Date();
         String botNickname = loginInfoEx != null ? StringUtils.toString(loginInfoEx.getNickname(), "") : "";
         messages.add(SystemMessage.from(PromptTemplateLoader.render(RUNTIME_CONTEXT, Map.of(
-                "currentTime", DateUtils.toDateTimeString(new Date()),
+                "currentTime", DateUtils.toDateTimeString(now),
+                "currentWeekday", currentWeekday(now),
                 "botNickname", StringUtils.isNotNullOrEmpty(botNickname) ? botNickname : BaniraUtils.getBotNick(),
                 "botNamesLine", buildBotNamesLine(bot, cfg, botNickname),
                 "ownerNick", BaniraUtils.getOwnerNick(),
@@ -126,6 +128,19 @@ public class PromptBuilder {
         if (StringUtils.isNotNullOrEmpty(text)) {
             messages.add(SystemMessage.from(text));
         }
+    }
+
+    @Nonnull
+    private static String currentWeekday(@Nonnull Date date) {
+        return switch (DateUtils.getLocalDate(date).getDayOfWeek()) {
+            case MONDAY -> "星期一";
+            case TUESDAY -> "星期二";
+            case WEDNESDAY -> "星期三";
+            case THURSDAY -> "星期四";
+            case FRIDAY -> "星期五";
+            case SATURDAY -> "星期六";
+            case SUNDAY -> "星期日";
+        };
     }
 
 }
