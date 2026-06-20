@@ -4,46 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>BaniraKanri - 机器人监控面板</title>
-    <link rel="stylesheet" href="style/all.min.css">
-    <script src="script/chart.js"></script>
     <script src="footer.js"></script>
     <script src="config.js"></script>
     <style>
         @import url('style/css2.css');
 
         :root {
-            --primary: #ff6b9d;
-            --secondary: #a8e6cf;
-            --accent: #ffd93d;
-            --warning: #ffb347;
-            --danger: #ff8a80;
-            --success: #81c784;
-            --info: #64b5f6;
-            --dark: #4a4a4a;
-            --light: #ffffff;
-            --pink-light: #ffe0ec;
-            --pink-medium: #ffb3d1;
-            --purple-light: #e1bee7;
-            --blue-light: #bbdefb;
-            --card-bg: rgba(255, 255, 255, 0.7);
-            --shadow: 0 8px 32px rgba(255, 107, 157, 0.2);
-            --shadow-hover: 0 12px 40px rgba(255, 107, 157, 0.3);
+            --pink: #ff6f9f;
+            --pink-deep: #f04d86;
+            --pink-soft: #ffe3ee;
+            --pink-line: rgba(255, 127, 171, 0.28);
+            --cream: rgba(255, 252, 246, 0.92);
+            --cream-strong: rgba(255, 255, 255, 0.96);
+            --text: #4c4650;
+            --muted: #7f7680;
+            --faint: #b9aeb7;
+            --green: #39cf8a;
+            --yellow: #ffbd4a;
+            --red: #ff6d7a;
+            --shadow: 0 14px 34px rgba(255, 111, 159, 0.18);
+            --radius: 18px;
         }
 
         * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            font-family: 'Nunito', 'Microsoft YaHei', sans-serif;
+        }
+
+        html,
+        body {
+            width: 100%;
+            min-height: 100%;
         }
 
         body {
-            /*background: url('bg.png') no-repeat center center fixed;*/
-            background-size: cover;
-            color: #4a4a4a;
-            line-height: 1.6;
-            padding: 20px;
-            min-height: 100vh;
+            background: #fff5f8 center / cover no-repeat fixed;
+            color: var(--text);
+            font-family: 'Nunito', 'Microsoft YaHei', 'PingFang SC', system-ui, sans-serif;
+            line-height: 1.45;
+            padding: 22px;
             position: relative;
             overflow-x: hidden;
         }
@@ -51,729 +51,510 @@
         body::before {
             content: '';
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="20" cy="20" r="2" fill="%23ffffff" opacity="0.1"><animate attributeName="opacity" values="0.1;0.3;0.1" dur="3s" repeatCount="indefinite"/></circle><circle cx="80" cy="30" r="1.5" fill="%23ffffff" opacity="0.1"><animate attributeName="opacity" values="0.1;0.4;0.1" dur="4s" repeatCount="indefinite"/></circle><circle cx="40" cy="70" r="1" fill="%23ffffff" opacity="0.1"><animate attributeName="opacity" values="0.1;0.5;0.1" dur="2s" repeatCount="indefinite"/></circle></svg>') repeat;
-            pointer-events: none;
+            inset: 0;
+            z-index: -2;
+            background:
+                    radial-gradient(circle at 18% 14%, rgba(255, 255, 255, 0.72), transparent 30%),
+                    linear-gradient(135deg, rgba(255, 246, 250, 0.84), rgba(255, 253, 236, 0.72));
+            backdrop-filter: blur(2px) saturate(1.06);
+        }
+
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
             z-index: -1;
-        }
-
-        @keyframes gradientBG {
-            0% {
-                background-position: 0% 50%;
-            }
-            50% {
-                background-position: 100% 50%;
-            }
-            100% {
-                background-position: 0% 50%;
-            }
-        }
-
-        @keyframes float {
-            0%, 100% {
-                transform: translateY(0px);
-            }
-            50% {
-                transform: translateY(-10px);
-            }
-        }
-
-        @keyframes bounce {
-            0%, 20%, 50%, 80%, 100% {
-                transform: translateY(0);
-            }
-            40% {
-                transform: translateY(-10px);
-            }
-            60% {
-                transform: translateY(-5px);
-            }
-        }
-
-        @keyframes sparkle {
-            0%, 100% {
-                opacity: 0;
-                transform: scale(0);
-            }
-            50% {
-                opacity: 1;
-                transform: scale(1);
-            }
+            pointer-events: none;
+            background-image:
+                    radial-gradient(circle, rgba(255, 111, 159, 0.22) 0 2px, transparent 2.5px),
+                    radial-gradient(circle, rgba(255, 210, 92, 0.20) 0 1.6px, transparent 2px);
+            background-size: 86px 86px, 112px 112px;
+            background-position: 12px 18px, 54px 38px;
+            opacity: 0.42;
         }
 
         .container {
-            max-width: 1400px;
+            width: min(956px, 100%);
             margin: 0 auto;
-            position: relative;
+        }
+
+        header,
+        .metric-card,
+        .panel,
+        footer,
+        .loading {
+            background: var(--cream);
+            border: 1px solid var(--pink-line);
+            box-shadow: var(--shadow);
+            backdrop-filter: blur(14px) saturate(1.08);
         }
 
         header {
-            display: flex;
-            justify-content: space-between;
+            display: grid;
+            grid-template-columns: 88px minmax(0, 1fr);
+            gap: 20px;
             align-items: center;
-            margin-bottom: 30px;
-            padding: 25px 30px;
-            background: var(--card-bg);
-            border-radius: 25px;
-            box-shadow: var(--shadow);
-            color: var(--dark);
-            backdrop-filter: blur(10px);
-            border: 2px solid var(--pink-light);
+            min-height: 132px;
+            margin-bottom: 16px;
+            padding: 20px 24px;
+            border-radius: 24px;
             position: relative;
             overflow: hidden;
-            animation: float 6s ease-in-out infinite;
         }
 
         header::before {
-            content: '✨';
+            content: '✦';
             position: absolute;
-            top: 15px;
-            right: 20px;
-            font-size: 1.5rem;
-            animation: sparkle 2s ease-in-out infinite;
-        }
-
-        header::after {
-            content: '💖';
-            position: absolute;
-            bottom: 15px;
-            left: 20px;
-            font-size: 1.2rem;
-            animation: bounce 3s ease-in-out infinite;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 25px;
+            right: 24px;
+            top: 16px;
+            color: #ffc94a;
+            font-size: 28px;
+            text-shadow: 0 4px 14px rgba(255, 201, 74, 0.35);
         }
 
         .bot-avatar {
-            width: 90px;
-            height: 90px;
+            width: 88px;
+            height: 88px;
             border-radius: 50%;
-            border: 4px solid var(--primary);
             object-fit: cover;
-            box-shadow: 0 0 25px rgba(255, 107, 157, 0.6);
-            transition: all 0.3s ease;
-            animation: float 4s ease-in-out infinite;
+            border: 4px solid #ff91b9;
+            box-shadow: 0 0 0 7px rgba(255, 145, 185, 0.18), 0 10px 24px rgba(255, 111, 159, 0.28);
         }
 
-        .bot-avatar:hover {
-            transform: scale(1.1) rotate(5deg);
-            box-shadow: 0 0 35px rgba(255, 107, 157, 0.8);
+        .bot-info {
+            min-width: 0;
         }
 
         .bot-info h1 {
-            font-size: 2.5rem;
+            color: var(--pink-deep);
+            font-size: 40px;
+            font-weight: 900;
+            letter-spacing: 0;
+            line-height: 1.05;
             margin-bottom: 10px;
-            background: linear-gradient(45deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            font-weight: 800;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-            position: relative;
+            text-shadow: 0 2px 0 rgba(255, 255, 255, 0.72);
         }
 
-        .bot-info h1::after {
-            content: '🌸';
-            position: absolute;
-            right: -30px;
-            top: -5px;
-            font-size: 1.5rem;
-            animation: bounce 2s ease-in-out infinite;
-        }
-
-        .bot-info p {
+        .bot-status-line,
+        .bot-activity-line {
             display: flex;
             align-items: center;
-            gap: 10px;
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--dark);
+            min-width: 0;
+            color: var(--text);
+            font-size: 17px;
+            font-weight: 760;
+        }
+
+        .bot-status-line {
+            margin-bottom: 6px;
+            padding-right: 36px;
+        }
+
+        #bot-status,
+        #bot-activity {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
+            flex: 0 0 auto;
+            width: 13px;
+            height: 13px;
+            margin-right: 10px;
             border-radius: 50%;
-            background: linear-gradient(45deg, var(--success), var(--secondary));
-            margin-right: 8px;
-            box-shadow: 0 0 15px var(--success);
-            animation: pulse 2s infinite;
-            position: relative;
+            background: var(--green);
+            box-shadow: 0 0 0 7px rgba(57, 207, 138, 0.18), 0 0 16px rgba(57, 207, 138, 0.45);
         }
 
-        .status-indicator::after {
-            content: '';
-            position: absolute;
-            width: 20px;
-            height: 20px;
-            border-radius: 50%;
-            border: 2px solid var(--success);
-            top: -4px;
-            left: -4px;
-            animation: ripple 2s infinite;
+        .bot-activity-line {
+            gap: 8px;
+            color: #5f5660;
         }
 
-        @keyframes pulse {
-            0%, 100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-            50% {
-                opacity: 0.7;
-                transform: scale(1.2);
-            }
+        .bot-activity-line::before {
+            content: '♡';
+            color: var(--pink);
+            font-size: 20px;
+            line-height: 1;
         }
 
-        @keyframes ripple {
-            0% {
-                transform: scale(0.8);
-                opacity: 1;
-            }
-            100% {
-                transform: scale(2);
-                opacity: 0;
-            }
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            grid-template-rows: repeat(2, auto);
-            gap: 25px;
-            margin-bottom: 30px;
-        }
-
-        .card {
-            background: var(--card-bg);
+        .loading {
             border-radius: 20px;
-            box-shadow: var(--shadow);
-            overflow: hidden;
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            backdrop-filter: blur(10px);
-            border: 2px solid var(--pink-light);
+            color: var(--muted);
+            margin-top: 18px;
+            padding: 44px 28px;
+            text-align: center;
+        }
+
+        .loading h2 {
+            color: var(--red);
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .dashboard-shell {
+            display: block;
+        }
+
+        .metric-strip {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .metric-card {
+            min-height: 108px;
+            padding: 16px 14px 14px;
+            border-radius: var(--radius);
             position: relative;
-            animation: float 8s ease-in-out infinite;
+            overflow: hidden;
         }
 
-        .card:nth-child(even) {
-            animation-delay: -2s;
-        }
-
-        .card:nth-child(3n) {
-            animation-delay: -4s;
-        }
-
-        /* .card::before {
+        .metric-card::after {
             content: '';
             position: absolute;
-            top: -2px;
-            left: -2px;
-            right: -2px;
-            bottom: -2px;
-            background: linear-gradient(45deg, var(--primary), var(--accent), var(--secondary), var(--info));
-            border-radius: 22px;
-            z-index: -1;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        } */
-
-        .card:hover {
-            transform: translateY(-15px) scale(1.02);
-            box-shadow: var(--shadow-hover);
+            right: -28px;
+            bottom: -40px;
+            width: 96px;
+            height: 96px;
+            border-radius: 999px;
+            background: rgba(255, 111, 159, 0.10);
         }
 
-        .card:hover::before {
-            opacity: 1;
+        .metric-card .value {
+            color: var(--pink-deep);
+            font-size: 34px;
+            font-weight: 900;
+            letter-spacing: 0;
+            line-height: 1.05;
+            margin-bottom: 10px;
+            position: relative;
+            z-index: 1;
         }
 
-        .card-header {
-            background: linear-gradient(135deg, var(--primary), var(--pink-medium));
-            color: white;
-            padding: 20px 25px;
-            font-size: 1.3rem;
-            font-weight: 700;
+        .metric-card .label {
+            color: var(--muted);
+            font-size: 15px;
+            font-weight: 800;
+            position: relative;
+            z-index: 1;
+        }
+
+        .metric-card .label::before {
+            content: '';
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            margin-right: 7px;
+            border-radius: 999px;
+            background: var(--green);
+            vertical-align: 1px;
+        }
+
+        .metric-card.warning .value {
+            color: var(--yellow);
+        }
+
+        .metric-card.warning .label::before {
+            background: var(--yellow);
+        }
+
+        .metric-card.critical .value {
+            color: var(--red);
+        }
+
+        .metric-card.critical .label::before {
+            background: var(--red);
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: minmax(0, 1.18fr) minmax(0, 0.82fr);
+            gap: 14px;
+            align-items: stretch;
+        }
+
+        .panel {
             display: flex;
+            flex-direction: column;
+            border-radius: 20px;
+            overflow: hidden;
+        }
+
+        .content-grid > .panel:not(.disk-panel) {
+            height: 100%;
+        }
+
+        .disk-panel {
+            grid-column: 1 / -1;
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
             align-items: center;
             gap: 12px;
-            position: relative;
+            min-height: 58px;
+            padding: 16px 20px;
+            background: linear-gradient(135deg, rgba(255, 111, 159, 0.92), rgba(255, 145, 185, 0.88));
+            color: #fff;
+            font-size: 22px;
+            font-weight: 900;
+        }
+
+        .panel-header small {
+            color: rgba(255, 255, 255, 0.82);
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .panel-header::after {
+            content: '✦';
+            color: #ffe66a;
+            font-size: 20px;
+            text-shadow: 0 2px 8px rgba(255, 230, 106, 0.45);
+        }
+
+        .panel-body {
+            flex: 1;
+            padding: 18px 20px 20px;
+        }
+
+        .load-list {
+            display: grid;
+            gap: 12px;
+        }
+
+        .load-item,
+        .info-row,
+        .disk-item {
+            background: rgba(255, 255, 255, 0.64);
+            border: 1px solid rgba(255, 127, 171, 0.22);
+            border-radius: 16px;
+        }
+
+        .load-item {
+            padding: 15px 16px;
+        }
+
+        .load-head {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 14px;
+            align-items: baseline;
+            margin-bottom: 10px;
+        }
+
+        .load-title {
+            color: var(--pink-deep);
+            font-size: 18px;
+            font-weight: 900;
+        }
+
+        .load-title::before {
+            content: '◔';
+            color: #ffc94a;
+            margin-right: 8px;
+        }
+
+        .load-value {
+            color: var(--text);
+            font-size: 28px;
+            font-weight: 900;
+            line-height: 1;
+        }
+
+        .load-meta,
+        .model-line {
+            color: var(--muted);
+            font-size: 15px;
+            font-weight: 760;
             overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .card-header::before {
-            content: '🌟';
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 1.2rem;
-            animation: sparkle 3s ease-in-out infinite;
-        }
-
-        .card-header::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .card:hover .card-header::after {
-            left: 100%;
-        }
-
-        .card-body {
-            padding: 25px;
-            position: relative;
-        }
-
-        .info-item {
-            margin-bottom: 18px;
-            padding: 15px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-            border-radius: 15px;
-            border: 1px solid rgba(255, 107, 157, 0.2);
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .info-item:hover {
-            transform: translateX(5px);
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.08));
-            border-color: var(--primary);
-        }
-
-        .info-item:last-child {
-            margin-bottom: 0;
-        }
-
-        .info-item .label {
-            font-weight: 700;
-            color: var(--primary);
-            margin-bottom: 8px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 0.95rem;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .info-item .label::before {
-            content: '💫';
-            font-size: 0.9rem;
-        }
-
-        .info-item .value {
-            font-size: 1.2rem;
-            color: var(--dark);
-            font-weight: 600;
+        .model-line {
+            margin-top: 9px;
         }
 
         .progress-container {
-            margin-top: 12px;
-        }
-
-        .progress-label {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 0.9rem;
-            color: var(--dark);
-            font-weight: 600;
+            margin-top: 10px;
         }
 
         .progress-bar {
-            height: 16px;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.1));
-            border-radius: 25px;
+            height: 12px;
+            border-radius: 999px;
+            background: rgba(255, 218, 229, 0.72);
+            box-shadow: inset 0 1px 3px rgba(127, 91, 109, 0.12);
             overflow: hidden;
-            position: relative;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .progress-bar::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 50%;
-            background: linear-gradient(180deg, rgba(255, 255, 255, 0.3), transparent);
-            border-radius: 25px 25px 0 0;
         }
 
         .progress-fill {
+            width: 0;
             height: 100%;
-            border-radius: 25px;
-            transition: width 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
-            position: relative;
+            border-radius: inherit;
+            background: var(--green);
+            box-shadow: 0 5px 14px rgba(57, 207, 138, 0.22);
+            transition: width 0.45s ease;
+        }
+
+        .mini-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 8px;
+            margin-top: 11px;
+        }
+
+        .mini-stat {
+            min-width: 0;
+            padding: 9px 10px;
+            border-radius: 12px;
+            background: rgba(255, 235, 242, 0.58);
+        }
+
+        .mini-stat .mini-label {
+            color: var(--faint);
+            font-size: 12px;
+            font-weight: 900;
+            margin-bottom: 2px;
+        }
+
+        .mini-stat .mini-value {
+            color: var(--text);
+            font-size: 15px;
+            font-weight: 860;
             overflow: hidden;
-        }
-
-        .progress-fill::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-            animation: shimmer 2s infinite;
-        }
-
-        @keyframes shimmer {
-            0% {
-                left: -100%;
-            }
-            100% {
-                left: 100%;
-            }
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .disk-container {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 18px;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
         }
 
         .disk-item {
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
-            border-radius: 15px;
-            padding: 18px;
-            border: 2px solid rgba(255, 107, 157, 0.2);
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            padding: 12px 13px;
         }
 
-        .disk-item::before {
-            content: '💾';
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 1.2rem;
-            opacity: 0.7;
-        }
-
-        .disk-item:hover {
-            transform: scale(1.02);
-            border-color: var(--primary);
-            box-shadow: 0 8px 25px rgba(255, 107, 157, 0.3);
-        }
-
-        .chart-container {
-            height: 200px;
-            margin-top: 15px;
-        }
-
-        .stats-grid {
+        .disk-head {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 25px;
-            margin-top: 30px;
-            margin-bottom: 30px;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: baseline;
+            margin-bottom: 8px;
         }
 
-        .stat-card {
-            background: var(--card-bg);
-            border-radius: 20px;
-            padding: 25px 20px;
-            text-align: center;
-            box-shadow: var(--shadow);
-            backdrop-filter: blur(10px);
-            border: 2px solid var(--pink-light);
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            position: relative;
+        .disk-label {
+            color: var(--text);
+            font-size: 16px;
+            font-weight: 900;
             overflow: hidden;
-            animation: float 6s ease-in-out infinite;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
-        .stat-card:nth-child(2n) {
-            animation-delay: -1s;
+        .disk-label::before {
+            content: '▣';
+            color: var(--pink);
+            margin-right: 7px;
         }
 
-        .stat-card:nth-child(3n) {
-            animation-delay: -2s;
+        .disk-percent {
+            color: var(--pink-deep);
+            font-size: 18px;
+            font-weight: 900;
         }
 
-        .stat-card:nth-child(4n) {
-            animation-delay: -3s;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: -50%;
-            left: -50%;
-            width: 200%;
-            height: 200%;
-            background: conic-gradient(from 0deg, transparent, var(--primary), transparent);
-            animation: rotate 4s linear infinite;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .stat-card::after {
-            content: '';
-            position: absolute;
-            inset: 2px;
-            background: var(--card-bg);
-            border-radius: 18px;
-            z-index: 1;
-        }
-
-        .stat-card > * {
-            position: relative;
-            z-index: 2;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-10px) scale(1.05);
-            box-shadow: var(--shadow-hover);
-        }
-
-        .stat-card:hover::before {
-            opacity: 1;
-        }
-
-        @keyframes rotate {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .stat-card .value {
-            font-size: 2.5rem;
+        .disk-specs {
+            color: var(--muted);
+            font-size: 13px;
             font-weight: 800;
-            margin: 15px 0;
-            background: linear-gradient(45deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
-            position: relative;
+            margin-top: 7px;
         }
 
-        .stat-card .value::after {
-            content: '✨';
-            position: absolute;
-            top: -10px;
-            right: -20px;
-            font-size: 1rem;
-            animation: sparkle 2s ease-in-out infinite;
+        .info-list {
+            display: grid;
+            gap: 10px;
         }
 
-        .stat-card .label {
-            color: var(--dark);
-            font-size: 1rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            position: relative;
+        .info-row {
+            padding: 12px 14px;
         }
 
-        .stat-card .label::before {
-            content: '🎀';
-            margin-right: 8px;
+        .info-row .label {
+            color: var(--pink-deep);
+            font-size: 14px;
+            font-weight: 900;
+            margin-bottom: 5px;
         }
 
-        .critical .value {
-            background: linear-gradient(45deg, var(--danger), #ff6b6b);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .info-row .label::before {
+            content: '◔';
+            color: #ffc94a;
+            margin-right: 7px;
         }
 
-        .warning .value {
-            background: linear-gradient(45deg, var(--warning), #ffd93d);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .info-row .value {
+            color: var(--text);
+            font-size: 17px;
+            font-weight: 820;
+            overflow-wrap: anywhere;
         }
 
-        .normal .value {
-            background: linear-gradient(45deg, var(--success), var(--secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+        .info-row.compact .value {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         footer {
-            text-align: left;
-            margin-top: 40px;
-            padding: 25px;
-            background: var(--card-bg);
-            border-radius: 20px;
-            backdrop-filter: blur(10px);
-            border: 2px solid var(--pink-light);
-            box-shadow: var(--shadow);
-            position: relative;
-            overflow: hidden;
-            animation: float 10s ease-in-out infinite;
+            display: flex;
+            align-items: center;
+            min-height: 54px;
+            margin-top: 14px;
+            padding: 13px 20px;
+            border-radius: 18px;
         }
 
         footer p {
-            color: var(--dark);
-            font-size: 1rem;
-            font-weight: 600;
-            margin-top: 0;
             width: 100%;
-            background: linear-gradient(45deg, var(--primary), var(--accent));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
+            color: var(--pink-deep);
+            font-size: 15px;
+            font-weight: 860;
         }
 
-        .refresh-btn {
-            background: linear-gradient(45deg, var(--primary), var(--accent));
-            color: white;
-            border: none;
-            padding: 12px 25px;
-            border-radius: 25px;
-            cursor: pointer;
-            font-weight: 700;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            box-shadow: 0 4px 15px rgba(255, 107, 157, 0.4);
-            position: relative;
-            overflow: hidden;
-        }
-
-        .refresh-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-            transition: left 0.5s ease;
-        }
-
-        .refresh-btn:hover {
-            transform: scale(1.1) translateY(-2px);
-            box-shadow: 0 8px 25px rgba(255, 107, 157, 0.6);
-        }
-
-        .refresh-btn:hover::before {
-            left: 100%;
-        }
-
-        .refresh-btn:active {
-            transform: scale(0.95);
-        }
-
-        .loading {
-            text-align: center;
-            padding: 60px;
-            background: var(--card-bg);
-            border-radius: 20px;
-            border: 2px solid var(--pink-light);
-            box-shadow: var(--shadow);
-            backdrop-filter: blur(10px);
-        }
-
-        .loading h2 {
-            color: var(--danger);
-            font-size: 1.8rem;
-            margin-bottom: 15px;
-            font-weight: 800;
-        }
-
-        .loading p {
-            color: var(--dark);
-            font-size: 1.1rem;
-            font-weight: 600;
-        }
-
-        .loading i {
-            font-size: 3rem;
-            margin-bottom: 20px;
-            display: block;
-            animation: spin 2s linear infinite;
-            color: var(--primary);
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* 可爱的滚动条 */
-        ::-webkit-scrollbar {
-            width: 12px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: linear-gradient(180deg, var(--pink-light), var(--purple-light));
-            border-radius: 10px;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: linear-gradient(180deg, var(--primary), var(--accent));
-            border-radius: 10px;
-            border: 2px solid var(--pink-light);
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: linear-gradient(180deg, var(--accent), var(--primary));
-        }
-
-        /* 选中文本的样式 */
-        ::selection {
-            background: var(--primary);
-            color: white;
-        }
-
-        ::-moz-selection {
-            background: var(--primary);
-            color: white;
-        }
-
-        @media (max-width: 1200px) {
-            .dashboard {
-                grid-template-columns: repeat(2, 1fr);
-                grid-template-rows: auto;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .dashboard {
-                grid-template-columns: 1fr;
-            }
-
-            .disk-container {
-                grid-template-columns: 1fr;
+        @media (max-width: 820px) {
+            body {
+                padding: 16px;
             }
 
             header {
-                flex-direction: column;
-                text-align: center;
-                gap: 15px;
+                grid-template-columns: 72px minmax(0, 1fr);
+                min-height: 112px;
+                padding: 16px;
             }
 
-            .header-left {
-                flex-direction: column;
+            .bot-avatar {
+                width: 72px;
+                height: 72px;
+            }
+
+            .bot-info h1 {
+                font-size: 30px;
+            }
+
+            .metric-strip {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .content-grid {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -781,181 +562,169 @@
 <body>
 <div class="container">
     <header>
-        <div class="header-left">
-            <img id="bot-avatar" class="bot-avatar" src="" alt="Bot Avatar">
-            <div class="bot-info">
-                <h1 id="bot-title">加载中...</h1>
-                <p><span class="status-indicator"></span><span id="bot-status">状态加载中...</span></p>
-                <p id="bot-activity">收0 | 发0 | 群0 | 好友0</p>
-            </div>
+        <img id="bot-avatar" class="bot-avatar" src="" alt="Bot Avatar">
+        <div class="bot-info">
+            <h1 id="bot-title">加载中...</h1>
+            <p class="bot-status-line"><span class="status-indicator"></span><span id="bot-status">状态加载中...</span></p>
+            <p class="bot-activity-line"><span id="bot-activity">收0 | 发0 | 群0 | 好友0</span></p>
         </div>
     </header>
 
     <div id="loading" class="loading">
-        <div style="color: #e74c3c; text-align: center; padding: 30px;">
-            <h2>配置加载失败</h2>
-            <p>请确保config.js文件存在且格式正确</p>
-        </div>
+        <h2>配置加载失败</h2>
+        <p>请确认 config.js 文件存在且格式正确</p>
     </div>
 
-    <div id="dashboard" style="display: none;">
-        <div class="stats-grid">
-            <div class="stat-card critical">
+    <div id="dashboard" class="dashboard-shell" style="display: none;">
+        <section class="metric-strip">
+            <div class="metric-card" id="metric-cpu">
                 <div class="value" id="cpu-percentage">0%</div>
                 <div class="label">CPU 使用率</div>
             </div>
-            <div class="stat-card critical">
+            <div class="metric-card" id="metric-ram">
                 <div class="value" id="ram-percentage">0%</div>
                 <div class="label">内存使用率</div>
             </div>
-            <div class="stat-card warning">
+            <div class="metric-card" id="metric-swap">
                 <div class="value" id="swap-percentage">0%</div>
-                <div class="label">交换空间使用率</div>
+                <div class="label">交换空间</div>
             </div>
-            <div class="stat-card">
+            <div class="metric-card" id="metric-disk">
                 <div class="value" id="disk-warning">0</div>
                 <div class="label">磁盘警告</div>
             </div>
-        </div>
+        </section>
 
-        <div class="dashboard">
-            <div class="card">
-                <div class="card-header">
-                    CPU 使用情况
+        <main class="content-grid">
+            <section class="panel">
+                <div class="panel-header">
+                    <span>核心负载</span>
+                    <small>实时资源</small>
                 </div>
-                <div class="card-body">
-                    <div class="info-item">
-                        <div class="label">使用率</div>
-                        <div class="value" id="cpu-usage">0%</div>
-                        <div class="progress-container">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="cpu-progress"
-                                     style="width: 0%; background-color: #e74c3c;"></div>
+                <div class="panel-body">
+                    <div class="load-list">
+                        <article class="load-item">
+                            <div class="load-head">
+                                <div>
+                                    <div class="load-title">CPU</div>
+                                    <div class="load-meta" id="cpu-specs">加载中...</div>
+                                </div>
+                                <div class="load-value" id="cpu-usage">0%</div>
                             </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="cpu-progress"></div>
+                                </div>
+                            </div>
+                            <div class="model-line" id="cpu-model">加载中...</div>
+                        </article>
+
+                        <article class="load-item">
+                            <div class="load-head">
+                                <div>
+                                    <div class="load-title">内存</div>
+                                    <div class="load-meta">宿主机物理内存</div>
+                                </div>
+                                <div class="load-value" id="ram-usage">0%</div>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="ram-progress"></div>
+                                </div>
+                            </div>
+                            <div class="mini-grid">
+                                <div class="mini-stat">
+                                    <div class="mini-label">总量</div>
+                                    <div class="mini-value" id="ram-total">加载中...</div>
+                                </div>
+                                <div class="mini-stat">
+                                    <div class="mini-label">已用</div>
+                                    <div class="mini-value" id="ram-used">加载中...</div>
+                                </div>
+                                <div class="mini-stat">
+                                    <div class="mini-label">剩余</div>
+                                    <div class="mini-value" id="ram-remaining">加载中...</div>
+                                </div>
+                            </div>
+                        </article>
+
+                        <article class="load-item">
+                            <div class="load-head">
+                                <div>
+                                    <div class="load-title">交换空间</div>
+                                    <div class="load-meta">Swap / Pagefile</div>
+                                </div>
+                                <div class="load-value" id="swap-usage">0%</div>
+                            </div>
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="swap-progress"></div>
+                                </div>
+                            </div>
+                            <div class="mini-grid">
+                                <div class="mini-stat">
+                                    <div class="mini-label">总量</div>
+                                    <div class="mini-value" id="swap-total">加载中...</div>
+                                </div>
+                                <div class="mini-stat">
+                                    <div class="mini-label">已用</div>
+                                    <div class="mini-value" id="swap-used">加载中...</div>
+                                </div>
+                                <div class="mini-stat">
+                                    <div class="mini-label">剩余</div>
+                                    <div class="mini-value" id="swap-remaining">加载中...</div>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-header">
+                    <span>运行信息</span>
+                    <small>框架 / 系统</small>
+                </div>
+                <div class="panel-body">
+                    <div class="info-list">
+                        <div class="info-row">
+                            <div class="label">框架运行时间</div>
+                            <div class="value" id="plugin-uptime">加载中...</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="label">系统运行时间</div>
+                            <div class="value" id="system-uptime">加载中...</div>
+                        </div>
+                        <div class="info-row compact">
+                            <div class="label">操作系统</div>
+                            <div class="value" id="os-info">加载中...</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="label">插件状态</div>
+                            <div class="value" id="plugin-status">加载中...</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="label">JVM 内存</div>
+                            <div class="value" id="memory-usage">加载中...</div>
+                        </div>
+                        <div class="info-row compact">
+                            <div class="label">编译信息</div>
+                            <div class="value" id="compilation-info">加载中...</div>
                         </div>
                     </div>
-                    <div class="info-item">
-                        <div class="label">规格</div>
-                        <div class="value" id="cpu-specs">加载中...</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">处理器型号</div>
-                        <div class="value" id="cpu-model">加载中...</div>
-                    </div>
                 </div>
-            </div>
+            </section>
 
-            <div class="card">
-                <div class="card-header">
-                    内存使用情况
+            <section class="panel disk-panel">
+                <div class="panel-header">
+                    <span>磁盘</span>
+                    <small>容量概览</small>
                 </div>
-                <div class="card-body">
-                    <div class="info-item">
-                        <div class="label">使用率</div>
-                        <div class="value" id="ram-usage">0%</div>
-                        <div class="progress-container">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="ram-progress"
-                                     style="width: 0%; background-color: #e74c3c;"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">总量</div>
-                        <div class="value" id="ram-total">加载中...</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">已用</div>
-                        <div class="value" id="ram-used">加载中...</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">剩余</div>
-                        <div class="value" id="ram-remaining">加载中...</div>
-                    </div>
+                <div class="panel-body">
+                    <div class="disk-container" id="disks-container"></div>
                 </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    磁盘使用情况
-                </div>
-                <div class="card-body">
-                    <div class="disk-container" id="disks-container">
-                        <!-- Disk items will be generated here -->
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    交换空间
-                </div>
-                <div class="card-body">
-                    <div class="info-item">
-                        <div class="label">使用率</div>
-                        <div class="value" id="swap-usage">0%</div>
-                        <div class="progress-container">
-                            <div class="progress-bar">
-                                <div class="progress-fill" id="swap-progress"
-                                     style="width: 0%; background-color: #f39c12;"></div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">总量</div>
-                        <div class="value" id="swap-total">加载中...</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">已用</div>
-                        <div class="value" id="swap-used">加载中...</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">剩余</div>
-                        <div class="value" id="swap-remaining">加载中...</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    运行时间
-                </div>
-                <div class="card-body">
-                    <div class="info-item">
-                        <div class="label">框架运行时间</div>
-                        <div class="value" id="plugin-uptime">加载中...</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">系统运行时间</div>
-                        <div class="value" id="system-uptime">加载中...</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">编译信息</div>
-                        <div class="value" id="compilation-info">加载中...</div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="card-header">
-                    系统信息
-                </div>
-                <div class="card-body">
-                    <div class="info-item">
-                        <div class="label">操作系统</div>
-                        <div class="value" id="os-info">加载中...</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">插件状态</div>
-                        <div class="value" id="plugin-status">加载中...</div>
-                    </div>
-                    <div class="info-item">
-                        <div class="label">内存使用</div>
-                        <div class="value" id="memory-usage">加载中...</div>
-                    </div>
-                </div>
-            </div>
-        </div>
+            </section>
+        </main>
     </div>
 
     <footer>
@@ -964,120 +733,153 @@
 </div>
 
 <script>
+    function setText(id, value) {
+        const element = document.getElementById(id);
+        if (element) {
+            element.textContent = value == null || value === '' ? '无数据' : String(value);
+        }
+    }
 
-    // 更新页面元素
+    function toNumber(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number : 0;
+    }
+
+    function formatPercent(value) {
+        const number = toNumber(value);
+        return `${number}%`;
+    }
+
+    function escapeHtml(value) {
+        return String(value == null ? '' : value)
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+    }
+
+    function loadColor(percentage, warning, critical) {
+        const value = toNumber(percentage);
+        if (value >= critical) return '#ff6d7a';
+        if (value >= warning) return '#ffbd4a';
+        return '#39cf8a';
+    }
+
+    function setProgress(id, percentage, warning, critical) {
+        const fill = document.getElementById(id);
+        if (!fill) return;
+        const value = Math.max(0, Math.min(100, toNumber(percentage)));
+        const color = loadColor(percentage, warning, critical);
+        fill.style.width = `${value}%`;
+        fill.style.background = color;
+        fill.style.boxShadow = `0 5px 14px ${color}40`;
+    }
+
+    function setMetricTone(id, percentage, warning, critical) {
+        const card = document.getElementById(id);
+        if (!card) return;
+        const value = toNumber(percentage);
+        card.classList.toggle('critical', value >= critical);
+        card.classList.toggle('warning', value >= warning && value < critical);
+    }
+
     function updateUI(config) {
         if (!config) return;
 
-        // 显示仪表板，隐藏加载提示
         document.getElementById('loading').style.display = 'none';
         document.getElementById('dashboard').style.display = 'block';
+        document.body.style.backgroundImage = `url('${config.background || 'bg.png'}')`;
 
-        // 更新背景图
-        document.body.style.backgroundImage = "url('" + config.background + "')";
+        setText('bot-title', config.bot?.title);
+        document.getElementById('bot-avatar').src = config.bot?.avatar || '';
+        setText('bot-status', config.bot?.status);
+        setText('bot-activity', config.bot?.activity);
 
-        // 更新Bot信息
-        document.getElementById('bot-title').textContent = config.bot.title;
-        document.getElementById('bot-avatar').src = config.bot.avatar;
-        document.getElementById('bot-status').textContent = config.bot.status;
-        document.getElementById('bot-activity').textContent = config.bot.activity;
+        setText('plugin-uptime', config.uptime?.plugin);
+        setText('system-uptime', config.uptime?.system);
+        setText('compilation-info', config.uptime?.compilation);
 
-        // 更新运行时间
-        document.getElementById('plugin-uptime').textContent = config.uptime.plugin;
-        document.getElementById('system-uptime').textContent = config.uptime.system;
-        document.getElementById('compilation-info').textContent = config.uptime.compilation;
+        const cpuPercent = toNumber(config.resources?.cpu?.percentage);
+        const ramPercent = toNumber(config.resources?.ram?.percentage);
+        const swapPercent = toNumber(config.resources?.swap?.percentage);
 
-        // 更新资源信息
-        document.getElementById('cpu-percentage').textContent = config.resources.cpu.percentage + '%';
-        document.getElementById('ram-percentage').textContent = config.resources.ram.percentage + '%';
-        document.getElementById('swap-percentage').textContent = config.resources.swap.percentage + '%';
+        setText('cpu-percentage', formatPercent(cpuPercent));
+        setText('ram-percentage', formatPercent(ramPercent));
+        setText('swap-percentage', formatPercent(swapPercent));
 
-        // 更新CPU部分
-        document.getElementById('cpu-usage').textContent = config.resources.cpu.percentage + '%';
-        document.getElementById('cpu-specs').textContent = config.resources.cpu.specs + ' | ' + config.resources.cpu.maxSpeed;
-        document.getElementById('cpu-model').textContent = config.systemSpecs.cpu;
+        setText('cpu-usage', formatPercent(cpuPercent));
+        setText('cpu-specs', `${config.resources?.cpu?.specs || '未知规格'} | ${config.resources?.cpu?.maxSpeed || '未知频率'}`);
+        setText('cpu-model', config.systemSpecs?.cpu);
 
-        // 更新内存部分
-        document.getElementById('ram-usage').textContent = config.resources.ram.percentage + '%';
-        document.getElementById('ram-total').textContent = config.resources.ram.total;
-        document.getElementById('ram-used').textContent = config.resources.ram.used;
-        document.getElementById('ram-remaining').textContent = config.resources.ram.remaining;
+        setText('ram-usage', formatPercent(ramPercent));
+        setText('ram-total', config.resources?.ram?.total);
+        setText('ram-used', config.resources?.ram?.used);
+        setText('ram-remaining', config.resources?.ram?.remaining);
 
-        // 更新交换空间
-        document.getElementById('swap-usage').textContent = config.resources.swap.percentage + '%';
-        document.getElementById('swap-total').textContent = config.resources.swap.total;
-        document.getElementById('swap-used').textContent = config.resources.swap.used;
-        document.getElementById('swap-remaining').textContent = config.resources.swap.remaining;
+        setText('swap-usage', formatPercent(swapPercent));
+        setText('swap-total', config.resources?.swap?.total);
+        setText('swap-used', config.resources?.swap?.used);
+        setText('swap-remaining', config.resources?.swap?.remaining);
 
-        // 更新磁盘信息
+        setText('os-info', config.systemSpecs?.os);
+        setText('plugin-status', config.systemSpecs?.plugin);
+        setText('memory-usage', config.systemSpecs?.memory);
+
+        setProgress('cpu-progress', cpuPercent, 70, 90);
+        setProgress('ram-progress', ramPercent, 80, 90);
+        setProgress('swap-progress', swapPercent, 70, 90);
+
+        setMetricTone('metric-cpu', cpuPercent, 70, 90);
+        setMetricTone('metric-ram', ramPercent, 80, 90);
+        setMetricTone('metric-swap', swapPercent, 70, 90);
+
         const disksContainer = document.getElementById('disks-container');
         disksContainer.innerHTML = '';
-
         let diskWarnings = 0;
 
-        config.disks.forEach(disk => {
-            const diskItem = document.createElement('div');
-            diskItem.className = 'disk-item';
-
-            // 根据使用率设置颜色
-            let color = '#2ecc71'; // 绿色
-            if (disk.percentage > 90) {
-                color = '#e74c3c'; // 红色
-                diskWarnings++;
-            } else if (disk.percentage > 80) {
-                color = '#f39c12'; // 橙色
+        (config.disks || []).forEach(disk => {
+            const percentage = toNumber(disk.percentage);
+            const color = loadColor(percentage, 80, 90);
+            if (percentage >= 80) {
                 diskWarnings++;
             }
 
+            const diskItem = document.createElement('div');
+            diskItem.className = 'disk-item';
             diskItem.innerHTML = `
-                    <div class="label">${disk.label} ${disk.percentage}%</div>
-                    <div class="progress-container">
-                        <div class="progress-bar">
-                            <div class="progress-fill" style="width: ${disk.percentage}%; background-color: ${color};"></div>
-                        </div>
+                <div class="disk-head">
+                    <div class="disk-label">${escapeHtml(disk.label || '磁盘')}</div>
+                    <div class="disk-percent" style="color:${color}">${formatPercent(percentage)}</div>
+                </div>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div class="progress-fill" style="width:${Math.max(0, Math.min(100, percentage))}%; background:${color}; box-shadow:0 5px 14px ${color}40;"></div>
                     </div>
-                    <div class="specs" style="margin-top: 8px; color: #bdc3c7; font-size: 0.9rem;">${disk.used} / ${disk.total}</div>
-                `;
+                </div>
+                <div class="disk-specs">${escapeHtml(disk.used || '0BIT')} / ${escapeHtml(disk.total || '0BIT')}</div>
+            `;
             disksContainer.appendChild(diskItem);
         });
 
-        // 更新系统信息
-        document.getElementById('os-info').textContent = config.systemSpecs.os;
-        document.getElementById('plugin-status').textContent = config.systemSpecs.plugin;
-        document.getElementById('memory-usage').textContent = config.systemSpecs.memory;
+        if (!disksContainer.children.length) {
+            const empty = document.createElement('div');
+            empty.className = 'disk-item';
+            empty.innerHTML = '<div class="disk-label">暂无磁盘数据</div>';
+            disksContainer.appendChild(empty);
+        }
 
-        // 更新磁盘警告数量
-        document.getElementById('disk-warning').textContent = diskWarnings;
+        setText('disk-warning', diskWarnings);
+        setMetricTone('metric-disk', diskWarnings, 1, 2);
 
-        // 更新进度条
-        document.getElementById('cpu-progress').style.width = Math.min(100, config.resources.cpu.percentage) + '%';
-        document.getElementById('ram-progress').style.width = config.resources.ram.percentage + '%';
-        document.getElementById('swap-progress').style.width = config.resources.swap.percentage + '%';
-
-        // 更新进度条颜色
-        document.getElementById('cpu-progress').style.backgroundColor =
-            config.resources.cpu.percentage > 500 ? '#e74c3c' :
-                config.resources.cpu.percentage > 300 ? '#f39c12' : '#2ecc71';
-
-        document.getElementById('ram-progress').style.backgroundColor =
-            config.resources.ram.percentage > 90 ? '#e74c3c' :
-                config.resources.ram.percentage > 80 ? '#f39c12' : '#2ecc71';
-
-        document.getElementById('swap-progress').style.backgroundColor =
-            config.resources.swap.percentage > 90 ? '#e74c3c' :
-                config.resources.swap.percentage > 70 ? '#f39c12' : '#2ecc71';
-
-        setBaniraFooter("banira-footer", "框架状态");
+        setBaniraFooter('banira-footer', '框架状态');
     }
 
-    // 初始化页面
     async function initPage() {
         updateUI(configData);
     }
 
-    // 页面加载完成后初始化
     document.addEventListener('DOMContentLoaded', initPage);
-
 </script>
 </body>
 </html>

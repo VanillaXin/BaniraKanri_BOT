@@ -45,7 +45,9 @@ import xin.vanilla.banira.util.html.HtmlScreenshotResult;
 import xin.vanilla.banira.util.html.HtmlScreenshotUtils;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.nio.file.*;
@@ -78,6 +80,7 @@ public class StatusPlugin extends BasePlugin implements AiCapabilityProvider {
 
     private static final File HTML_FILE = new File("config/plugin/status_plugin/index.html");
     private static final File TEMP_BG_FILE = new File("config/plugin/status_plugin/temp.png");
+    private static final String TEMPLATE_RESOURCE_PATH = "template/status_plugin";
     private static final String CLIP_SELECTOR = ".container";
 
     @Override
@@ -224,9 +227,7 @@ public class StatusPlugin extends BasePlugin implements AiCapabilityProvider {
                 bot.setMsgEmojiLikeOk(event.getMessageId());
 
             try {
-                if (!HTML_FILE.exists()) {
-                    ResourceCopyUtils.copyResources("template/status_plugin", HTML_FILE.getParent());
-                }
+                ensureStatusTemplateResources();
             } catch (Exception e) {
                 LOGGER.error("Failed to copy resources", e);
                 return bot.setMsgEmojiLikeBrokenHeart(event.getMessageId());
@@ -265,6 +266,30 @@ public class StatusPlugin extends BasePlugin implements AiCapabilityProvider {
             }
         }
         return false;
+    }
+
+    private void ensureStatusTemplateResources() throws IOException {
+        if (!HTML_FILE.exists()) {
+            ResourceCopyUtils.copyResources(TEMPLATE_RESOURCE_PATH, HTML_FILE.getParent());
+        }
+        copyStatusTemplateResource("index.html");
+        copyStatusTemplateResource("footer.js");
+        copyStatusTemplateResource("style/css2.css");
+    }
+
+    private void copyStatusTemplateResource(String relativePath) throws IOException {
+        Path target = Paths.get(HTML_FILE.getParent(), relativePath);
+        Path parent = target.getParent();
+        if (parent != null) {
+            Files.createDirectories(parent);
+        }
+        String resourcePath = TEMPLATE_RESOURCE_PATH + "/" + relativePath.replace('\\', '/');
+        try (InputStream inputStream = Thread.currentThread().getContextClassLoader().getResourceAsStream(resourcePath)) {
+            if (inputStream == null) {
+                throw new FileNotFoundException("Resource path not found: " + resourcePath);
+            }
+            Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
+        }
     }
 
     @AnyMessageHandler
