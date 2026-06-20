@@ -88,7 +88,7 @@ public class StatusService {
                 .doubleValue();
 
         return """
-                机器人：%s
+                账号：%s
                 版本：%s-%s | BaniraKanri v%s
                 运行：%s | 系统：%s
                 消息：收%s 发%s | 群%s 好友%s
