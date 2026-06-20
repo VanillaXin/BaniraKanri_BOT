@@ -64,14 +64,14 @@ public class InstructionsConfig {
     private List<String> mcQuerySlash;
 
     /**
-     * MC 查询文本输出模式标记
+     * 通用文本输出模式标记
      */
-    private List<String> mcQueryText;
+    private List<String> outputText;
 
     /**
-     * MC 查询图片输出模式标记
+     * 通用图片输出模式标记
      */
-    private List<String> mcQueryImg;
+    private List<String> outputImg;
 
     /**
      * MC 服务器 RCON
@@ -139,8 +139,8 @@ public class InstructionsConfig {
         this.wife = BaniraUtils.mutableListOf("老婆", "wife");
         this.mcQuery = BaniraUtils.mutableListOf("我的世界", "麦块", "mcquery");
         this.mcQuerySlash = BaniraUtils.mutableListOf("list", "ls", "mc");
-        this.mcQueryText = BaniraUtils.mutableListOf("-t", "text", "文本");
-        this.mcQueryImg = BaniraUtils.mutableListOf("-i", "img", "pic", "图片");
+        this.outputText = BaniraUtils.mutableListOf("-t", "--text");
+        this.outputImg = BaniraUtils.mutableListOf("-i", "--img", "--image");
         this.mcRcon = BaniraUtils.mutableListOf("rcon", "远程", "mc远程");
         this.mcRconPsw = BaniraUtils.mutableListOf("密码", "psw", "password");
         this.mcRconGrant = BaniraUtils.mutableListOf("授权", "grant");

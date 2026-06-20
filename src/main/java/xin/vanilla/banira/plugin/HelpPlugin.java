@@ -144,9 +144,10 @@ public class HelpPlugin extends BasePlugin implements AiCapabilityProvider {
         }
 
         try {
-            String argString = super.deleteCommandPrefix(context);
+            CommandExtendedArgs extendedArgs = getCommandExtendedArgs(context);
+            String argString = extendedArgs.body();
             String[] split = argString.split("\\s+");
-            HelpQueryArgs args = parseHelpArgs(split);
+            HelpQueryArgs args = parseHelpArgs(split, extendedArgs.hasFlag("-ex", "--extended"));
 
             LoginInfoResp loginInfoEx = bot.getLoginInfoEx();
             String defaultNickname = loginInfoEx.getNickname();
@@ -204,16 +205,11 @@ public class HelpPlugin extends BasePlugin implements AiCapabilityProvider {
     }
 
     @Nonnull
-    private HelpQueryArgs parseHelpArgs(@Nonnull String[] split) {
+    private HelpQueryArgs parseHelpArgs(@Nonnull String[] split, boolean extended) {
         if (split.length <= 1) {
-            return new HelpQueryArgs(List.of(), 1, false);
+            return new HelpQueryArgs(List.of(), 1, extended);
         }
         int start = 1;
-        boolean extended = false;
-        if ("-ex".equalsIgnoreCase(split[1])) {
-            extended = true;
-            start = 2;
-        }
         if (split.length <= start) {
             return new HelpQueryArgs(List.of(), 1, extended);
         }

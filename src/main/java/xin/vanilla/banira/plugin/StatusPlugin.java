@@ -91,10 +91,14 @@ public class StatusPlugin extends BasePlugin implements AiCapabilityProvider {
         List<String> aliases = new ArrayList<>(statusAliases.size() + aliveAliases.size());
         aliases.addAll(statusAliases);
         aliases.addAll(aliveAliases);
+        String textFlag = HelpTopics.formatAliasChoices(textOutputFlags());
+        String imgFlag = HelpTopics.formatAliasChoices(imageOutputFlags());
 
         HelpTopic topic = HelpTopics.of("状态监控", "框架状态与存活检测。", 2, aliases);
         topic.child(HelpTopics.sub("状态总览", "生成框架及系统状态截图。", 1, statusAliases,
-                prefix + statusAliases.getFirst() + "\n\n限频：同一来源 1 分钟内仅可请求一次。"));
+                prefix + statusAliases.getFirst() + " [" + textFlag + " | " + imgFlag + "]\n\n"
+                        + "默认返回图片；加 " + textFlag + " 返回文字摘要，加 " + imgFlag + " 强制返回图片。\n"
+                        + "图片限频：同一来源 1 分钟内仅可请求一次。"));
         topic.child(HelpTopics.sub("存活检测", "确认机器人在线。", 2, aliveAliases,
                 prefix + aliveAliases.getFirst() + "\n\n群内回复表情 66，私聊回复带表情 66 的消息。"));
         topics.add(topic);
@@ -216,10 +220,21 @@ public class StatusPlugin extends BasePlugin implements AiCapabilityProvider {
     @AnyMessageHandler
     public boolean status(BaniraBot bot, AnyMessageEvent event) {
         BaniraCodeContext context = new BaniraCodeContext(bot, event);
-        if (super.isCommand(context)
-                && insConfig.get().base().status() != null
-                && insConfig.get().base().status().contains(super.deleteCommandPrefix(context))
-        ) {
+        if (super.isCommand(context) && insConfig.get().base().status() != null) {
+            CommandExtendedArgs extendedArgs = getCommandExtendedArgs(context);
+            String argLine = matchInstructionArgs(extendedArgs.body(), insConfig.get().base().status());
+            if (argLine == null) {
+                return false;
+            }
+            if (StringUtils.isNotNullOrEmpty(argLine)) {
+                return false;
+            }
+            if (extendedArgs.outputMode() == CommandOutputMode.TEXT) {
+                bot.setMsgEmojiLikeOk(event.getMessageId());
+                ActionData<MsgId> msgIdData = bot.sendMsg(event, statusService.getStatusSummary(bot), false);
+                return bot.isActionDataMsgIdNotEmpty(msgIdData);
+            }
+
             // 限制访问
             if (System.currentTimeMillis() - lastRenderTime < 1000 * 60)
                 return bot.setMsgEmojiLikeNo(event.getMessageId());
@@ -266,6 +281,25 @@ public class StatusPlugin extends BasePlugin implements AiCapabilityProvider {
             }
         }
         return false;
+    }
+
+    private String matchInstructionArgs(String commandBody, List<String> aliases) {
+        if (StringUtils.isNullOrEmptyEx(commandBody) || aliases == null) {
+            return null;
+        }
+        String body = commandBody.trim();
+        for (String alias : aliases) {
+            if (StringUtils.isNullOrEmptyEx(alias)) {
+                continue;
+            }
+            if (body.equals(alias)) {
+                return "";
+            }
+            if (body.startsWith(alias + " ")) {
+                return body.substring(alias.length()).trim();
+            }
+        }
+        return null;
     }
 
     private void ensureStatusTemplateResources() throws IOException {

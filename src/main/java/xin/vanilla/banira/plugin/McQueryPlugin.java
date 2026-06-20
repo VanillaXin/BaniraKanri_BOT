@@ -61,10 +61,6 @@ public class McQueryPlugin extends BasePlugin implements AiCapabilityProvider {
     private static final File HTML_FILE = new File("config/plugin/mc_query_plugin/index.html");
     private static final String CLIP_SELECTOR = ".card";
 
-    private enum QueryOutputMode {
-        AUTO, TEXT, IMAGE
-    }
-
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
         InstructionsConfig ins = insConfig.get();
@@ -73,8 +69,8 @@ public class McQueryPlugin extends BasePlugin implements AiCapabilityProvider {
         List<String> mcQuery = ins.mcQuery();
         String mcCmd = prefix + mcQuery.getFirst();
         String slashCmd = "/" + ins.mcQuerySlash().getFirst();
-        String textFlag = HelpTopics.formatAliasChoices(ins.mcQueryText());
-        String imgFlag = HelpTopics.formatAliasChoices(ins.mcQueryImg());
+        String textFlag = HelpTopics.formatAliasChoices(textOutputFlags());
+        String imgFlag = HelpTopics.formatAliasChoices(imageOutputFlags());
 
         HelpTopic topic = HelpTopics.of("MC服务器", "查询 Minecraft 服务器在线状态与玩家列表。", 99, mcQuery);
         topic.child(HelpTopics.opAdd(base,
@@ -91,9 +87,9 @@ public class McQueryPlugin extends BasePlugin implements AiCapabilityProvider {
                 "用法1：\n" + slashCmd + " [<名称>] <查询地址> <查询端口>\n\n"
                         + "用法2：\n" + slashCmd + " [<名称>] <查询地址:查询端口>\n\n"
                         + "省略参数时查询当前群全部已保存服务器。\n"
-                        + "单条默认图片，多条默认文本；可用 " + textFlag + " / " + imgFlag + " 指定输出格式。\n\n"
-                        + "示例：\n" + slashCmd + " " + ins.mcQueryText().getFirst() + " hypixel.net\n"
-                        + slashCmd + " " + ins.mcQueryImg().getFirst() + " 我的服务器");
+                        + "单条默认图片，多条默认文本；可在参数任意位置加 " + textFlag + " / " + imgFlag + " 指定输出格式。\n\n"
+                        + "示例：\n" + slashCmd + " " + textOutputFlags().getFirst() + " hypixel.net\n"
+                        + slashCmd + " 我的服务器 " + imageOutputFlags().getFirst());
         topic.child(direct);
         topics.add(topic);
     }
@@ -145,8 +141,9 @@ public class McQueryPlugin extends BasePlugin implements AiCapabilityProvider {
         String matchedSlash = matchSlashQuery(message);
         if (matchedSlash == null) return false;
 
-        QueryOutputMode mode = parseOutputMode(message, matchedSlash);
-        String queryBody = stripSlashPrefix(message, matchedSlash);
+        CommandExtendedArgs extendedArgs = parseCommandExtendedArgs(stripCommandOnly(message, matchedSlash));
+        CommandOutputMode mode = extendedArgs.outputMode();
+        String queryBody = extendedArgs.body();
         List<MinecraftRecord> records = extractMinecraftRecords(queryBody, event);
 
         if (CollectionUtils.isNullOrEmpty(records)) return false;
@@ -399,30 +396,7 @@ public class McQueryPlugin extends BasePlugin implements AiCapabilityProvider {
         return message.substring(prefix.length()).trim();
     }
 
-    private QueryOutputMode parseOutputMode(String message, String matchedSlash) {
-        String body = stripCommandOnly(message, matchedSlash);
-        if (body.isEmpty()) return QueryOutputMode.AUTO;
-        String first = body.split("\\s+")[0];
-        if (matchModeFlag(insConfig.get().mcQueryText(), first)) return QueryOutputMode.TEXT;
-        if (matchModeFlag(insConfig.get().mcQueryImg(), first)) return QueryOutputMode.IMAGE;
-        return QueryOutputMode.AUTO;
-    }
-
-    private String stripSlashPrefix(String message, String matchedSlash) {
-        String body = stripCommandOnly(message, matchedSlash);
-        if (body.isEmpty()) return body;
-        String[] tokens = body.split("\\s+");
-        if (matchModeFlag(insConfig.get().mcQueryText(), tokens[0]) || matchModeFlag(insConfig.get().mcQueryImg(), tokens[0])) {
-            return body.substring(tokens[0].length()).trim();
-        }
-        return body;
-    }
-
-    private boolean matchModeFlag(List<String> flags, String token) {
-        return flags != null && flags.contains(token);
-    }
-
-    private boolean resolveUseImage(QueryOutputMode mode, int recordCount) {
+    private boolean resolveUseImage(CommandOutputMode mode, int recordCount) {
         return switch (mode) {
             case TEXT -> false;
             case IMAGE -> true;

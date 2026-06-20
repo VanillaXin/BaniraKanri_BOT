@@ -16,7 +16,11 @@ import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.CollectionUtils;
 import xin.vanilla.banira.util.RegexpHelper;
+import xin.vanilla.banira.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -38,6 +42,25 @@ public abstract class BasePlugin {
     private Pattern KANRI_COMMAND_PATTERN;
     private final Set<Pattern> TIMER_COMMAND_PATTERN = BaniraUtils.mutableSetOf();
     private final Set<Pattern> KEYWORD_COMMAND_PATTERN = BaniraUtils.mutableSetOf();
+
+    public enum CommandOutputMode {
+        AUTO, TEXT, IMAGE
+    }
+
+    public record CommandExtendedArgs(
+            @Nonnull CommandOutputMode outputMode,
+            @Nonnull String body,
+            @Nonnull Set<String> flags
+    ) {
+        public boolean hasFlag(@Nonnull String... aliases) {
+            for (String alias : aliases) {
+                if (flags.contains(alias.toLowerCase())) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
 
     public static String replaceReply(String msg) {
         return BaniraUtils.replaceReply(msg);
@@ -73,10 +96,114 @@ public abstract class BasePlugin {
      * 删除指令前缀
      */
     public String deleteCommandPrefix(BaniraCodeContext context) {
+        return getCommandExtendedArgs(context).body();
+    }
+
+    /**
+     * 删除指令前缀，保留扩展参数。
+     */
+    public String deleteCommandPrefixRaw(BaniraCodeContext context) {
         String msg = encodeCode(context);
         return baseCommand()
                 .matcher(replaceReply(msg))
                 .replaceAll("");
+    }
+
+    @Nonnull
+    protected CommandExtendedArgs getCommandExtendedArgs(BaniraCodeContext context) {
+        return parseCommandExtendedArgs(deleteCommandPrefixRaw(context));
+    }
+
+    @Nonnull
+    protected CommandExtendedArgs parseCommandExtendedArgs(@Nullable String argLine) {
+        if (StringUtils.isNullOrEmptyEx(argLine)) {
+            return new CommandExtendedArgs(CommandOutputMode.AUTO, "", Set.of());
+        }
+
+        CommandOutputMode outputMode = CommandOutputMode.AUTO;
+        Set<String> flags = new LinkedHashSet<>();
+        StringBuilder body = new StringBuilder();
+        for (String token : argLine.trim().split("\\s+")) {
+            if (isTextOutputFlag(token)) {
+                outputMode = CommandOutputMode.TEXT;
+                flags.add(token.trim().toLowerCase());
+                continue;
+            }
+            if (isImageOutputFlag(token)) {
+                outputMode = CommandOutputMode.IMAGE;
+                flags.add(token.trim().toLowerCase());
+                continue;
+            }
+            if (matchesOutputFlag(commonExtensionFlags(), token)) {
+                flags.add(token.trim().toLowerCase());
+                continue;
+            }
+            if (!body.isEmpty()) {
+                body.append(' ');
+            }
+            body.append(token);
+        }
+        return new CommandExtendedArgs(outputMode, body.toString(), Collections.unmodifiableSet(flags));
+    }
+
+    protected boolean isTextOutputFlag(@Nullable String token) {
+        return matchesOutputFlag(textOutputFlags(), token);
+    }
+
+    protected boolean isImageOutputFlag(@Nullable String token) {
+        return matchesOutputFlag(imageOutputFlags(), token);
+    }
+
+    @Nonnull
+    protected List<String> textOutputFlags() {
+        LinkedHashSet<String> flags = new LinkedHashSet<>();
+        if (insConfig.get() != null) {
+            addFlags(flags, insConfig.get().outputText());
+        }
+        flags.add("-t");
+        flags.add("--text");
+        return new ArrayList<>(flags);
+    }
+
+    @Nonnull
+    protected List<String> imageOutputFlags() {
+        LinkedHashSet<String> flags = new LinkedHashSet<>();
+        if (insConfig.get() != null) {
+            addFlags(flags, insConfig.get().outputImg());
+        }
+        flags.add("-i");
+        flags.add("--img");
+        flags.add("--image");
+        return new ArrayList<>(flags);
+    }
+
+    @Nonnull
+    protected List<String> commonExtensionFlags() {
+        return List.of("-ex", "--extended");
+    }
+
+    private void addFlags(@Nonnull Set<String> target, @Nullable List<String> source) {
+        if (source == null) {
+            return;
+        }
+        source.stream()
+                .filter(StringUtils::isNotNullOrEmpty)
+                .map(String::trim)
+                .filter(StringUtils::isNotNullOrEmpty)
+                .filter(this::isExtensionFlagToken)
+                .forEach(target::add);
+    }
+
+    private boolean matchesOutputFlag(@Nonnull List<String> flags, @Nullable String token) {
+        if (!isExtensionFlagToken(token)) {
+            return false;
+        }
+        String normalized = token.trim();
+        return flags.stream().anyMatch(flag -> flag.equalsIgnoreCase(normalized));
+    }
+
+    private boolean isExtensionFlagToken(@Nullable String token) {
+        return !StringUtils.isNullOrEmptyEx(token) && token.trim().startsWith("-") && token.trim().length() > 1;
     }
 
     // endregion 基础指令
@@ -110,7 +237,8 @@ public abstract class BasePlugin {
      */
     public String replaceKanriCommand(BaniraCodeContext context) {
         String msg = encodeCode(context);
-        return kanriCommand().matcher(replaceReply(msg)).replaceAll("");
+        String body = kanriCommand().matcher(replaceReply(msg)).replaceAll("");
+        return parseCommandExtendedArgs(body).body();
     }
 
 

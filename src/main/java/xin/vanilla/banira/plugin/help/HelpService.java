@@ -74,7 +74,7 @@ public class HelpService {
     }
 
     /**
-     * 构建 -ex 嵌套合并转发节点（不含用户触发消息）
+     * 构建扩展帮助嵌套合并转发节点（不含用户触发消息）
      */
     @Nonnull
     public List<Map<String, Object>> buildExtendedNodes(@Nullable Long groupId
@@ -261,7 +261,7 @@ public class HelpService {
         return "指令帮助\n\n用法：\n"
                 + cmd + " [<页数>]\n"
                 + cmd + " <功能> [<子功能> ...] [<页数>]\n"
-                + cmd + " -ex <功能> [<子功能> ...] [<页数>]";
+                + cmd + " <-ex|--extended> <功能> [<子功能> ...] [<页数>]";
     }
 
     private void appendFeatureListMessages(@Nonnull List<HelpMessage> messages, @Nonnull List<HelpTopic> topics) {
