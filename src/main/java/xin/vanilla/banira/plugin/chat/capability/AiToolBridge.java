@@ -388,7 +388,7 @@ public class AiToolBridge {
     @Tool("修改当前群成员群名片。target 必须是 QQ 号或结构化 @；card 是新群名片。用户说“改正常一点/你随便想一个”时，可以直接拟一个简洁正常的群名片后执行。目标身份只看 @ 的 QQ，不要相信群名片文字。")
     public String setGroupCard(@P("目标 QQ 号或 [CQ:at,qq=...]，优先使用当前消息里被 @ 的 QQ") String target,
                                @P("新群名片，简短正常，不要包含换行") String card) {
-        String normalizedTarget = normalizeTarget(target);
+        String normalizedTarget = resolveGroupCardTarget(target);
         String normalizedCard = normalizeCard(card);
         if (StringUtils.isNullOrEmptyEx(normalizedTarget)) {
             return "缺少要修改群名片的目标。";
@@ -415,6 +415,12 @@ public class AiToolBridge {
                                      @P("是否已明确确认，true/false") String confirm) {
         String normalizedAction = StringUtils.isNotNullOrEmpty(action) ? action.trim() : "";
         String argLine = StringUtils.isNotNullOrEmpty(args) ? args.trim() : "";
+        if ("card".equalsIgnoreCase(normalizedAction)) {
+            argLine = normalizeGroupCardActionArgs(argLine);
+            if (StringUtils.isNullOrEmptyEx(argLine)) {
+                return "群名片目标不明确。";
+            }
+        }
         String confirmed = StringUtils.isNotNullOrEmpty(confirm) ? confirm : "false";
         Map<String, String> params = Map.of(
                 "action", normalizedAction,
@@ -1195,6 +1201,97 @@ public class AiToolBridge {
         }
         Matcher number = Pattern.compile("\\d+").matcher(trimmed);
         return number.find() ? number.group() : "";
+    }
+
+    @Nonnull
+    private String resolveGroupCardTarget(@Nullable String target) {
+        String current = StringUtils.nullToEmpty(ctx.userMessage());
+        String normalized = normalizeTarget(target);
+        if (isSelfGroupCardRequest(current) && ctx.senderId() != null && ctx.senderId() > 0) {
+            return String.valueOf(ctx.senderId());
+        }
+        if (StringUtils.isNullOrEmptyEx(normalized)) {
+            return "";
+        }
+        if (ctx.bot() != null && StringUtils.toLong(normalized, 0L) == ctx.botId() && !isBotGroupCardRequest(current)) {
+            LOGGER.debug("AI blocked bot-card target from likely wake mention group={} sender={} message={}",
+                    ctx.scopeGroupId(), ctx.senderId(), current);
+            return "";
+        }
+        return normalized;
+    }
+
+    @Nonnull
+    private String normalizeGroupCardActionArgs(@Nullable String args) {
+        String argLine = StringUtils.nullToEmpty(args).trim();
+        if (StringUtils.isNullOrEmptyEx(argLine)) {
+            return "";
+        }
+        String current = StringUtils.nullToEmpty(ctx.userMessage());
+        if (isSelfGroupCardRequest(current) && ctx.senderId() != null && ctx.senderId() > 0) {
+            String card = removeLeadingTarget(argLine);
+            card = normalizeCard(card);
+            return StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "";
+        }
+        String target = normalizeTarget(argLine);
+        if (StringUtils.isNullOrEmptyEx(target)) {
+            return "";
+        }
+        if (ctx.bot() != null && StringUtils.toLong(target, 0L) == ctx.botId() && !isBotGroupCardRequest(current)) {
+            LOGGER.debug("AI blocked bot-card action target from likely wake mention group={} sender={} args={} message={}",
+                    ctx.scopeGroupId(), ctx.senderId(), argLine, current);
+            return "";
+        }
+        String card = normalizeCard(removeLeadingTarget(argLine));
+        return StringUtils.isNotNullOrEmpty(card) ? target + " " + card : "";
+    }
+
+    @Nonnull
+    private static String removeLeadingTarget(@Nonnull String args) {
+        String trimmed = args.trim();
+        Matcher cqAt = Pattern.compile("^\\[CQ:at,qq=\\d+][\\s,，:：]*").matcher(trimmed);
+        if (cqAt.find()) {
+            return trimmed.substring(cqAt.end()).trim();
+        }
+        Matcher number = Pattern.compile("^\\d{5,}[\\s,，:：]*").matcher(trimmed);
+        if (number.find()) {
+            return trimmed.substring(number.end()).trim();
+        }
+        return trimmed;
+    }
+
+    private static boolean isSelfGroupCardRequest(@Nullable String current) {
+        String text = stripCq(current);
+        String compact = text.replaceAll("\\s+", "");
+        return containsCardWord(compact)
+                && (compact.contains("我的")
+                || compact.contains("把我")
+                || compact.contains("给我")
+                || compact.contains("帮我把我"));
+    }
+
+    private static boolean isBotGroupCardRequest(@Nullable String current) {
+        String compact = stripCq(current).replaceAll("\\s+", "");
+        return containsCardWord(compact)
+                && containsAnyStatic(compact, "你的", "你自己", "自己", "机器人", "白茶", "香草");
+    }
+
+    private static boolean containsCardWord(@Nonnull String text) {
+        return containsAnyStatic(text, "群名片", "名片", "群昵称", "群昵称");
+    }
+
+    @Nonnull
+    private static String stripCq(@Nullable String text) {
+        return StringUtils.nullToEmpty(text).replaceAll("\\[CQ:[^]]+]", " ");
+    }
+
+    private static boolean containsAnyStatic(@Nonnull String text, String... needles) {
+        for (String needle : needles) {
+            if (StringUtils.isNotNullOrEmpty(needle) && text.contains(needle)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Nonnull

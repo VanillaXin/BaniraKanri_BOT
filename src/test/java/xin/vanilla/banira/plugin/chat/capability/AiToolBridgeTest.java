@@ -469,6 +469,52 @@ class AiToolBridgeTest {
     }
 
     @Test
+    void shouldSetSenderGroupCardWhenUserSaysMyCardEvenIfBotMentioned() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        Mockito.when(registry.execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.anyMap()))
+                .thenReturn("设置群名片已执行：辉小月。");
+        AgentContext ctx = context("[CQ:at,qq=10000] 你把我的群名片改成辉小月试试");
+        AiToolBridge bridge = bridge(registry, ctx);
+
+        String result = bridge.setGroupCard("[CQ:at,qq=10000]", "辉小月");
+
+        Assertions.assertEquals("设置群名片已执行：辉小月。", result);
+        Mockito.verify(registry).execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.argThat(map ->
+                "card".equals(map.get("action"))
+                        && "30000 辉小月".equals(map.get("args"))
+                        && "true".equals(map.get("confirm"))));
+    }
+
+    @Test
+    void shouldNormalizeGenericCardActionForSenderWhenUserSaysMyCard() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        Mockito.when(registry.execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.anyMap()))
+                .thenReturn("设置群名片已执行：辉小月。");
+        AgentContext ctx = context("[CQ:at,qq=10000] 你把我的群名片改成辉小月试试");
+        AiToolBridge bridge = bridge(registry, ctx);
+
+        String result = bridge.executeKanriAction("card", "10000 辉小月", "true");
+
+        Assertions.assertEquals("设置群名片已执行：辉小月。", result);
+        Mockito.verify(registry).execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.argThat(map ->
+                "card".equals(map.get("action"))
+                        && "30000 辉小月".equals(map.get("args"))
+                        && "true".equals(map.get("confirm"))));
+    }
+
+    @Test
+    void shouldBlockBotGroupCardChangeFromWakeMentionWhenNotExplicitlyBotCard() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        AgentContext ctx = context("[CQ:at,qq=10000] 把群名片改成辉小月试试");
+        AiToolBridge bridge = bridge(registry, ctx);
+
+        String result = bridge.setGroupCard("[CQ:at,qq=10000]", "辉小月");
+
+        Assertions.assertTrue(result.contains("缺少要修改群名片的目标"));
+        Mockito.verifyNoInteractions(registry);
+    }
+
+    @Test
     void shouldBlockGroupCardChangeWithoutCurrentMentionTarget() {
         AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
         AgentContext ctx = context("[CQ:at,qq=10000] 你随便想一个正常一点的就行");

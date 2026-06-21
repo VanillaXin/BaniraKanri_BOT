@@ -171,6 +171,9 @@ public final class CapabilityInvocationPolicy {
         if ("mute".equals(action) && selfTarget) {
             return allowsCurrentSenderSelfTarget(ctx, actionText);
         }
+        if ("card".equals(action) && isSelfGroupCardRequest(current)) {
+            return allowsCurrentSenderCardTarget(ctx, actionText);
+        }
         if (isMuteOrLoudAction(action) && confirm && PendingAiActionStore.isKanriProceedIntent(current)) {
             return Decision.allow();
         }
@@ -209,6 +212,19 @@ public final class CapabilityInvocationPolicy {
         return Decision.allow();
     }
 
+    @Nonnull
+    private static Decision allowsCurrentSenderCardTarget(@Nonnull AgentContext ctx, @Nonnull String actionText) {
+        Long senderId = ctx.senderId();
+        if (senderId == null || senderId <= 0) {
+            return Decision.block("自我群名片修改缺少当前发送者身份。");
+        }
+        String first = firstToken(actionText);
+        if (!String.valueOf(senderId).equals(first)) {
+            return Decision.block("自我群名片修改只能作用于当前发消息的人本人。");
+        }
+        return Decision.allow();
+    }
+
     private static boolean isMuteOrLoudAction(@Nonnull String action) {
         return "mute".equals(action) || "loud".equals(action);
     }
@@ -231,6 +247,22 @@ public final class CapabilityInvocationPolicy {
                 || normalized.equals("@全体")
                 || normalized.equals("@全员")
                 || normalized.equals("@全体成员");
+    }
+
+    @Nonnull
+    private static String firstToken(@Nullable String value) {
+        if (StringUtils.isNullOrEmptyEx(value)) {
+            return "";
+        }
+        String[] parts = value.trim().split("\\s+");
+        return parts.length > 0 ? parts[0] : "";
+    }
+
+    private static boolean isSelfGroupCardRequest(@Nonnull String current) {
+        String compact = current.replaceAll("\\[CQ:[^]]+]", " ")
+                .replaceAll("\\s+", "");
+        return containsAny(compact, "群名片", "名片", "群昵称")
+                && containsAny(compact, "我的", "把我", "给我", "帮我把我");
     }
 
     private static boolean mentionsWholeGroup(@Nonnull String current) {
