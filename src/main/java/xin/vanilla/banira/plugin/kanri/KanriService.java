@@ -84,7 +84,8 @@ public class KanriService {
         }
         if (!handler.hasPermission(kanriContext)
                 && !KanriSelfOperationPolicy.allowsMute(kanriContext, args, handler)
-                && !KanriSelfOperationPolicy.allowsLoud(kanriContext, args, handler)) {
+                && !KanriSelfOperationPolicy.allowsLoud(kanriContext, args, handler)
+                && !KanriSelfOperationPolicy.allowsCard(kanriContext, args, handler)) {
             return KanriExecuteReport.withMessage(
                     KanriHandler.NO_OP,
                     handler.getHelpSubTopic().name(),

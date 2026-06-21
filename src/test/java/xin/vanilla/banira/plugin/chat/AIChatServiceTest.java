@@ -74,6 +74,19 @@ class AIChatServiceTest {
     }
 
     @Test
+    void shouldStripInternalQqPrefixFromSpeech() {
+        ChatResponseSanitizer sanitizer = new ChatResponseSanitizer(new ChatConfig(), ChatGuardService.defaults());
+
+        StructuredReply reply = sanitizer.sanitize(
+                new xin.vanilla.banira.domain.BaniraCodeContext(null, List.of(), 1L, 2L, 2L).msg("你在修改谁的群名片"),
+                "改的是 qq=900000000001 那个，之前你让我改成洛裘",
+                List.of()
+        );
+
+        Assertions.assertEquals("改的是 900000000001 那个，之前你让我改成洛裘", reply.speech());
+    }
+
+    @Test
     void shouldSuppressWeakSearchReferenceForImplicitExplanationQuestion() {
         ChatResponseSanitizer sanitizer = new ChatResponseSanitizer(new ChatConfig(), ChatGuardService.defaults());
 

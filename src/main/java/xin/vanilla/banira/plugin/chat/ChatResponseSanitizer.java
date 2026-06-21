@@ -67,6 +67,7 @@ public class ChatResponseSanitizer {
             return new StructuredReply("", List.of());
         }
 
+        text = stripInternalQqPrefixes(text);
         StructuredReply structured = StructuredReplyPipeline.parseAndProcess(text, references, cfg.reply());
         structured = filterStructuredReferences(ctx, structured);
         if (guard.looksLikePromptLeak(structured.speech())) {
@@ -314,6 +315,15 @@ public class ChatResponseSanitizer {
         boolean listLike = Pattern.compile("(?m)^\\s*1[.、]").matcher(trimmed).find();
         boolean searchFields = Pattern.compile("(?m)^\\s*(摘要|链接)：").matcher(trimmed).find();
         return searchHeader && (listLike || searchFields);
+    }
+
+    @Nonnull
+    private static String stripInternalQqPrefixes(@Nonnull String text) {
+        if (StringUtils.isNullOrEmptyEx(text)) {
+            return text;
+        }
+        return text.replaceAll("(?i)(?<![A-Za-z0-9_])qq\\s*=\\s*(\\d{5,12})", "$1")
+                .replaceAll("(?i)(?<![A-Za-z0-9_])QQ\\s*[:：=]\\s*(\\d{5,12})", "$1");
     }
 
     private static boolean looksLikeInternalContextSpeech(String text) {

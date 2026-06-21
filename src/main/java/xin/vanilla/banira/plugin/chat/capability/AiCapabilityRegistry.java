@@ -205,7 +205,7 @@ public class AiCapabilityRegistry {
             return false;
         }
         String action = StringUtils.nullToEmpty(args.get("action")).trim().toLowerCase(Locale.ROOT);
-        if (!"mute".equals(action) && !"loud".equals(action)) {
+        if (!"mute".equals(action) && !"loud".equals(action) && !"card".equals(action)) {
             return false;
         }
         if (ctx.bot() == null || ctx.senderId() == null || ctx.senderId() <= 0 || ctx.scopeGroupId() <= 0) {
@@ -214,6 +214,9 @@ public class AiCapabilityRegistry {
         Set<Long> targets = BaniraUtils.getUserIds(StringUtils.nullToEmpty(args.get("args")).split("\\s+"));
         if (targets.size() != 1 || !targets.contains(ctx.senderId())) {
             return false;
+        }
+        if ("card".equals(action)) {
+            return KanriSelfOperationPolicy.canAllowSelfCard(ctx.bot(), ctx.scopeGroupId(), ctx.senderId());
         }
         return KanriSelfOperationPolicy.canAllowSelfMuteOrLoud(ctx.bot(), ctx.scopeGroupId(), ctx.senderId());
     }
@@ -229,7 +232,8 @@ public class AiCapabilityRegistry {
                 && ctx.senderId() != null
                 && ctx.senderId() > 0
                 && ctx.scopeGroupId() > 0
-                && KanriSelfOperationPolicy.canAllowSelfMuteOrLoud(ctx.bot(), ctx.scopeGroupId(), ctx.senderId());
+                && (KanriSelfOperationPolicy.canAllowSelfMuteOrLoud(ctx.bot(), ctx.scopeGroupId(), ctx.senderId())
+                || KanriSelfOperationPolicy.canAllowSelfCard(ctx.bot(), ctx.scopeGroupId(), ctx.senderId()));
     }
 
     @Nonnull
