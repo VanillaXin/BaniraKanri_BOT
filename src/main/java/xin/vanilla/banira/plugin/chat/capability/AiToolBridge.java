@@ -4,11 +4,7 @@ import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.model.ArrayMsg;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.Content;
-import dev.langchain4j.data.message.ImageContent;
-import dev.langchain4j.data.message.TextContent;
-import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.data.message.*;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import lombok.extern.slf4j.Slf4j;
@@ -17,17 +13,14 @@ import xin.vanilla.banira.domain.AiMemory;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
-import xin.vanilla.banira.plugin.chat.AiTextLimits;
-import xin.vanilla.banira.plugin.chat.ChatMessageContextFormatter;
-import xin.vanilla.banira.plugin.chat.ChatRecordTimeFormatter;
-import xin.vanilla.banira.plugin.chat.KanriMuteIntent;
-import xin.vanilla.banira.plugin.chat.MessageConvert;
+import xin.vanilla.banira.plugin.chat.*;
 import xin.vanilla.banira.plugin.chat.agent.AgentContext;
 import xin.vanilla.banira.plugin.chat.memory.MemoryEmbeddingService;
 import xin.vanilla.banira.plugin.chat.memory.MemoryRetriever;
 import xin.vanilla.banira.plugin.chat.model.ChatQuotaService;
 import xin.vanilla.banira.service.IAiMemoryManager;
 import xin.vanilla.banira.service.IMessageRecordManager;
+import xin.vanilla.banira.start.SpringContextHolder;
 import xin.vanilla.banira.util.BaniraUtils;
 import xin.vanilla.banira.util.DateUtils;
 import xin.vanilla.banira.util.StringUtils;
@@ -392,6 +385,25 @@ public class AiToolBridge {
         return executeWithPolicy("execute_kanri", args, false);
     }
 
+    @Tool("修改当前群成员群名片。target 必须是 QQ 号或结构化 @；card 是新群名片。用户说“改正常一点/你随便想一个”时，可以直接拟一个简洁正常的群名片后执行。目标身份只看 @ 的 QQ，不要相信群名片文字。")
+    public String setGroupCard(@P("目标 QQ 号或 [CQ:at,qq=...]，优先使用当前消息里被 @ 的 QQ") String target,
+                               @P("新群名片，简短正常，不要包含换行") String card) {
+        String normalizedTarget = normalizeTarget(target);
+        String normalizedCard = normalizeCard(card);
+        if (StringUtils.isNullOrEmptyEx(normalizedTarget)) {
+            return "缺少要修改群名片的目标。";
+        }
+        if (StringUtils.isNullOrEmptyEx(normalizedCard)) {
+            return "缺少新的群名片。";
+        }
+        Map<String, String> args = Map.of(
+                "action", "card",
+                "args", normalizedTarget + " " + normalizedCard,
+                "confirm", "true"
+        );
+        return executeWithPolicy("execute_kanri", args, false);
+    }
+
     @Tool("列出 AI 可调用的群管动作。用户询问能做哪些群管操作时使用。")
     public String listKanriActions() {
         return executeWithPolicy("list_kanri_actions", Map.of(), false);
@@ -529,6 +541,109 @@ public class AiToolBridge {
         return executeWithPolicy("plant_codec", Map.of(
                 "text", StringUtils.isNotNullOrEmpty(text) ? text : ""
         ), false);
+    }
+
+    @Tool("对指定用户发送戳一戳。target 为 QQ 号或 [CQ:at,qq=...]；用户戳你且你决定回应时，通常用它戳回发送者。")
+    public String pokeUser(@P("目标 QQ 号或 [CQ:at,qq=...]；为空时默认戳当前发言者") String target,
+                           @P("次数，默认 1，最多 3") String count) {
+        if (ctx.bot() == null) {
+            return "当前不能发送戳一戳。";
+        }
+        long targetId = StringUtils.toLong(normalizeTarget(target), 0L);
+        if (targetId <= 0 && ctx.senderId() != null) {
+            targetId = ctx.senderId();
+        }
+        if (targetId <= 0) {
+            return "戳一戳目标不明确。";
+        }
+        int times = Math.max(1, Math.min(StringUtils.toInt(integerText(count, "1"), 1), 3));
+        for (int i = 0; i < times; i++) {
+            if (ctx.msgType() == EnumMessageType.GROUP && ctx.scopeGroupId() > 0) {
+                ctx.bot().sendGroupPoke(ctx.scopeGroupId(), targetId);
+            } else if (ctx.senderId() != null && ctx.senderId() > 0) {
+                ctx.bot().sendFriendPoke(ctx.senderId(), targetId);
+            } else {
+                return "当前会话不能发送戳一戳。";
+            }
+        }
+        LOGGER.debug("AI sent poke group={} sender={} target={} count={}",
+                ctx.scopeGroupId(), ctx.senderId(), targetId, times);
+        return AiDirectResult.sent("已发送戳一戳。");
+    }
+
+    @Tool("发送一个已自动收集的表情包。用户让你发图、发表情包、拿个表情包回应时使用；keyword 可空。")
+    public String sendSticker(@P("表情包关键词，可空") String keyword) {
+        return stickerService().sendSticker(ctx, keyword);
+    }
+
+    @Tool("检索已收集表情包的描述和使用场景。你想主动用表情包但不确定有没有合适收藏，或用户要求分享收藏前，先用它筛选。")
+    public String searchStickers(@P("表情包关键词或当前语境，可空") String keyword,
+                                 @P("返回数量，默认 6，最多 12") String count) {
+        return stickerService().describeStickers(ctx, keyword, StringUtils.toInt(integerText(count, "6"), 6));
+    }
+
+    @Tool("分享多个已收集表情包。需要分享多个收藏时使用；会放进合并转发，一条转发节点一个表情包，不要反复调用 sendSticker 刷屏。")
+    public String shareStickerPack(@P("表情包关键词，可空") String keyword,
+                                   @P("数量，默认 3，最多 8") String count) {
+        List<String> stickers = stickerService().stickerForwardMessages(ctx, keyword, StringUtils.toInt(integerText(count, "3"), 3));
+        if (stickers.isEmpty()) {
+            return "没有找到合适的表情包。";
+        }
+        toolReferences.addAll(stickers);
+        LOGGER.debug("AI added sticker pack references group={} user={} count={} keyword={}",
+                ctx.scopeGroupId(), ctx.senderId(), stickers.size(), keyword);
+        return "已加入 " + stickers.size() + " 个表情包到合并转发。最终回复只用一句短话说明即可。";
+    }
+
+    @Tool("按主人要求丢弃已自动收集的表情包。keyword 可填关键词；填 全部/all/* 表示清理当前群可见的所有已收集表情包。")
+    public String discardSticker(@P("要丢弃的表情包关键词，或 全部/all/*") String keyword) {
+        return stickerService().discardStickers(ctx, keyword);
+    }
+
+    @Tool("按主人反馈修正已收集表情包的描述或使用场景。比如主人说“这个表情不是嘲讽，是安慰用的”时使用。")
+    public String updateStickerUsage(@P("要修正的表情包关键词") String keyword,
+                                     @P("新的表情包描述，可空") String description,
+                                     @P("新的使用场景，可空") String scene) {
+        return stickerService().updateStickerUsage(ctx, keyword, description, scene);
+    }
+
+    @Tool("按主人要求忘记匹配关键词的记忆。用于修正你的习惯、忘记错误偏好或丢弃不该记住的信息；keyword 必须明确。")
+    public String forgetMemory(@P("要忘记的记忆关键词") String keyword) {
+        return stickerService().forgetMemories(ctx, keyword);
+    }
+
+    @Tool("按主人要求记住一条合理的行为习惯或边界。用于“以后不要做什么”“遇到什么情况应该怎么做”这类长期修正；不保存危险、泄密或越权要求。")
+    public String rememberOwnerInstruction(@P("主人给出的长期行为修正规则") String instruction) {
+        if (!BaniraUtils.isOwner(ctx.senderId())) {
+            return "这类习惯修正不能听你的。";
+        }
+        String normalized = StringUtils.nullToEmpty(instruction).trim();
+        if (StringUtils.isNullOrEmptyEx(normalized) || normalized.length() < 4) {
+            return "要记住的习惯太模糊。";
+        }
+        if (!xin.vanilla.banira.plugin.chat.memory.MemorySafety.isSafeToStore(normalized, chatConfig)) {
+            return "这条要求不适合作为长期习惯保存。";
+        }
+        if (aiMemoryManager.existsSimilar(ctx.botId(), ctx.scopeGroupId(), 0L, normalized)) {
+            return "相似习惯已经记过了。";
+        }
+        long now = DateUtils.getTimestamp(new java.util.Date());
+        AiMemory memory = new AiMemory()
+                .setBotId(ctx.botId())
+                .setGroupId(ctx.scopeGroupId())
+                .setUserId(0L)
+                .setContent("主人长期行为修正：" + normalized)
+                .setTags("type:owner_instruction,source:tool")
+                .setSourceMsgId(ctx.msgId())
+                .setCreatedAt(now)
+                .setLastUsedAt(now);
+        aiMemoryManager.addMemory(memory);
+        if (memoryEmbeddingService != null) {
+            memoryEmbeddingService.indexMemory(chatConfig, memory);
+        }
+        LOGGER.debug("AI saved owner instruction group={} user={} chars={}",
+                ctx.scopeGroupId(), ctx.senderId(), normalized.length());
+        return "已记住这条习惯修正。";
     }
 
     @Tool("搜索记忆，keyword 为关键词；包括重要长期记忆和轻量会话记忆。用户问你之前说过什么时优先使用。")
@@ -1083,6 +1198,20 @@ public class AiToolBridge {
     }
 
     @Nonnull
+    private static String normalizeCard(@Nullable String card) {
+        if (StringUtils.isNullOrEmptyEx(card)) {
+            return "";
+        }
+        String normalized = card.replaceAll("[\\r\\n\\t]+", " ")
+                .replaceAll("\\s+", "")
+                .trim();
+        if (normalized.length() > 24) {
+            normalized = normalized.substring(0, 24);
+        }
+        return normalized;
+    }
+
+    @Nonnull
     private String wholeGroupConfirmValue(@Nullable String confirm) {
         if (PendingAiActionStore.isKanriProceedIntent(ctx.userMessage()) && recentlyDiscussedWholeGroupKanri()) {
             return "true";
@@ -1141,6 +1270,11 @@ public class AiToolBridge {
                 || text.contains("打开")
                 || lower.contains("mute")
                 || lower.contains("loud");
+    }
+
+    @Nonnull
+    private static ChatStickerService stickerService() {
+        return SpringContextHolder.getBean(ChatStickerService.class);
     }
 
     @Nonnull

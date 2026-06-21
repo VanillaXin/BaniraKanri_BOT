@@ -31,6 +31,11 @@ public class AiMemoryManager implements IAiMemoryManager {
         return aiMemoryDao.selectById(id);
     }
 
+    @Override
+    public boolean updateMemory(AiMemory memory) {
+        return memory != null && memory.getId() != null && aiMemoryDao.updateById(memory) > 0;
+    }
+
     @Nonnull
     @Override
     public List<AiMemory> getMemoryList(AiMemoryQueryParam param) {
@@ -44,6 +49,11 @@ public class AiMemoryManager implements IAiMemoryManager {
     @Override
     public void touchMemory(long id, long lastUsedAt) {
         aiMemoryDao.updateLastUsedAt(id, lastUsedAt);
+    }
+
+    @Override
+    public boolean deleteMemory(long id) {
+        return aiMemoryDao.deleteById(id) > 0;
     }
 
     @Override

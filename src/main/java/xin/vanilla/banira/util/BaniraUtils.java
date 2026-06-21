@@ -175,7 +175,7 @@ public final class BaniraUtils {
 
     public static String getOwnerDisplayName() {
         String ownerNick = getOwnerNick();
-        return StringUtils.isNotNullOrEmpty(ownerNick) ? ownerNick : "那位熟人";
+        return StringUtils.isNotNullOrEmpty(ownerNick) ? ownerNick : "能处理的人";
     }
 
     /**

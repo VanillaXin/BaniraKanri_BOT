@@ -1,10 +1,10 @@
 package xin.vanilla.banira.plugin.chat.capability;
 
+import dev.langchain4j.data.message.ImageContent;
+import dev.langchain4j.data.message.UserMessage;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import dev.langchain4j.data.message.ImageContent;
-import dev.langchain4j.data.message.UserMessage;
 import xin.vanilla.banira.config.entity.extended.ChatConfig;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumMessageType;
@@ -448,6 +448,35 @@ class AiToolBridgeTest {
         String result = bridge.muteGroupMember("30000", "10");
 
         Assertions.assertTrue(result.contains("本回合已由系统执行"));
+        Mockito.verifyNoInteractions(registry);
+    }
+
+    @Test
+    void shouldSetGroupCardForStructuredMentionTarget() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        Mockito.when(registry.execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.anyMap()))
+                .thenReturn("设置群名片已执行：洛裘。");
+        AgentContext ctx = context("[CQ:at,qq=10000] 把[CQ:at,qq=123456] 的群名片改正常一点");
+        AiToolBridge bridge = bridge(registry, ctx);
+
+        String result = bridge.setGroupCard("[CQ:at,qq=123456]", "洛 裘");
+
+        Assertions.assertEquals("设置群名片已执行：洛裘。", result);
+        Mockito.verify(registry).execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.argThat(map ->
+                "card".equals(map.get("action"))
+                        && "123456 洛裘".equals(map.get("args"))
+                        && "true".equals(map.get("confirm"))));
+    }
+
+    @Test
+    void shouldBlockGroupCardChangeWithoutCurrentMentionTarget() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        AgentContext ctx = context("[CQ:at,qq=10000] 你随便想一个正常一点的就行");
+        AiToolBridge bridge = bridge(registry, ctx);
+
+        String result = bridge.setGroupCard("123456", "洛裘");
+
+        Assertions.assertTrue(result.contains("当前最新消息"));
         Mockito.verifyNoInteractions(registry);
     }
 

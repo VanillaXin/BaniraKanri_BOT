@@ -71,11 +71,11 @@ public class KanriPlugin extends BasePlugin implements AiCapabilityProvider {
                 .executor((ctx, args) -> kanriService.listAiActions()));
         capabilities.add(new AiCapability()
                 .name("execute_kanri")
-                .description("执行允许的群管动作。以当前对话发起者为操作者，权限与群管指令一致。")
-                .parameterHint("action=动作别名,args=参数字符串(空格分隔，如 QQ号、时长、add/del 等)")
+                .description("执行允许的群管动作。以当前对话发起者为操作者，权限与群管指令一致；支持禁言、解禁、名片、头衔、精华、群名等 AI 白名单动作。")
+                .parameterHint("action=动作别名,args=参数字符串(空格分隔；禁言/解禁用 QQ/全员 与时长，名片/头衔用 QQ 与内容，精华用 add/del 与消息，群名用新名称)")
                 .parameters(List.of(
                         AiCapabilityParameter.required("action", "群管动作别名，必须是 list_kanri_actions 返回的允许动作"),
-                        AiCapabilityParameter.required("args", "动作参数字符串，目标和参数必须来自当前消息"),
+                        AiCapabilityParameter.required("args", "动作参数字符串；目标和参数必须来自当前消息、结构化 @ 或引用消息"),
                         AiCapabilityParameter.optional("confirm", "用户明确确认后才可填 true")
                 ))
                 .access(AiCapabilityAccess.ADMIN)

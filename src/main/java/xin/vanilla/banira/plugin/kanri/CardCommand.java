@@ -82,17 +82,13 @@ public class CardCommand implements KanriHandler {
         );
 
         for (Long targetId : targets) {
-            if (context.bot().isUpper(context.group(), context.sender(), targetId)) {
-                BaniraCodeContext code = codeHandler.decode(
-                        codeContext.sender(context.sender())
-                                .group(context.group())
-                                .target(targetId)
-                                .msg(card)
-                );
-                context.bot().setGroupCard(context.group(), targetId, code.msg());
-            } else {
-                context.noPermissionTargets().add(targetId);
-            }
+            BaniraCodeContext code = codeHandler.decode(
+                    codeContext.sender(context.sender())
+                            .group(context.group())
+                            .target(targetId)
+                            .msg(card)
+            );
+            context.bot().setGroupCard(context.group(), targetId, code.msg());
         }
         executeFail(context);
 

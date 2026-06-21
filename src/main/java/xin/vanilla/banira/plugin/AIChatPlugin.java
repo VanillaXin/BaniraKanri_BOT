@@ -1,8 +1,11 @@
 package xin.vanilla.banira.plugin;
 
 import com.mikuac.shiro.annotation.AnyMessageHandler;
+import com.mikuac.shiro.annotation.GroupPokeNoticeHandler;
+import com.mikuac.shiro.annotation.PrivatePokeNoticeHandler;
 import com.mikuac.shiro.annotation.common.Shiro;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
+import com.mikuac.shiro.dto.event.notice.PokeNoticeEvent;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
@@ -12,10 +15,7 @@ import xin.vanilla.banira.config.entity.extended.ChatConfig;
 import xin.vanilla.banira.config.entity.group.AIChatGroupConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.enums.EnumMessageType;
-import xin.vanilla.banira.plugin.chat.AIChatService;
-import xin.vanilla.banira.plugin.chat.AIChatServiceFactory;
-import xin.vanilla.banira.plugin.chat.ChatConfigSupport;
-import xin.vanilla.banira.plugin.chat.ChatRecallService;
+import xin.vanilla.banira.plugin.chat.*;
 import xin.vanilla.banira.plugin.chat.capability.*;
 import xin.vanilla.banira.plugin.chat.web.WeatherService;
 import xin.vanilla.banira.plugin.chat.web.WebSearchService;
@@ -50,6 +50,8 @@ public class AIChatPlugin extends BasePlugin implements AiCapabilityProvider {
     private WebSearchService webSearchService;
     @Resource
     private WeatherService weatherService;
+    @Resource
+    private ChatStickerService chatStickerService;
 
     @Override
     public void registerHelpTopics(@Nonnull List<HelpTopic> topics, Long groupId) {
@@ -152,6 +154,7 @@ public class AIChatPlugin extends BasePlugin implements AiCapabilityProvider {
         if (event.getUserId() == bot.getSelfId()) {
             return false;
         }
+        chatStickerService.collectFromMessage(bot, event);
 
         BaniraCodeContext context = new BaniraCodeContext(bot
                 , event.getArrayMsg()
@@ -169,22 +172,70 @@ public class AIChatPlugin extends BasePlugin implements AiCapabilityProvider {
             return false;
         }
 
-        ChatConfig chatConfig = null;
         long cacheKey = context.msgType() == EnumMessageType.GROUP ? event.getGroupId() : 0L;
-        if (context.msgType() == EnumMessageType.GROUP) {
-            AIChatGroupConfig config = BaniraUtils.getGroupConfigOrGlobal(AIChatGroupConfig.class, event.getGroupId());
-            chatConfig = config != null ? config.chatConfig() : null;
-        } else {
-            AIChatGroupConfig globalConfig = BaniraUtils.getGroupConfigOrGlobal(AIChatGroupConfig.class, 0L);
-            chatConfig = globalConfig != null ? globalConfig.chatConfig() : null;
-        }
-
+        ChatConfig chatConfig = chatConfig(context.msgType(), event.getGroupId());
         if (chatConfig == null || !chatConfig.enabled()) {
             return false;
         }
         AIChatService chatService = getChatService(cacheKey, chatConfig);
         if (chatService == null) return false;
         return chatService.generateAndSendReply(bot, context);
+    }
+
+    @GroupPokeNoticeHandler
+    @PrivatePokeNoticeHandler
+    public void poke(BaniraBot bot, PokeNoticeEvent event) {
+        if (event.getUserId() == bot.getSelfId()) {
+            return;
+        }
+        EnumMessageType msgType = BaniraUtils.isGroupIdValid(event.getGroupId())
+                ? EnumMessageType.GROUP
+                : EnumMessageType.FRIEND;
+        ChatConfig chatConfig = chatConfig(msgType, event.getGroupId());
+        if (chatConfig == null || !chatConfig.enabled()) {
+            return;
+        }
+        BaniraCodeContext context = new BaniraCodeContext(bot
+                , List.of()
+                , event.getGroupId()
+                , event.getUserId()
+                , event.getTargetId()
+        )
+                .operator(event.getUserId())
+                .msg(pokeEventMessage(bot, event))
+                .time(event.getTime())
+                .msgType(msgType);
+        long cacheKey = msgType == EnumMessageType.GROUP ? event.getGroupId() : 0L;
+        AIChatService chatService = getChatService(cacheKey, chatConfig);
+        if (chatService != null) {
+            chatService.generateAndSendReply(bot, context);
+        }
+    }
+
+    private ChatConfig chatConfig(EnumMessageType msgType, long groupId) {
+        if (msgType == EnumMessageType.GROUP) {
+            AIChatGroupConfig config = BaniraUtils.getGroupConfigOrGlobal(AIChatGroupConfig.class, groupId);
+            return config != null ? config.chatConfig() : null;
+        }
+        AIChatGroupConfig globalConfig = BaniraUtils.getGroupConfigOrGlobal(AIChatGroupConfig.class, 0L);
+        return globalConfig != null ? globalConfig.chatConfig() : null;
+    }
+
+    private static String pokeEventMessage(BaniraBot bot, PokeNoticeEvent event) {
+        long sender = event.getUserId();
+        long target = event.getTargetId();
+        long groupId = BaniraUtils.isGroupIdValid(event.getGroupId()) ? event.getGroupId() : 0L;
+        String senderName = BaniraUtils.isGroupIdValid(event.getGroupId())
+                ? bot.getUserNameEx(event.getGroupId(), sender)
+                : bot.getUserNameEx(groupId, sender);
+        String targetName = target == bot.getSelfId()
+                ? "你"
+                : (BaniraUtils.isGroupIdValid(event.getGroupId())
+                ? bot.getUserNameEx(event.getGroupId(), target)
+                : bot.getUserNameEx(groupId, target));
+        return "【戳一戳事件】发送者 qq=" + sender + " 显示名=" + senderName
+                + "；目标 qq=" + target + " 显示名=" + targetName
+                + "。这不是普通文字消息，一般不需要回复；如果目标是你且想回应，优先调用 pokeUser 戳回去。";
     }
 
     private void invalidateChatCaches(long groupId) {

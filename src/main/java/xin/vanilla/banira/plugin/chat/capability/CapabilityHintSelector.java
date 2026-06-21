@@ -117,7 +117,7 @@ public final class CapabilityHintSelector {
             return containsAny(text, "搜索", "查询", "查", "学历", "新闻", "资料", "网页") ? 8 : 0;
         }
         if (name.contains("kanri") || name.contains("mute")) {
-            return containsAny(text, "禁言", "解禁", "名片", "头衔", "精华", "群管") ? 8 : 0;
+            return containsAny(text, "禁言", "解禁", "名片", "头衔", "精华", "群名", "群名称", "群管") ? 8 : 0;
         }
         if (name.contains("rcon")) {
             return containsAny(text, "rcon", "服务器命令", "执行命令") ? 8 : 0;

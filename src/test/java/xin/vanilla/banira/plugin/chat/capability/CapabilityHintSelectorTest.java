@@ -20,4 +20,16 @@ class CapabilityHintSelectorTest {
         Assertions.assertEquals("create_timer", selected.getFirst().name());
         Assertions.assertTrue(selected.stream().noneMatch(cap -> "draw_today_wife".equals(cap.name())));
     }
+
+    @Test
+    void shouldSelectKanriCapabilityForGroupNameIntent() {
+        List<AiCapability> selected = CapabilityHintSelector.selectRelevant(List.of(
+                new AiCapability().name("web_search").description("搜索公开网页资料"),
+                new AiCapability().name("execute_kanri").description("执行允许的群管动作"),
+                new AiCapability().name("get_group_summary").description("查询群基础信息")
+        ), "把群名称改成测试群");
+
+        Assertions.assertFalse(selected.isEmpty());
+        Assertions.assertEquals("execute_kanri", selected.getFirst().name());
+    }
 }

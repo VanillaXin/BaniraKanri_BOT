@@ -12,10 +12,14 @@ public interface IAiMemoryManager {
 
     AiMemory getMemory(long id);
 
+    boolean updateMemory(AiMemory memory);
+
     @Nonnull
     List<AiMemory> getMemoryList(AiMemoryQueryParam param);
 
     void touchMemory(long id, long lastUsedAt);
+
+    boolean deleteMemory(long id);
 
     boolean existsSimilar(long botId, long groupId, long userId, String content);
 

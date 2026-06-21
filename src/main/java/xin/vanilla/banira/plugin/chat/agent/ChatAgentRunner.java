@@ -56,6 +56,7 @@ public class ChatAgentRunner {
             "searchChatHistory",
             "loadMessageImages",
             "saveMemory",
+            "searchStickers",
             "recallLastAiReply",
             "muteSelf",
             "muteAllGroup",

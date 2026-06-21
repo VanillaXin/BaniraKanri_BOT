@@ -37,7 +37,8 @@ public class McQueryService {
             return "未找到已保存的服务器：" + name;
         }
         return records.stream()
-                .map(record -> McQueryCode.getQueryInfo(record.getName(), record.getQueryIp(), record.getQueryPort()))
+                .map(record -> McQueryCode.getQueryInfo(record.getName(), record.getQueryIp(), record.getQueryPort())
+                        + "\n" + maintainerHint(record))
                 .collect(Collectors.joining("\n\n"));
     }
 
@@ -53,7 +54,9 @@ public class McQueryService {
             builder.append(i + 1).append(". ")
                     .append(record.getName()).append(" (")
                     .append(record.getQueryIp()).append(":").append(record.getQueryPort())
-                    .append(")\n");
+                    .append(")")
+                    .append("，添加者 qq=").append(record.getCreatorId())
+                    .append("\n");
         }
         return builder.toString().trim();
     }
@@ -95,6 +98,15 @@ public class McQueryService {
             builder.append(tokens[i]);
         }
         return builder.toString();
+    }
+
+    @Nonnull
+    private static String maintainerHint(@Nonnull MinecraftRecord record) {
+        Long creatorId = record.getCreatorId();
+        if (creatorId == null || creatorId <= 0) {
+            return "服务器记录添加者未知；如果服务器异常，先让能处理服务器的人看。";
+        }
+        return "服务器记录添加者 qq=" + creatorId + "；如果服务器异常，优先让这个人看，不要默认找配置主人。";
     }
 
 }
