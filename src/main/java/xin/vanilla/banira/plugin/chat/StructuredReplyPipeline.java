@@ -38,7 +38,7 @@ public final class StructuredReplyPipeline {
         if (StringUtils.isNullOrEmptyEx(speech)) {
             return parsed;
         }
-        int maxForwardLength = Math.max(100, settings.maxForwardLength());
+        int maxForwardLength = dynamicForwardLength(settings);
         boolean hasLongCode = hasLongCodeBlock(speech, Math.max(80, settings.maxCharsPerPart()));
         boolean tooLong = speech.length() > maxForwardLength;
         if (!hasLongCode && !tooLong) {
@@ -55,6 +55,16 @@ public final class StructuredReplyPipeline {
                 parsed.atTargets(),
                 parsed.directHandled()
         );
+    }
+
+    private static int dynamicForwardLength(@Nonnull ChatReplySettings settings) {
+        int baseLimit = Math.max(100, settings.maxForwardLength());
+        int dynamicBudget = MessageSplitter.dynamicSpeechCharBudget(settings.maxCharsPerPart(), settings.maxSplitParts());
+        if (dynamicBudget <= 0) {
+            return baseLimit;
+        }
+        int relaxedLimit = Math.min(dynamicBudget, baseLimit * 2);
+        return Math.min(dynamicBudget, Math.max(baseLimit, relaxedLimit));
     }
 
     private static boolean hasLongCodeBlock(@Nonnull String text, int minCodeLength) {

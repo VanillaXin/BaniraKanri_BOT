@@ -4,6 +4,8 @@ import com.mikuac.shiro.dto.event.message.GroupMessageEvent;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.test.util.ReflectionTestUtils;
+import xin.vanilla.banira.coder.common.BaniraCodeHandler;
 import xin.vanilla.banira.domain.KanriContext;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 
@@ -116,5 +118,84 @@ class KanriSelfOperationPolicyTest {
 
         Assertions.assertEquals(KanriHandler.SUCCESS, result);
         Mockito.verify(bot).setGroupBan(TEST_GROUP_ID, TEST_SENDER_QQ, 600);
+    }
+
+    @Test
+    void cardCommandAllowsOrdinaryMemberToChangeOwnCardWhenBotIsAdmin() {
+        BaniraBot bot = Mockito.mock(BaniraBot.class);
+        Mockito.when(bot.getSelfId()).thenReturn(TEST_BOT_QQ);
+        Mockito.when(bot.isGroupOwnerOrAdmin(TEST_GROUP_ID)).thenReturn(true);
+        GroupMessageEvent event = Mockito.mock(GroupMessageEvent.class);
+        Mockito.when(event.getArrayMsg()).thenReturn(java.util.List.of());
+        KanriContext context = new KanriContext(
+                event,
+                bot,
+                TEST_GROUP_ID,
+                TEST_SENDER_QQ,
+                0,
+                "",
+                TEST_SENDER + " 新名片"
+        ).aiInvoked(true);
+        CardCommand handler = cardCommand();
+
+        int result = handler.execute(context, new String[]{TEST_SENDER, "新名片"});
+
+        Assertions.assertEquals(KanriHandler.SUCCESS, result);
+        Mockito.verify(bot).setGroupCard(TEST_GROUP_ID, TEST_SENDER_QQ, "新名片");
+    }
+
+    @Test
+    void cardCommandDeniesOrdinaryMemberChangingOtherCard() {
+        BaniraBot bot = Mockito.mock(BaniraBot.class);
+        Mockito.when(bot.getSelfId()).thenReturn(TEST_BOT_QQ);
+        Mockito.when(bot.isGroupOwnerOrAdmin(TEST_GROUP_ID)).thenReturn(true);
+        GroupMessageEvent event = Mockito.mock(GroupMessageEvent.class);
+        Mockito.when(event.getArrayMsg()).thenReturn(java.util.List.of());
+        KanriContext context = new KanriContext(
+                event,
+                bot,
+                TEST_GROUP_ID,
+                TEST_SENDER_QQ,
+                0,
+                "",
+                TEST_OTHER + " 新名片"
+        ).aiInvoked(true);
+        CardCommand handler = cardCommand();
+
+        int result = handler.execute(context, new String[]{TEST_OTHER, "新名片"});
+
+        Assertions.assertEquals(KanriHandler.NO_OP, result);
+        Mockito.verify(bot, Mockito.never()).setGroupCard(Mockito.anyLong(), Mockito.anyLong(), Mockito.anyString());
+    }
+
+    @Test
+    void cardCommandAllowsGroupAdminChangingOtherCard() {
+        BaniraBot bot = Mockito.mock(BaniraBot.class);
+        Mockito.when(bot.getSelfId()).thenReturn(TEST_BOT_QQ);
+        Mockito.when(bot.isGroupOwnerOrAdmin(TEST_GROUP_ID)).thenReturn(true);
+        Mockito.when(bot.isGroupOwnerOrAdmin(TEST_GROUP_ID, TEST_SENDER_QQ)).thenReturn(true);
+        GroupMessageEvent event = Mockito.mock(GroupMessageEvent.class);
+        Mockito.when(event.getArrayMsg()).thenReturn(java.util.List.of());
+        KanriContext context = new KanriContext(
+                event,
+                bot,
+                TEST_GROUP_ID,
+                TEST_SENDER_QQ,
+                0,
+                "",
+                TEST_OTHER + " 新名片"
+        ).aiInvoked(true);
+        CardCommand handler = cardCommand();
+
+        int result = handler.execute(context, new String[]{TEST_OTHER, "新名片"});
+
+        Assertions.assertEquals(KanriHandler.SUCCESS, result);
+        Mockito.verify(bot).setGroupCard(TEST_GROUP_ID, TEST_OTHER_QQ, "新名片");
+    }
+
+    private static CardCommand cardCommand() {
+        CardCommand handler = new CardCommand();
+        ReflectionTestUtils.setField(handler, "codeHandler", new BaniraCodeHandler());
+        return handler;
     }
 }

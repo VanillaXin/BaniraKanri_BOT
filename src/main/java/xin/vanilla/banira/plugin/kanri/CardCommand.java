@@ -7,7 +7,6 @@ import xin.vanilla.banira.coder.common.BaniraCodeHandler;
 import xin.vanilla.banira.config.entity.InstructionsConfig;
 import xin.vanilla.banira.domain.BaniraCodeContext;
 import xin.vanilla.banira.domain.KanriContext;
-import xin.vanilla.banira.enums.EnumPermission;
 import xin.vanilla.banira.plugin.help.HelpTopic;
 import xin.vanilla.banira.plugin.help.HelpTopics;
 import xin.vanilla.banira.util.BaniraUtils;
@@ -41,13 +40,14 @@ public class CardCommand implements KanriHandler {
 
     @Override
     public boolean botHasPermission(@Nonnull KanriContext context) {
-        // 可以改自己的所以直接返回true
+        // 名片权限取决于目标：机器人改自己不需要群管，改其他人需要机器人是群主/群管。
         return true;
     }
 
     @Override
     public boolean hasPermission(@Nonnull KanriContext context) {
-        return context.bot().hasPermission(context.group(), context.sender(), EnumPermission.CARD);
+        // 普通成员也允许请求修改自己的群名片；是否能改别人交给 execute 按目标判断。
+        return true;
     }
 
     @Nonnull
@@ -81,7 +81,12 @@ public class CardCommand implements KanriHandler {
                 , context.sender()
         );
 
+        int success = 0;
         for (Long targetId : targets) {
+            if (!canSenderRequestTarget(context, targetId) || !canBotModifyTarget(context, targetId)) {
+                context.noPermissionTargets().add(targetId);
+                continue;
+            }
             BaniraCodeContext code = codeHandler.decode(
                     codeContext.sender(context.sender())
                             .group(context.group())
@@ -89,10 +94,33 @@ public class CardCommand implements KanriHandler {
                             .msg(card)
             );
             context.bot().setGroupCard(context.group(), targetId, code.msg());
+            success++;
         }
         executeFail(context);
 
-        return targets.isEmpty() ? FAIL : SUCCESS;
+        if (targets.isEmpty()) {
+            return FAIL;
+        }
+        return success > 0 ? SUCCESS : NO_OP;
+    }
+
+    private boolean canSenderRequestTarget(@Nonnull KanriContext context, long targetId) {
+        if (targetId == context.sender()) {
+            return true;
+        }
+        if (context.bot().isGroupOwnerOrAdmin(context.group(), context.sender())) {
+            return true;
+        }
+        try {
+            return BaniraUtils.hasKanriOperatorAccess(context.bot(), context.group(), context.sender());
+        } catch (IllegalStateException ignored) {
+            return false;
+        }
+    }
+
+    private boolean canBotModifyTarget(@Nonnull KanriContext context, long targetId) {
+        return targetId == context.bot().getSelfId()
+                || context.bot().isGroupOwnerOrAdmin(context.group());
     }
 
 }

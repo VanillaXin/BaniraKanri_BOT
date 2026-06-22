@@ -16,6 +16,16 @@ import java.util.List;
 class ChatStickerServiceTest {
 
     @Test
+    void shouldInferQuestionStickerMetadataFromArchivePath() {
+        ChatStickerService.StickerMetadata metadata = ChatStickerService.fallbackStickerMetadata("疑问/问号猫.png");
+
+        Assertions.assertTrue(metadata.description().contains("疑问") || metadata.description().contains("问号"));
+        Assertions.assertTrue(metadata.scene().contains("疑问") || metadata.scene().contains("困惑"));
+        Assertions.assertTrue(metadata.keywords().contains("疑问"));
+        Assertions.assertTrue(metadata.keywords().contains("困惑"));
+    }
+
+    @Test
     void shouldResolveArchiveFromQuotedMessageRecord() {
         IMessageRecordManager manager = Mockito.mock(IMessageRecordManager.class);
         Mockito.when(manager.getGroupMessageRecord(20000L, 42))

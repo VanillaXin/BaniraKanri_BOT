@@ -387,8 +387,8 @@ public class AiToolBridge {
         return executeWithPolicy("execute_kanri", args, false);
     }
 
-    @Tool("修改当前群成员群名片。target 必须是 QQ 号或结构化 @；card 是新群名片。用户说“改正常一点/你随便想一个”时，可以直接拟一个简洁正常的群名片后执行。@你只是唤醒，不是目标；“我的”指当前发言者，“你自己/你的”指机器人自己。")
-    public String setGroupCard(@P("目标 QQ 号或 [CQ:at,qq=...]；不要把唤醒你的 @ 当目标；我的=当前发言者，你自己/你的=机器人自己") String target,
+    @Tool("修改当前群成员群名片。target 是 QQ 号或结构化 @；当前消息明确说“我的/我自己/自己”或“你自己/你的”时，target 可留空，由代码绑定为当前发言者或机器人自己。用户说“改正常一点/你随便想一个”时，可以直接拟一个简洁正常的群名片后执行。@你只是唤醒，不是目标。")
+    public String setGroupCard(@P("目标 QQ 号或 [CQ:at,qq=...]；明确自改/改你自己时可留空；不要把唤醒你的 @ 当目标；我的=当前发言者，你自己/你的=机器人自己") String target,
                                @P("新群名片，简短正常，不要包含换行") String card) {
         String normalizedCard = normalizeCard(card);
         String normalizedTarget = resolveGroupCardTarget(target, normalizedCard);
@@ -619,7 +619,7 @@ public class AiToolBridge {
     public String collectStickerArchive(@P("zip 压缩包链接、本地路径或 file: URI；可空") String source,
                                         @P("导入表情包的统一描述，可空") String description,
                                         @P("导入表情包的使用场景，可空") String scene) {
-        return stickerService().collectStickerArchive(ctx, source, description, scene);
+        return stickerService().collectStickerArchive(ctx, source, description, scene, chatConfig);
     }
 
     @Tool("按主人要求忘记匹配关键词的记忆。用于修正你的习惯、忘记错误偏好或丢弃不该记住的信息；keyword 必须明确。")
@@ -1338,11 +1338,20 @@ public class AiToolBridge {
         }
         String current = StringUtils.nullToEmpty(ctx.userMessage());
         String target = normalizeTarget(argLine);
-        if (StringUtils.isNullOrEmptyEx(target)) {
-            return "";
-        }
         String card = normalizeCard(removeLeadingTarget(argLine));
         CardTargetHint hint = inferGroupCardTargetFromCard(current, card);
+        if (StringUtils.isNullOrEmptyEx(target)) {
+            if (hint == CardTargetHint.SENDER && ctx.senderId() != null && ctx.senderId() > 0) {
+                return StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "";
+            }
+            if (hint == CardTargetHint.BOT && ctx.bot() != null) {
+                return StringUtils.isNotNullOrEmpty(card) ? ctx.botId() + " " + card : "";
+            }
+            if (isSelfGroupCardRequest(current) && ctx.senderId() != null && ctx.senderId() > 0) {
+                return StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "";
+            }
+            return "";
+        }
         if (hint == CardTargetHint.SENDER && ctx.senderId() != null && ctx.senderId() > 0) {
             return StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "";
         }

@@ -14,8 +14,10 @@ import java.util.stream.Collectors;
 public class MessageSplitter {
     private final ChatReplySettings cfg;
 
-    private static final String PUNCTUATION = "。！？!?…｡\n";
-    private static final Set<Character> CLOSING_QUOTES = Set.of('”', '"', '）', ')', '』', '」', '’', '\'');
+    private static final int DYNAMIC_SPLIT_MULTIPLIER = 2;
+    private static final int MAX_DYNAMIC_SPLIT_PARTS = 20;
+    private static final String PUNCTUATION = "。！？?!…｡\n";
+    private static final Set<Character> CLOSING_QUOTES = Set.of('”', '"', '）', ')', '】', '』', '」', '’', '\'');
     private static final Set<Character> SOFT_BREAKS = Set.of('，', ',', '；', ';', '：', ':');
 
     public MessageSplitter(ChatReplySettings cfg) {
@@ -40,6 +42,7 @@ public class MessageSplitter {
         if (maxCharsPerPart <= 0 || maxParts <= 0) {
             return Collections.emptyList();
         }
+        maxParts = dynamicMaxPartsForLength(text.length(), maxCharsPerPart, maxParts);
         if (text.contains("\n")) {
             List<String> parts = new ArrayList<>();
             for (String line : normalizeLines(text)) {
@@ -55,6 +58,23 @@ public class MessageSplitter {
             return parts.stream().filter(s -> !s.isEmpty()).collect(Collectors.toList());
         }
         return splitSingleLine(text, maxCharsPerPart, maxParts);
+    }
+
+    public static int dynamicMaxPartsForLength(int textLength, int maxCharsPerPart, int baseMaxParts) {
+        if (textLength <= 0 || maxCharsPerPart <= 0 || baseMaxParts <= 0) {
+            return 0;
+        }
+        int requiredParts = (int) Math.ceil((double) textLength / (double) maxCharsPerPart);
+        int dynamicCeiling = Math.min(MAX_DYNAMIC_SPLIT_PARTS, baseMaxParts * DYNAMIC_SPLIT_MULTIPLIER);
+        return Math.max(baseMaxParts, Math.min(requiredParts, dynamicCeiling));
+    }
+
+    public static int dynamicSpeechCharBudget(int maxCharsPerPart, int baseMaxParts) {
+        if (maxCharsPerPart <= 0 || baseMaxParts <= 0) {
+            return 0;
+        }
+        int dynamicCeiling = Math.min(MAX_DYNAMIC_SPLIT_PARTS, baseMaxParts * DYNAMIC_SPLIT_MULTIPLIER);
+        return maxCharsPerPart * dynamicCeiling;
     }
 
     private static List<String> normalizeLines(String text) {
@@ -80,7 +100,7 @@ public class MessageSplitter {
         }
         for (int i = 0; i < text.length(); i++) {
             char ch = text.charAt(i);
-            if (!CLOSING_QUOTES.contains(ch) && "，,。．！？!?…".indexOf(ch) < 0) {
+            if (!CLOSING_QUOTES.contains(ch) && "，,。．；！？!?…｡".indexOf(ch) < 0) {
                 return false;
             }
         }
@@ -103,7 +123,7 @@ public class MessageSplitter {
                 while (cut < text.length() && CLOSING_QUOTES.contains(text.charAt(cut))) {
                     cut++;
                 }
-                if (cuts.isEmpty() || cuts.getLast() != cut) {
+                if (cuts.isEmpty() || !cuts.get(cuts.size() - 1).equals(cut)) {
                     cuts.add(cut);
                 }
                 i = cut - 1;
@@ -113,71 +133,69 @@ public class MessageSplitter {
         List<String> parts = new ArrayList<>();
         int start = 0;
 
-        final class Helper {
-            int findBreakBackwards(String s, int pos, int limit) {
-                for (int j = limit; j > pos; j--) {
-                    char ch = s.charAt(j - 1);
-                    if (Character.isWhitespace(ch) || SOFT_BREAKS.contains(ch)) {
-                        return j;
-                    }
-                }
-                return -1;
-            }
-        }
-        Helper helper = new Helper();
-
         if (!cuts.isEmpty()) {
+            int lastGoodCut = -1;
             for (int idx = 0; idx < cuts.size() && parts.size() < maxParts; idx++) {
                 int cut = cuts.get(idx);
                 if (cut - start <= maxCharsPerPart) {
-                    parts.add(text.substring(start, cut).trim());
-                    start = cut;
-                } else {
-                    int pos = start;
-                    int regionEnd = cut;
-                    while (pos < regionEnd && parts.size() < maxParts) {
-                        int nextPos = Math.min(regionEnd, pos + maxCharsPerPart);
-                        int breakPos = helper.findBreakBackwards(text, pos, nextPos);
-                        if (breakPos == -1 || breakPos <= pos) {
-                            breakPos = nextPos;
-                        }
-                        parts.add(text.substring(pos, breakPos).trim());
-                        pos = breakPos;
-                    }
-                    start = cut;
+                    lastGoodCut = cut;
+                    continue;
                 }
-            }
-
-            if (parts.size() < maxParts && start < text.length()) {
-                String tail = text.substring(start);
-                int pos = 0;
-                while (pos < tail.length() && parts.size() < maxParts) {
-                    int nextPos = Math.min(tail.length(), pos + maxCharsPerPart);
-                    int breakPos = helper.findBreakBackwards(tail, pos, nextPos);
-                    if (breakPos == -1 || breakPos <= pos) {
-                        breakPos = nextPos;
+                if (lastGoodCut > start) {
+                    addPart(parts, text.substring(start, lastGoodCut));
+                    start = lastGoodCut;
+                    lastGoodCut = -1;
+                    if (cut - start <= maxCharsPerPart) {
+                        lastGoodCut = cut;
+                        continue;
                     }
-                    parts.add(tail.substring(pos, breakPos).trim());
+                }
+                int pos = start;
+                int regionEnd = cut;
+                while (pos < regionEnd && parts.size() < maxParts) {
+                    int breakPos = findBestBreak(text, pos, Math.min(regionEnd, pos + maxCharsPerPart));
+                    addPart(parts, text.substring(pos, breakPos));
                     pos = breakPos;
                 }
+                start = cut;
             }
-        } else {
-            int pos = 0;
+            if (parts.size() < maxParts && lastGoodCut > start) {
+                addPart(parts, text.substring(start, lastGoodCut));
+                start = lastGoodCut;
+            }
+        }
+
+        if (parts.size() < maxParts && start < text.length()) {
+            int pos = start;
             while (pos < text.length() && parts.size() < maxParts) {
-                int nextPos = Math.min(text.length(), pos + maxCharsPerPart);
-                int breakPos = helper.findBreakBackwards(text, pos, nextPos);
-                if (breakPos == -1 || breakPos <= pos) {
-                    breakPos = nextPos;
-                }
-                parts.add(text.substring(pos, breakPos).trim());
+                int breakPos = findBestBreak(text, pos, Math.min(text.length(), pos + maxCharsPerPart));
+                addPart(parts, text.substring(pos, breakPos));
                 pos = breakPos;
             }
         }
 
-        if (parts.size() > maxParts) {
-            parts = parts.subList(0, maxParts);
-        }
-
         return parts.stream().filter(s -> !s.isEmpty()).collect(Collectors.toList());
+    }
+
+    private static int findBestBreak(String s, int pos, int limit) {
+        int breakPos = findBreakBackwards(s, pos, limit);
+        return breakPos > pos ? breakPos : limit;
+    }
+
+    private static int findBreakBackwards(String s, int pos, int limit) {
+        for (int j = limit; j > pos; j--) {
+            char ch = s.charAt(j - 1);
+            if (Character.isWhitespace(ch) || SOFT_BREAKS.contains(ch)) {
+                return j;
+            }
+        }
+        return -1;
+    }
+
+    private static void addPart(List<String> parts, String part) {
+        String trimmed = part.trim();
+        if (!trimmed.isEmpty()) {
+            parts.add(trimmed);
+        }
     }
 }

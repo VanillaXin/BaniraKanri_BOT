@@ -6,11 +6,16 @@ import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.enums.MsgTypeEnum;
 import com.mikuac.shiro.model.ArrayMsg;
+import dev.langchain4j.data.message.Content;
+import dev.langchain4j.data.message.ImageContent;
+import dev.langchain4j.data.message.TextContent;
+import dev.langchain4j.data.message.UserMessage;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import xin.vanilla.banira.config.entity.extended.ChatConfig;
 import xin.vanilla.banira.domain.AiMemory;
 import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumCacheFileType;
@@ -19,6 +24,7 @@ import xin.vanilla.banira.mapper.param.AiMemoryQueryParam;
 import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.plugin.chat.agent.AgentContext;
 import xin.vanilla.banira.plugin.chat.capability.AiDirectResult;
+import xin.vanilla.banira.plugin.chat.model.ChatModelRouter;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.service.IAiMemoryManager;
 import xin.vanilla.banira.service.IMessageRecordManager;
@@ -33,6 +39,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -54,6 +62,9 @@ public class ChatStickerService {
     private static final int MAX_EXPLICIT_IMAGE_SIDE = 900;
     private static final int MAX_EXPLICIT_IMAGE_PIXELS = 900 * 900;
     private static final int QUERY_LIMIT = 40;
+    private static final int MAX_METADATA_TEXT = 160;
+    private static final int MAX_KEYWORD_COUNT = 12;
+    private static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("\\{.*}", Pattern.DOTALL);
 
     @Resource
     private IAiMemoryManager aiMemoryManager;
@@ -93,14 +104,15 @@ public class ChatStickerService {
             return;
         }
         String plainText = plainText(event.getArrayMsg());
-        String description = StringUtils.isNotNullOrEmpty(plainText)
-                ? "带文字说明的表情包：" + plainText
-                : "自动收集的表情包";
-        String scene = StringUtils.isNotNullOrEmpty(plainText)
-                ? "适合回应类似“" + AiTextLimits.truncate(plainText, 40) + "”的语境"
-                : "适合需要用表情包简单回应的语境";
+        StickerMetadata metadata = fallbackStickerMetadata(
+                StringUtils.isNotNullOrEmpty(plainText) ? plainText : source.url(),
+                imageInfo(bytes),
+                StringUtils.isNotNullOrEmpty(plainText) ? "带文字说明的表情包：" + plainText : "",
+                StringUtils.isNotNullOrEmpty(plainText) ? "适合回应类似“" + AiTextLimits.truncate(plainText, 40) + "”的语境" : ""
+        );
         if (!saveStickerMemory(bot.getSelfId(), groupId, event.getUserId(), event.getMessageId(),
-                source.url(), message, bytes, description, scene, "source:auto_collect")) {
+                source.url(), message, bytes, metadata.description(), metadata.scene(), metadata.keywords(),
+                "source:auto_collect," + metadata.tagCsv())) {
             return;
         }
         LOGGER.debug("AI collected sticker group={} user={} msgId={} chars={}",
@@ -112,6 +124,15 @@ public class ChatStickerService {
                                         @Nullable String source,
                                         @Nullable String description,
                                         @Nullable String scene) {
+        return collectStickerArchive(ctx, source, description, scene, null);
+    }
+
+    @Nonnull
+    public String collectStickerArchive(@Nonnull AgentContext ctx,
+                                        @Nullable String source,
+                                        @Nullable String description,
+                                        @Nullable String scene,
+                                        @Nullable ChatConfig chatConfig) {
         if (!BaniraUtils.hasKanriOperatorAccess(ctx.bot(), ctx.scopeGroupId(), ctx.senderId())) {
             return ownerOnlyText("表情包压缩包导入");
         }
@@ -132,7 +153,9 @@ public class ChatStickerService {
         int scanned = 0;
         int saved = 0;
         int skipped = 0;
+        int analyzed = 0;
         long sourceMsgId = StringUtils.toLong(ctx.msgId(), 0L);
+        StickerVisionAnalyzer analyzer = StickerVisionAnalyzer.create(chatConfig);
         try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(archive))) {
             ZipEntry entry;
             while ((entry = zip.getNextEntry()) != null && scanned < MAX_ARCHIVE_ENTRIES) {
@@ -146,26 +169,25 @@ public class ChatStickerService {
                     continue;
                 }
                 byte[] bytes = readZipEntry(zip, MAX_STICKER_BYTES + 1);
+                ImageInfo info = imageInfo(bytes);
                 if (bytes.length == 0 || bytes.length > MAX_STICKER_BYTES
-                        || !looksLikeExplicitStickerImage(bytes)) {
+                        || !info.valid()
+                        || !looksLikeExplicitStickerInfo(info)) {
                     skipped++;
                     continue;
                 }
-                String desc = StringUtils.isNotNullOrEmpty(description)
-                        ? description.trim()
-                        : "从压缩包导入的表情包：" + safeArchiveEntryName(name);
-                String useScene = StringUtils.isNotNullOrEmpty(scene)
-                        ? scene.trim()
-                        : "适合轻松接梗或简短回应时使用";
+                StickerMetadata metadata = analyzeStickerMetadata(name, bytes, info, description, scene, analyzer);
                 String sourceUrl = resolved + "#" + name;
                 if (stickerExists(ctx.botId(), ctx.scopeGroupId(), sourceUrl)) {
                     skipped++;
                     continue;
                 }
                 boolean ok = saveStickerMemory(ctx.botId(), ctx.scopeGroupId(), ctx.senderId(),
-                        sourceMsgId, sourceUrl, "", bytes, desc, useScene, "source:archive");
+                        sourceMsgId, sourceUrl, "", bytes, metadata.description(), metadata.scene(), metadata.keywords(),
+                        "source:archive," + metadata.tagCsv());
                 if (ok) {
                     saved++;
+                    analyzed++;
                 } else {
                     skipped++;
                 }
@@ -175,10 +197,10 @@ public class ChatStickerService {
                     ctx.scopeGroupId(), ctx.senderId(), resolved, e);
             return "压缩包解压失败。";
         }
-        LOGGER.debug("AI collected sticker archive group={} user={} scanned={} saved={} skipped={} source={}",
-                ctx.scopeGroupId(), ctx.senderId(), scanned, saved, skipped, resolved);
+        LOGGER.debug("AI collected sticker archive group={} user={} scanned={} saved={} skipped={} analyzed={} source={}",
+                ctx.scopeGroupId(), ctx.senderId(), scanned, saved, skipped, analyzed, resolved);
         return saved > 0
-                ? "已导入 " + saved + " 个表情包，跳过 " + skipped + " 个。"
+                ? "已导入 " + saved + " 个表情包，跳过 " + skipped + " 个，已写入逐图描述和标签。"
                 : "没有导入到合适的表情包。";
     }
 
@@ -255,7 +277,8 @@ public class ChatStickerService {
             builder.append('\n')
                     .append("- id=").append(memory.getId() != null ? memory.getId() : 0)
                     .append("；描述=").append(StringUtils.isNotNullOrEmpty(sticker.description()) ? sticker.description() : "无")
-                    .append("；场景=").append(StringUtils.isNotNullOrEmpty(sticker.scene()) ? sticker.scene() : "无");
+                    .append("；场景=").append(StringUtils.isNotNullOrEmpty(sticker.scene()) ? sticker.scene() : "无")
+                    .append("；关键词=").append(StringUtils.isNotNullOrEmpty(sticker.keywords()) ? sticker.keywords() : "无");
             emitted++;
             if (emitted >= limit) {
                 break;
@@ -345,23 +368,43 @@ public class ChatStickerService {
     @Nonnull
     private List<AiMemory> findStickers(@Nonnull AgentContext ctx, @Nullable String keyword) {
         String normalized = StringUtils.nullToEmpty(keyword).trim();
+        List<AiMemory> memories = new ArrayList<>();
+        if (StringUtils.isNullOrEmptyEx(normalized) || isAllKeyword(normalized)) {
+            memories.addAll(queryStickerMemories(ctx, ""));
+        } else {
+            for (String term : expandStickerKeyword(normalized)) {
+                memories.addAll(queryStickerMemories(ctx, term));
+                if (memories.size() >= QUERY_LIMIT) {
+                    break;
+                }
+            }
+        }
+        List<AiMemory> result = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (AiMemory memory : memories) {
+            String key = memory.getId() != null ? "id:" + memory.getId() : "content:" + memory.getContent();
+            if (seen.add(key) && parseSticker(memory).usable()) {
+                result.add(memory);
+                if (result.size() >= QUERY_LIMIT) {
+                    break;
+                }
+            }
+        }
+        return result;
+    }
+
+    @Nonnull
+    private List<AiMemory> queryStickerMemories(@Nonnull AgentContext ctx, @Nonnull String keyword) {
         AiMemoryQueryParam param = new AiMemoryQueryParam()
                 .setBotId(ctx.botId())
                 .setGroupIdInGlobal(ctx.scopeGroupId())
                 .setTagsLike(STICKER_TAG)
                 .setLimit(QUERY_LIMIT)
                 .addOrderByLastUsedAt(false);
-        if (StringUtils.isNotNullOrEmpty(normalized) && !isAllKeyword(normalized)) {
-            param.setContentLike(normalized);
+        if (StringUtils.isNotNullOrEmpty(keyword)) {
+            param.setContentLike(keyword);
         }
-        List<AiMemory> memories = aiMemoryManager.getMemoryList(param);
-        List<AiMemory> result = new ArrayList<>();
-        for (AiMemory memory : memories) {
-            if (parseSticker(memory).usable()) {
-                result.add(memory);
-            }
-        }
-        return result;
+        return aiMemoryManager.getMemoryList(param);
     }
 
     private int deleteAll(@Nullable List<AiMemory> memories) {
@@ -389,7 +432,7 @@ public class ChatStickerService {
         String payload = content.substring(STICKER_PREFIX.length()).trim();
         JsonObject json = JsonUtils.parseJsonObject(payload);
         if (json == null) {
-            return new StickerEntry("", payload, "", "", "", "", 0);
+            return new StickerEntry("", payload, "", "", "", "", "", 0);
         }
         return new StickerEntry(
                 JsonUtils.getString(json, "path", ""),
@@ -397,6 +440,7 @@ public class ChatStickerService {
                 JsonUtils.getString(json, "sourceUrl", ""),
                 JsonUtils.getString(json, "description", ""),
                 JsonUtils.getString(json, "scene", ""),
+                JsonUtils.getString(json, "keywords", ""),
                 JsonUtils.getString(json, "sourceMsgId", ""),
                 JsonUtils.getLong(json, "size", 0L)
         );
@@ -531,29 +575,31 @@ public class ChatStickerService {
                                       @Nonnull byte[] bytes,
                                       @Nonnull String description,
                                       @Nonnull String scene,
+                                      @Nonnull String keywords,
                                       @Nonnull String extraTag) {
         String cachePath = BaniraUtils.saveFileToCachePath(bytes, EnumCacheFileType.image);
         if (StringUtils.isNullOrEmptyEx(cachePath)) {
             return false;
         }
-        String content = STICKER_PREFIX + JsonUtils.toJsonString(Map.of(
-                "path", cachePath,
-                "originalCq", originalCq,
-                "sourceUrl", sourceUrl,
-                "description", description,
-                "scene", scene,
-                "sourceSender", senderId,
-                "sourceGroup", groupId,
-                "sourceMsgId", sourceMsgId,
-                "size", bytes.length
-        ));
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("path", cachePath);
+        payload.put("originalCq", originalCq);
+        payload.put("sourceUrl", sourceUrl);
+        payload.put("description", description);
+        payload.put("scene", scene);
+        payload.put("keywords", keywords);
+        payload.put("sourceSender", senderId);
+        payload.put("sourceGroup", groupId);
+        payload.put("sourceMsgId", sourceMsgId);
+        payload.put("size", bytes.length);
+        String content = STICKER_PREFIX + JsonUtils.toJsonString(payload);
         long now = DateUtils.getTimestamp(new Date());
         AiMemory memory = new AiMemory()
                 .setBotId(botId)
                 .setGroupId(groupId)
                 .setUserId(0L)
                 .setContent(content)
-                .setTags(STICKER_TAG + "," + extraTag)
+                .setTags(normalizeTags(STICKER_TAG + "," + extraTag))
                 .setSourceMsgId(String.valueOf(sourceMsgId))
                 .setCreatedAt(now)
                 .setLastUsedAt(now);
@@ -615,6 +661,269 @@ public class ChatStickerService {
                 || text.contains("拿去")
                 || text.contains("用这个")
                 || text.contains("发这个"));
+    }
+
+    @Nonnull
+    private static StickerMetadata analyzeStickerMetadata(@Nonnull String entryName,
+                                                          @Nonnull byte[] bytes,
+                                                          @Nonnull ImageInfo info,
+                                                          @Nullable String description,
+                                                          @Nullable String scene,
+                                                          @Nullable StickerVisionAnalyzer analyzer) {
+        StickerMetadata fallback = fallbackStickerMetadata(entryName, info, description, scene);
+        if (analyzer == null) {
+            return fallback;
+        }
+        StickerMetadata vision = analyzer.analyze(entryName, bytes, info);
+        return vision != null ? fallback.merge(vision) : fallback;
+    }
+
+    @Nonnull
+    static StickerMetadata fallbackStickerMetadata(@Nonnull String entryName,
+                                                   @Nonnull ImageInfo info,
+                                                   @Nullable String description,
+                                                   @Nullable String scene) {
+        String safeName = safeArchiveEntryName(entryName);
+        LinkedHashSet<String> keywords = new LinkedHashSet<>();
+        addNameTokens(keywords, entryName);
+        addCueKeywords(keywords, entryName);
+        if (info.valid()) {
+            keywords.add(info.width() + "x" + info.height());
+            if (info.aspectRatio() > 1.8) {
+                keywords.add("横图");
+            } else if (info.aspectRatio() < 0.6) {
+                keywords.add("竖图");
+            } else {
+                keywords.add("方图");
+            }
+        }
+        if (entryName.toLowerCase(Locale.ROOT).endsWith(".gif")) {
+            keywords.add("动图");
+        }
+        if (keywords.isEmpty()) {
+            keywords.add("表情包");
+        }
+        List<String> visible = keywords.stream()
+                .filter(keyword -> !keyword.matches("\\d+x\\d+"))
+                .limit(5)
+                .toList();
+        String inferred = visible.isEmpty()
+                ? "从压缩包导入的表情包：" + safeName
+                : "从压缩包导入的表情包：" + safeName + "；标签：" + String.join("、", visible);
+        String inferredScene = inferScene(keywords);
+        return new StickerMetadata(
+                mergeMetadataText(description, inferred),
+                mergeMetadataText(scene, inferredScene),
+                joinKeywords(keywords),
+                normalizeTags("label:" + joinKeywords(keywords))
+        );
+    }
+
+    @Nonnull
+    static StickerMetadata fallbackStickerMetadata(@Nonnull String entryName) {
+        return fallbackStickerMetadata(entryName, ImageInfo.invalid(), "", "");
+    }
+
+    @Nonnull
+    private static String inferScene(@Nonnull Set<String> keywords) {
+        if (containsAnyKeyword(keywords, "疑问", "问号", "困惑", "不解")) {
+            return "适合表达疑问、困惑、反问或看不懂的时候使用";
+        }
+        if (containsAnyKeyword(keywords, "震惊", "惊讶", "害怕")) {
+            return "适合表达震惊、意外或被吓到的时候使用";
+        }
+        if (containsAnyKeyword(keywords, "无语", "尴尬", "汗", "沉默")) {
+            return "适合无语、尴尬、冷场或不知道怎么接话时使用";
+        }
+        if (containsAnyKeyword(keywords, "开心", "笑", "乐", "大笑")) {
+            return "适合开心、接梗、调侃或气氛轻松时使用";
+        }
+        if (containsAnyKeyword(keywords, "生气", "愤怒", "怒")) {
+            return "适合表达生气、不满或轻度炸毛时使用";
+        }
+        if (containsAnyKeyword(keywords, "难过", "哭", "委屈")) {
+            return "适合表达难过、委屈、破防或卖惨时使用";
+        }
+        if (containsAnyKeyword(keywords, "赞同", "可以", "ok", "牛", "666")) {
+            return "适合表示赞同、认可、可以或夸一句时使用";
+        }
+        if (containsAnyKeyword(keywords, "安慰", "抱抱", "摸摸")) {
+            return "适合安慰、哄人或缓和语气时使用";
+        }
+        if (containsAnyKeyword(keywords, "睡觉", "困", "晚安")) {
+            return "适合表达困了、想睡、晚安或懒得动时使用";
+        }
+        if (containsAnyKeyword(keywords, "盯", "观察", "看")) {
+            return "适合盯人、观察、等对方解释或轻轻施压时使用";
+        }
+        return "适合轻松接梗、简短回应或需要用表情包带过时使用";
+    }
+
+    private static boolean containsAnyKeyword(@Nonnull Set<String> keywords, String... needles) {
+        for (String keyword : keywords) {
+            for (String needle : needles) {
+                if (keyword.contains(needle) || needle.contains(keyword)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private static void addNameTokens(@Nonnull LinkedHashSet<String> keywords, @Nonnull String entryName) {
+        String normalized = entryName.replace("\\", "/");
+        String withoutExt = normalized.replaceAll("(?i)\\.(png|jpe?g|gif|webp)$", "");
+        for (String part : withoutExt.split("[/\\\\._\\-\\s\\[\\]【】()（）]+")) {
+            String token = cleanKeyword(part);
+            if (isUsefulKeyword(token)) {
+                keywords.add(token);
+            }
+        }
+    }
+
+    private static void addCueKeywords(@Nonnull LinkedHashSet<String> keywords, @Nonnull String text) {
+        String lower = text.toLowerCase(Locale.ROOT);
+        addIfContains(keywords, lower, "疑问", "问号", "困惑", "不解", "疑惑", "what", "why", "huh", "？", "?");
+        addIfContains(keywords, lower, "无语", "沉默", "汗", "尴尬", "呆", "地铁老人", "speechless");
+        addIfContains(keywords, lower, "震惊", "惊讶", "害怕", "惊恐", "啊", "shock", "surprise");
+        addIfContains(keywords, lower, "开心", "笑", "大笑", "乐", "哈哈", "喜", "happy", "laugh");
+        addIfContains(keywords, lower, "生气", "愤怒", "怒", "气", "angry");
+        addIfContains(keywords, lower, "难过", "哭", "委屈", "破防", "悲", "cry", "sad");
+        addIfContains(keywords, lower, "赞同", "可以", "ok", "牛", "666", "赞", "good");
+        addIfContains(keywords, lower, "拒绝", "不要", "不行", "达咩", "no");
+        addIfContains(keywords, lower, "安慰", "抱抱", "摸摸", "pat", "hug");
+        addIfContains(keywords, lower, "睡觉", "困", "晚安", "sleep");
+        addIfContains(keywords, lower, "盯", "观察", "看", "盯着", "watch");
+        addIfContains(keywords, lower, "吃瓜", "围观", "瓜");
+        addIfContains(keywords, lower, "吐槽", "草", "绷", "乐子");
+    }
+
+    private static void addIfContains(@Nonnull LinkedHashSet<String> keywords,
+                                      @Nonnull String haystack,
+                                      @Nonnull String label,
+                                      String... cues) {
+        for (String cue : cues) {
+            if (StringUtils.isNotNullOrEmpty(cue) && haystack.contains(cue.toLowerCase(Locale.ROOT))) {
+                keywords.add(label);
+                for (String synonym : stickerSynonyms(label)) {
+                    keywords.add(synonym);
+                }
+                return;
+            }
+        }
+    }
+
+    @Nonnull
+    private static List<String> expandStickerKeyword(@Nonnull String keyword) {
+        LinkedHashSet<String> terms = new LinkedHashSet<>();
+        String normalized = keyword.trim();
+        terms.add(normalized);
+        for (String token : normalized.split("[\\s,，、;；]+")) {
+            String cleaned = cleanKeyword(token);
+            if (isUsefulKeyword(cleaned)) {
+                terms.add(cleaned);
+                terms.addAll(stickerSynonyms(cleaned));
+            }
+        }
+        terms.addAll(stickerSynonyms(normalized));
+        return terms.stream().filter(StringUtils::isNotNullOrEmpty).limit(10).toList();
+    }
+
+    @Nonnull
+    private static List<String> stickerSynonyms(@Nonnull String keyword) {
+        String compact = keyword.replaceAll("\\s+", "").toLowerCase(Locale.ROOT);
+        if (containsAnyText(compact, "疑问", "问号", "困惑", "疑惑", "不解", "what", "why", "huh", "？", "?")) {
+            return List.of("疑问", "问号", "困惑", "疑惑", "不解", "反问");
+        }
+        if (containsAnyText(compact, "无语", "尴尬", "汗", "沉默", "speechless")) {
+            return List.of("无语", "尴尬", "汗", "沉默");
+        }
+        if (containsAnyText(compact, "震惊", "惊讶", "惊恐", "害怕", "shock", "surprise")) {
+            return List.of("震惊", "惊讶", "惊恐", "害怕");
+        }
+        if (containsAnyText(compact, "开心", "笑", "乐", "哈哈", "happy", "laugh")) {
+            return List.of("开心", "笑", "大笑", "乐", "接梗");
+        }
+        if (containsAnyText(compact, "生气", "愤怒", "怒", "angry")) {
+            return List.of("生气", "愤怒", "怒", "不满");
+        }
+        if (containsAnyText(compact, "难过", "哭", "委屈", "破防", "sad", "cry")) {
+            return List.of("难过", "哭", "委屈", "破防");
+        }
+        if (containsAnyText(compact, "赞同", "可以", "ok", "牛", "666", "赞", "good")) {
+            return List.of("赞同", "可以", "ok", "牛", "666", "认可");
+        }
+        if (containsAnyText(compact, "安慰", "抱抱", "摸摸", "pat", "hug")) {
+            return List.of("安慰", "抱抱", "摸摸", "哄人");
+        }
+        if (containsAnyText(compact, "拒绝", "不要", "不行", "no", "达咩")) {
+            return List.of("拒绝", "不要", "不行", "达咩");
+        }
+        return List.of();
+    }
+
+    private static boolean containsAnyText(@Nonnull String text, String... needles) {
+        for (String needle : needles) {
+            if (StringUtils.isNotNullOrEmpty(needle) && text.contains(needle.toLowerCase(Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @Nonnull
+    private static String cleanKeyword(@Nullable String value) {
+        return StringUtils.nullToEmpty(value)
+                .replaceAll("[\"'`，。！？、：:；;（）()\\[\\]{}<>《》|/\\\\]+", "")
+                .trim();
+    }
+
+    private static boolean isUsefulKeyword(@Nonnull String token) {
+        if (StringUtils.isNullOrEmptyEx(token)) {
+            return false;
+        }
+        if (token.length() > 24) {
+            return false;
+        }
+        return !token.matches("\\d+");
+    }
+
+    @Nonnull
+    private static String mergeMetadataText(@Nullable String base, @Nonnull String generated) {
+        String normalizedBase = AiTextLimits.truncate(StringUtils.nullToEmpty(base).trim(), MAX_METADATA_TEXT);
+        String normalizedGenerated = AiTextLimits.truncate(generated.trim(), MAX_METADATA_TEXT);
+        if (StringUtils.isNullOrEmptyEx(normalizedBase)) {
+            return normalizedGenerated;
+        }
+        if (normalizedBase.contains(normalizedGenerated)) {
+            return normalizedBase;
+        }
+        return AiTextLimits.truncate(normalizedBase + "；" + normalizedGenerated, MAX_METADATA_TEXT);
+    }
+
+    @Nonnull
+    private static String joinKeywords(@Nonnull Collection<String> keywords) {
+        return keywords.stream()
+                .map(ChatStickerService::cleanKeyword)
+                .filter(ChatStickerService::isUsefulKeyword)
+                .distinct()
+                .limit(MAX_KEYWORD_COUNT)
+                .reduce((a, b) -> a + "," + b)
+                .orElse("表情包");
+    }
+
+    @Nonnull
+    private static String normalizeTags(@Nullable String tags) {
+        LinkedHashSet<String> normalized = new LinkedHashSet<>();
+        for (String part : StringUtils.nullToEmpty(tags).split("[,，\\s]+")) {
+            String tag = StringUtils.nullToEmpty(part)
+                    .replaceAll("[\"'`，。！？、；;（）()\\[\\]{}<>《》|/\\\\]+", "")
+                    .trim();
+            if (StringUtils.isNotNullOrEmpty(tag)) {
+                normalized.add(tag);
+            }
+        }
+        return String.join(",", normalized);
     }
 
     @Nonnull
@@ -822,6 +1131,112 @@ public class ChatStickerService {
         return AiTextLimits.truncate(normalized, 40);
     }
 
+    record StickerMetadata(String description,
+                           String scene,
+                           String keywords,
+                           String tagCsv) {
+
+        @Nonnull
+        StickerMetadata merge(@Nonnull StickerMetadata other) {
+            LinkedHashSet<String> mergedKeywords = new LinkedHashSet<>();
+            mergedKeywords.addAll(Arrays.asList(StringUtils.nullToEmpty(keywords).split(",")));
+            mergedKeywords.addAll(Arrays.asList(StringUtils.nullToEmpty(other.keywords()).split(",")));
+            return new StickerMetadata(
+                    mergeMetadataText(other.description(), description),
+                    mergeMetadataText(other.scene(), scene),
+                    joinKeywords(mergedKeywords),
+                    normalizeTags(tagCsv + "," + other.tagCsv())
+            );
+        }
+    }
+
+    private static final class StickerVisionAnalyzer {
+
+        private final ChatModelRouter router;
+
+        private StickerVisionAnalyzer(@Nonnull ChatModelRouter router) {
+            this.router = router;
+        }
+
+        @Nullable
+        static StickerVisionAnalyzer create(@Nullable ChatConfig config) {
+            if (config == null || config.model() == null || !config.model().imageInputEnabled() || !ChatConfigSupport.isModelReady(config)) {
+                return null;
+            }
+            try {
+                return new StickerVisionAnalyzer(new ChatModelRouter(ChatConfigSupport.normalize(config)));
+            } catch (Exception e) {
+                LOGGER.debug("AI sticker vision analyzer unavailable: {}", e.getMessage());
+                return null;
+            }
+        }
+
+        @Nullable
+        StickerMetadata analyze(@Nonnull String entryName, @Nonnull byte[] bytes, @Nonnull ImageInfo info) {
+            ImageContent image = MessageConvert.imageContentFromBytes(bytes);
+            if (image == null) {
+                return null;
+            }
+            try {
+                List<Content> contents = new ArrayList<>();
+                contents.add(new TextContent("""
+                        请分析这张将作为 QQ 群聊表情包收藏的图片。
+                        只返回 JSON，不要 Markdown，不要解释。
+                        字段：
+                        description：一句中文描述图里主体、表情或文字，20字以内
+                        scene：一句中文使用场景，说明适合表达什么情绪或回应什么话，35字以内
+                        keywords：中文关键词数组，3到8个，包含情绪、动作、文字梗、同义词
+                        文件名：%s
+                        尺寸：%dx%d
+                        """.formatted(safeArchiveEntryName(entryName), info.width(), info.height())));
+                contents.add(image);
+                String text = router.chat(List.of(UserMessage.userMessage("sticker_import", contents))).aiMessage().text();
+                return parseVisionMetadata(text);
+            } catch (Exception e) {
+                LOGGER.debug("AI sticker vision analysis failed entry={}: {}", entryName, e.getMessage());
+                return null;
+            }
+        }
+
+        @Nullable
+        private static StickerMetadata parseVisionMetadata(@Nullable String text) {
+            String jsonText = StringUtils.nullToEmpty(text).trim();
+            Matcher matcher = JSON_OBJECT_PATTERN.matcher(jsonText);
+            if (matcher.find()) {
+                jsonText = matcher.group();
+            }
+            JsonObject json = JsonUtils.parseJsonObject(jsonText);
+            if (json == null) {
+                return null;
+            }
+            String description = cleanMetadataSentence(JsonUtils.getString(json, "description", ""));
+            String scene = cleanMetadataSentence(JsonUtils.getString(json, "scene", ""));
+            LinkedHashSet<String> keywords = new LinkedHashSet<>();
+            String rawKeywords = JsonUtils.getString(json, "keywords", "");
+            rawKeywords = rawKeywords.replaceAll("[\\[\\]\"]", "");
+            for (String part : rawKeywords.split("[,，、\\s]+")) {
+                String keyword = cleanKeyword(part);
+                if (isUsefulKeyword(keyword)) {
+                    keywords.add(keyword);
+                    keywords.addAll(stickerSynonyms(keyword));
+                }
+            }
+            if (StringUtils.isNullOrEmptyEx(description) || StringUtils.isNullOrEmptyEx(scene) || keywords.isEmpty()) {
+                return null;
+            }
+            String keywordText = joinKeywords(keywords);
+            return new StickerMetadata(description, scene, keywordText, "vision:llm,label:" + keywordText);
+        }
+    }
+
+    @Nonnull
+    private static String cleanMetadataSentence(@Nullable String text) {
+        return AiTextLimits.truncate(StringUtils.nullToEmpty(text)
+                .replaceAll("[\\r\\n\\t]+", " ")
+                .replaceAll("\\s+", " ")
+                .trim(), MAX_METADATA_TEXT);
+    }
+
     private record StickerSource(String url, String originalCq, MsgTypeEnum type) {
     }
 
@@ -844,11 +1259,12 @@ public class ChatStickerService {
                                 String sourceUrl,
                                 String description,
                                 String scene,
+                                String keywords,
                                 String sourceMsgId,
                                 long size) {
 
         static StickerEntry empty() {
-            return new StickerEntry("", "", "", "", "", "", 0);
+            return new StickerEntry("", "", "", "", "", "", "", 0);
         }
 
         boolean usable() {
@@ -865,20 +1281,21 @@ public class ChatStickerService {
 
         @Nonnull
         StickerEntry with(@Nonnull String description, @Nonnull String scene) {
-            return new StickerEntry(path, originalCq, sourceUrl, description, scene, sourceMsgId, size);
+            return new StickerEntry(path, originalCq, sourceUrl, description, scene, keywords, sourceMsgId, size);
         }
 
         @Nonnull
         String toJson() {
-            return JsonUtils.toJsonString(Map.of(
-                    "path", StringUtils.nullToEmpty(path),
-                    "originalCq", StringUtils.nullToEmpty(originalCq),
-                    "sourceUrl", StringUtils.nullToEmpty(sourceUrl),
-                    "description", StringUtils.nullToEmpty(description),
-                    "scene", StringUtils.nullToEmpty(scene),
-                    "sourceMsgId", StringUtils.nullToEmpty(sourceMsgId),
-                    "size", size
-            ));
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("path", StringUtils.nullToEmpty(path));
+            payload.put("originalCq", StringUtils.nullToEmpty(originalCq));
+            payload.put("sourceUrl", StringUtils.nullToEmpty(sourceUrl));
+            payload.put("description", StringUtils.nullToEmpty(description));
+            payload.put("scene", StringUtils.nullToEmpty(scene));
+            payload.put("keywords", StringUtils.nullToEmpty(keywords));
+            payload.put("sourceMsgId", StringUtils.nullToEmpty(sourceMsgId));
+            payload.put("size", size);
+            return JsonUtils.toJsonString(payload);
         }
     }
 

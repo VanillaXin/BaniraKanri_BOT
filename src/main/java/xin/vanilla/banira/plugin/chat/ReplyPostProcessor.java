@@ -36,7 +36,7 @@ public class ReplyPostProcessor {
             return "";
         }
         String text = normalizeStyle(reply.trim(), cfg);
-        int maxChars = cfg.maxReplyChars();
+        int maxChars = hardReplyFallbackLimit(cfg);
         if (maxChars <= 0 || text.length() <= maxChars) {
             return text;
         }
@@ -195,6 +195,16 @@ public class ReplyPostProcessor {
         }
         builder.append(text.substring(last));
         return builder.toString();
+    }
+
+    private static int hardReplyFallbackLimit(@Nonnull ChatReplySettings cfg) {
+        int softLimit = cfg.maxReplyChars();
+        if (softLimit <= 0) {
+            return 0;
+        }
+        int dynamicBudget = MessageSplitter.dynamicSpeechCharBudget(cfg.maxCharsPerPart(), cfg.maxSplitParts());
+        int forwardLimit = Math.max(100, cfg.maxForwardLength());
+        return Math.max(softLimit, Math.max(dynamicBudget, forwardLimit));
     }
 
     @Nonnull

@@ -6,6 +6,7 @@ import dev.langchain4j.data.message.SystemMessage;
 import jakarta.annotation.Nonnull;
 import jakarta.annotation.Nullable;
 import xin.vanilla.banira.config.entity.extended.ChatConfig;
+import xin.vanilla.banira.config.entity.extended.ChatReplySettings;
 import xin.vanilla.banira.domain.AiMemory;
 import xin.vanilla.banira.plugin.chat.memory.MemoryRetriever;
 import xin.vanilla.banira.plugin.common.BaniraBot;
@@ -59,6 +60,7 @@ public class PromptBuilder {
                 "ownerDisplay", BaniraUtils.getOwnerDisplayName(),
                 "ownerLine", buildOwnerLine()
         ))));
+        messages.add(SystemMessage.from(buildReplyLengthGuidance(cfg.reply())));
         addTemplateMessage(messages, SAFETY_RULE, Map.of());
         List<AiMemory> memories = memoryRetriever.retrieve(ctx, cfg, currentUserText);
         String memoryText = memoryRetriever.format(ctx, memories);
@@ -118,6 +120,21 @@ public class PromptBuilder {
                 "ownerNick", BaniraUtils.getOwnerNick(),
                 "ownerDisplay", BaniraUtils.getOwnerDisplayName()
         ));
+    }
+
+    @Nonnull
+    private static String buildReplyLengthGuidance(@Nullable ChatReplySettings reply) {
+        if (reply == null) {
+            return "回复长度约束：普通聊天尽量 1 到 3 句；需要展开时先给结论，删掉次要铺垫，别把话说一半。";
+        }
+        String charBudget = reply.maxReplyChars() > 0
+                ? "普通台词建议控制在 " + reply.maxReplyChars() + " 字左右"
+                : "普通台词没有固定字数上限，但仍要克制";
+        return "回复长度约束："
+                + charBudget
+                + "；通常不超过 " + reply.maxSplitParts() + " 条短消息，每条约 " + reply.maxCharsPerPart() + " 字。"
+                + "情绪建议、解释过程这类回答可以略微超过，但必须每条都是完整句子，宁可删掉次要铺垫，也不要把话说一半。"
+                + "代码、日志、长配置、公开资料原文或大段引用仍然放 [REF] 合并转发，普通台词只留简短摘要。";
     }
 
     private static void addTemplateMessage(@Nonnull List<ChatMessage> messages

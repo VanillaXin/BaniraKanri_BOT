@@ -9,6 +9,35 @@ import java.util.List;
 class StructuredReplyPipelineTest {
 
     @Test
+    void shouldKeepModerateSpeechPastSoftReplyLimit() {
+        ChatReplySettings settings = new ChatReplySettings()
+                .maxReplyChars(30)
+                .maxForwardLength(60)
+                .maxCharsPerPart(40)
+                .maxSplitParts(2);
+        String raw = "alpha beta gamma delta epsilon zeta eta theta";
+
+        StructuredReply reply = StructuredReplyPipeline.parseAndProcess(raw, List.of(), settings);
+
+        Assertions.assertEquals(raw, reply.speech());
+        Assertions.assertTrue(reply.references().isEmpty());
+    }
+
+    @Test
+    void shouldMovePlainTextBeyondDynamicSpeechBudgetIntoForwardReference() {
+        ChatReplySettings settings = new ChatReplySettings()
+                .maxForwardLength(60)
+                .maxCharsPerPart(40)
+                .maxSplitParts(2);
+        String raw = "alpha beta gamma delta epsilon zeta eta theta iota kappa lambda mu ".repeat(4);
+
+        StructuredReply reply = StructuredReplyPipeline.parseAndProcess(raw, List.of(), settings);
+
+        Assertions.assertFalse(reply.references().isEmpty());
+        Assertions.assertTrue(reply.references().getFirst().contains("alpha beta"));
+    }
+
+    @Test
     void shouldMoveLongCodeBlockIntoForwardReference() {
         ChatReplySettings settings = new ChatReplySettings()
                 .maxForwardLength(220)

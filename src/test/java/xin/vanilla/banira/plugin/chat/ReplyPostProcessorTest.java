@@ -7,6 +7,20 @@ import xin.vanilla.banira.config.entity.extended.ChatReplySettings;
 class ReplyPostProcessorTest {
 
     @Test
+    void shouldTreatMaxReplyCharsAsSoftBudgetForModerateSpeech() {
+        ChatReplySettings settings = new ChatReplySettings()
+                .maxReplyChars(20)
+                .maxCharsPerPart(30)
+                .maxSplitParts(2)
+                .maxForwardLength(60);
+        String text = "alpha beta gamma delta epsilon zeta";
+
+        String result = ReplyPostProcessor.process(text, settings);
+
+        Assertions.assertEquals(text, result);
+    }
+
+    @Test
     void shouldStripMarkdownEmphasisFromSpeech() {
         String result = ReplyPostProcessor.process("**重点**是 `竹叶清`，不是****别的。", new ChatReplySettings());
 
