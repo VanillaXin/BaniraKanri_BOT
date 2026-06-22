@@ -45,8 +45,10 @@ public class ChatStickerService {
     private static final int MAX_STICKER_BYTES = 5 * 1024 * 1024;
     private static final int MAX_ARCHIVE_BYTES = 50 * 1024 * 1024;
     private static final int MAX_ARCHIVE_ENTRIES = 120;
-    private static final int MAX_AUTO_IMAGE_SIDE = 640;
-    private static final int MAX_AUTO_IMAGE_PIXELS = 640 * 640;
+    private static final int MAX_AUTO_IMAGE_SIDE = 320;
+    private static final int MAX_AUTO_IMAGE_PIXELS = 320 * 320;
+    private static final int MAX_EXPLICIT_IMAGE_SIDE = 900;
+    private static final int MAX_EXPLICIT_IMAGE_PIXELS = 900 * 900;
     private static final int QUERY_LIMIT = 40;
 
     @Resource
@@ -79,7 +81,7 @@ public class ChatStickerService {
                     groupId, event.getUserId(), event.getMessageId(), bytes != null ? bytes.length : -1);
             return;
         }
-        if (!looksLikeStickerImage(source.type(), event.getArrayMsg(), bytes)) {
+        if (!looksLikeAutoCollectStickerImage(event.getArrayMsg(), bytes)) {
             LOGGER.debug("AI ignored non-sticker image group={} user={} msgId={} sourceType={} bytes={}",
                     groupId, event.getUserId(), event.getMessageId(), source.type(), bytes.length);
             return;
@@ -139,7 +141,7 @@ public class ChatStickerService {
                 }
                 byte[] bytes = readZipEntry(zip, MAX_STICKER_BYTES + 1);
                 if (bytes.length == 0 || bytes.length > MAX_STICKER_BYTES
-                        || !looksLikeStickerImage(MsgTypeEnum.image, List.of(), bytes)) {
+                        || !looksLikeExplicitStickerImage(bytes)) {
                     skipped++;
                     continue;
                 }
@@ -553,26 +555,34 @@ public class ChatStickerService {
         return true;
     }
 
-    private static boolean looksLikeStickerImage(@Nonnull MsgTypeEnum type, @Nonnull List<ArrayMsg> msgs, @Nonnull byte[] bytes) {
-        if (type == MsgTypeEnum.mface || type == MsgTypeEnum.marketface) {
-            return true;
-        }
+    private static boolean looksLikeAutoCollectStickerImage(@Nonnull List<ArrayMsg> msgs, @Nonnull byte[] bytes) {
         ImageInfo info = imageInfo(bytes);
         if (!info.valid()) {
             return false;
         }
+        String text = plainText(msgs).replaceAll("\\s+", "");
+        if (containsStickerCue(text)) {
+            return looksLikeExplicitStickerInfo(info);
+        }
         if (info.width() <= MAX_AUTO_IMAGE_SIDE
                 && info.height() <= MAX_AUTO_IMAGE_SIDE
                 && (long) info.width() * info.height() <= MAX_AUTO_IMAGE_PIXELS
-                && info.aspectRatio() >= 0.45
-                && info.aspectRatio() <= 2.2) {
+                && info.aspectRatio() >= 0.6
+                && info.aspectRatio() <= 1.8) {
             return true;
         }
-        String text = plainText(msgs).replaceAll("\\s+", "");
-        return text.length() <= 12
-                && containsStickerCue(text)
-                && info.width() <= 900
-                && info.height() <= 900
+        return false;
+    }
+
+    private static boolean looksLikeExplicitStickerImage(@Nonnull byte[] bytes) {
+        ImageInfo info = imageInfo(bytes);
+        return info.valid() && looksLikeExplicitStickerInfo(info);
+    }
+
+    private static boolean looksLikeExplicitStickerInfo(@Nonnull ImageInfo info) {
+        return info.width() <= MAX_EXPLICIT_IMAGE_SIDE
+                && info.height() <= MAX_EXPLICIT_IMAGE_SIDE
+                && (long) info.width() * info.height() <= MAX_EXPLICIT_IMAGE_PIXELS
                 && info.aspectRatio() >= 0.35
                 && info.aspectRatio() <= 2.8;
     }
