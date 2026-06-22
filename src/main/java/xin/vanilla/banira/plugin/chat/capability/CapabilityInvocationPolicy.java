@@ -171,7 +171,10 @@ public final class CapabilityInvocationPolicy {
         if ("mute".equals(action) && selfTarget) {
             return allowsCurrentSenderSelfTarget(ctx, actionText);
         }
-        if ("card".equals(action) && isSelfGroupCardRequest(current)) {
+        if ("card".equals(action) && isBotGroupCardAction(ctx, current, actionText)) {
+            return Decision.allow();
+        }
+        if ("card".equals(action) && isSelfGroupCardAction(ctx, current, actionText)) {
             return allowsCurrentSenderCardTarget(ctx, actionText);
         }
         if ("card".equals(action) && confirm && hasNumericTargets(actionText)
@@ -252,6 +255,25 @@ public final class CapabilityInvocationPolicy {
         return ctx.bot() != null && current.contains("[CQ:at,qq=" + ctx.botId() + "]");
     }
 
+    private static boolean isSelfGroupCardAction(@Nonnull AgentContext ctx, @Nonnull String current, @Nonnull String actionText) {
+        CardTargetHint hint = inferGroupCardTargetFromCard(current, groupCardValue(actionText));
+        if (hint == CardTargetHint.SENDER) {
+            return true;
+        }
+        return hint == CardTargetHint.UNKNOWN && isSelfGroupCardRequest(current);
+    }
+
+    private static boolean isBotGroupCardAction(@Nonnull AgentContext ctx, @Nonnull String current, @Nonnull String actionText) {
+        if (ctx.bot() == null || ctx.botId() <= 0) {
+            return false;
+        }
+        if (!String.valueOf(ctx.botId()).equals(firstToken(actionText))) {
+            return false;
+        }
+        CardTargetHint hint = inferGroupCardTargetFromCard(current, groupCardValue(actionText));
+        return hint == CardTargetHint.BOT || hint == CardTargetHint.UNKNOWN && isBotGroupCardRequest(current);
+    }
+
     private static boolean isWholeGroupTarget(@Nullable String actionText) {
         String normalized = StringUtils.nullToEmpty(actionText)
                 .replaceAll("\\s+", "")
@@ -279,6 +301,83 @@ public final class CapabilityInvocationPolicy {
                 .replaceAll("\\s+", "");
         return containsAny(compact, "群名片", "名片", "群昵称")
                 && containsAny(compact, "我的", "把我", "给我", "帮我把我");
+    }
+
+    private static boolean isBotGroupCardRequest(@Nonnull String current) {
+        String compact = current.replaceAll("\\[CQ:[^]]+]", " ")
+                .replaceAll("\\s+", "");
+        return containsAny(compact, "群名片", "名片", "群昵称")
+                && containsAny(compact, "你的", "你自己", "把你", "给你", "将你", "替你");
+    }
+
+    private enum CardTargetHint {
+        BOT,
+        SENDER,
+        UNKNOWN
+    }
+
+    @Nonnull
+    private static CardTargetHint inferGroupCardTargetFromCard(@Nonnull String current, @Nonnull String card) {
+        String normalizedCard = card.replaceAll("[\\r\\n\\t]+", " ")
+                .replaceAll("\\s+", "")
+                .trim();
+        if (StringUtils.isNullOrEmptyEx(normalizedCard)) {
+            return CardTargetHint.UNKNOWN;
+        }
+        String compact = current.replaceAll("\\[CQ:[^]]+]", " ")
+                .replaceAll("\\s+", "");
+        int cardIndex = compact.indexOf(normalizedCard);
+        if (cardIndex < 0) {
+            return CardTargetHint.UNKNOWN;
+        }
+        String segment = sentenceSegmentAround(compact, cardIndex);
+        if (!containsAny(segment, "群名片", "名片", "群昵称")) {
+            return CardTargetHint.UNKNOWN;
+        }
+        if (containsAny(segment, "我的", "把我", "给我", "将我", "替我", "帮我把我")) {
+            return CardTargetHint.SENDER;
+        }
+        if (containsAny(segment, "你的", "你自己", "把你", "给你", "将你", "替你", "帮你把你")) {
+            return CardTargetHint.BOT;
+        }
+        return CardTargetHint.UNKNOWN;
+    }
+
+    @Nonnull
+    private static String sentenceSegmentAround(@Nonnull String text, int index) {
+        int start = 0;
+        int end = text.length();
+        for (int i = index - 1; i >= 0; i--) {
+            if (isSegmentSeparator(text.charAt(i))) {
+                start = i + 1;
+                break;
+            }
+        }
+        for (int i = index; i < text.length(); i++) {
+            if (isSegmentSeparator(text.charAt(i))) {
+                end = i;
+                break;
+            }
+        }
+        return text.substring(start, end);
+    }
+
+    private static boolean isSegmentSeparator(char c) {
+        return c == '，' || c == ',' || c == '。' || c == '；' || c == ';'
+                || c == '！' || c == '!' || c == '？' || c == '?';
+    }
+
+    @Nonnull
+    private static String groupCardValue(@Nullable String actionText) {
+        if (StringUtils.isNullOrEmptyEx(actionText)) {
+            return "";
+        }
+        String trimmed = actionText.trim();
+        String first = firstToken(trimmed);
+        if (StringUtils.isNullOrEmptyEx(first)) {
+            return "";
+        }
+        return trimmed.substring(Math.min(first.length(), trimmed.length())).trim();
     }
 
     private static boolean mentionsWholeGroup(@Nonnull String current) {

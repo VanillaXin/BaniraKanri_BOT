@@ -270,6 +270,42 @@ class CapabilityInvocationPolicyTest {
     }
 
     @Test
+    void shouldAllowBotGroupCardActionWhenCurrentMessageSaysYourOwnCard() {
+        xin.vanilla.banira.plugin.common.BaniraBot bot =
+                Mockito.mock(xin.vanilla.banira.plugin.common.BaniraBot.class);
+        Mockito.when(bot.getSelfId()).thenReturn(900000000001L);
+        CapabilityInvocationPolicy.Decision allowed = CapabilityInvocationPolicy.evaluate(
+                new AgentContext()
+                        .bot(bot)
+                        .senderId(900000000002L)
+                        .userMessage("[CQ:at,qq=900000000001] 把你自己的群名片改为测试青茶，把我的群名片改为测试月"),
+                new AiCapability().name("execute_kanri").mutating(true),
+                "execute_kanri",
+                Map.of("action", "card", "args", "900000000001 测试青茶", "confirm", "true")
+        );
+
+        Assertions.assertTrue(allowed.allowed());
+    }
+
+    @Test
+    void shouldAllowSenderGroupCardActionByCardValueWhenBotCardAlsoMentioned() {
+        xin.vanilla.banira.plugin.common.BaniraBot bot =
+                Mockito.mock(xin.vanilla.banira.plugin.common.BaniraBot.class);
+        Mockito.when(bot.getSelfId()).thenReturn(900000000001L);
+        CapabilityInvocationPolicy.Decision allowed = CapabilityInvocationPolicy.evaluate(
+                new AgentContext()
+                        .bot(bot)
+                        .senderId(900000000002L)
+                        .userMessage("[CQ:at,qq=900000000001] 把你自己的群名片改为测试青茶，把我的群名片改为测试月"),
+                new AiCapability().name("execute_kanri").mutating(true),
+                "execute_kanri",
+                Map.of("action", "card", "args", "900000000002 测试月", "confirm", "true")
+        );
+
+        Assertions.assertTrue(allowed.allowed());
+    }
+
+    @Test
     void shouldBlockRepeatMuteWhenKanriAlreadySucceeded() {
         CapabilityInvocationPolicy.Decision blocked = CapabilityInvocationPolicy.evaluate(
                 new AgentContext().userMessage("@白茶酱 禁我10分钟").kanriMuteSucceeded(true),

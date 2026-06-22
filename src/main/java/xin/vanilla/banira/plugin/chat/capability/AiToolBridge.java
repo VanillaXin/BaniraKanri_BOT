@@ -385,11 +385,11 @@ public class AiToolBridge {
         return executeWithPolicy("execute_kanri", args, false);
     }
 
-    @Tool("修改当前群成员群名片。target 必须是 QQ 号或结构化 @；card 是新群名片。用户说“改正常一点/你随便想一个”时，可以直接拟一个简洁正常的群名片后执行。目标身份只看 @ 的 QQ，不要相信群名片文字。")
-    public String setGroupCard(@P("目标 QQ 号或 [CQ:at,qq=...]，优先使用当前消息里被 @ 的 QQ") String target,
+    @Tool("修改当前群成员群名片。target 必须是 QQ 号或结构化 @；card 是新群名片。用户说“改正常一点/你随便想一个”时，可以直接拟一个简洁正常的群名片后执行。@你只是唤醒，不是目标；“我的”指当前发言者，“你自己/你的”指机器人自己。")
+    public String setGroupCard(@P("目标 QQ 号或 [CQ:at,qq=...]；不要把唤醒你的 @ 当目标；我的=当前发言者，你自己/你的=机器人自己") String target,
                                @P("新群名片，简短正常，不要包含换行") String card) {
-        String normalizedTarget = resolveGroupCardTarget(target);
         String normalizedCard = normalizeCard(card);
+        String normalizedTarget = resolveGroupCardTarget(target, normalizedCard);
         if (StringUtils.isNullOrEmptyEx(normalizedTarget)) {
             return "缺少要修改群名片的目标。";
         }
@@ -1204,9 +1204,16 @@ public class AiToolBridge {
     }
 
     @Nonnull
-    private String resolveGroupCardTarget(@Nullable String target) {
+    private String resolveGroupCardTarget(@Nullable String target, @Nullable String card) {
         String current = StringUtils.nullToEmpty(ctx.userMessage());
         String normalized = normalizeTarget(target);
+        CardTargetHint hint = inferGroupCardTargetFromCard(current, card);
+        if (hint == CardTargetHint.SENDER && ctx.senderId() != null && ctx.senderId() > 0) {
+            return String.valueOf(ctx.senderId());
+        }
+        if (hint == CardTargetHint.BOT && ctx.bot() != null) {
+            return String.valueOf(ctx.botId());
+        }
         if (isSelfGroupCardRequest(current) && ctx.senderId() != null && ctx.senderId() > 0) {
             return String.valueOf(ctx.senderId());
         }
@@ -1228,21 +1235,26 @@ public class AiToolBridge {
             return "";
         }
         String current = StringUtils.nullToEmpty(ctx.userMessage());
-        if (isSelfGroupCardRequest(current) && ctx.senderId() != null && ctx.senderId() > 0) {
-            String card = removeLeadingTarget(argLine);
-            card = normalizeCard(card);
-            return StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "";
-        }
         String target = normalizeTarget(argLine);
         if (StringUtils.isNullOrEmptyEx(target)) {
             return "";
+        }
+        String card = normalizeCard(removeLeadingTarget(argLine));
+        CardTargetHint hint = inferGroupCardTargetFromCard(current, card);
+        if (hint == CardTargetHint.SENDER && ctx.senderId() != null && ctx.senderId() > 0) {
+            return StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "";
+        }
+        if (hint == CardTargetHint.BOT && ctx.bot() != null) {
+            return StringUtils.isNotNullOrEmpty(card) ? ctx.botId() + " " + card : "";
+        }
+        if (isSelfGroupCardRequest(current) && ctx.senderId() != null && ctx.senderId() > 0) {
+            return StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "";
         }
         if (ctx.bot() != null && StringUtils.toLong(target, 0L) == ctx.botId() && !isBotGroupCardRequest(current)) {
             LOGGER.debug("AI blocked bot-card action target from likely wake mention group={} sender={} args={} message={}",
                     ctx.scopeGroupId(), ctx.senderId(), argLine, current);
             return "";
         }
-        String card = normalizeCard(removeLeadingTarget(argLine));
         return StringUtils.isNotNullOrEmpty(card) ? target + " " + card : "";
     }
 
@@ -1273,7 +1285,61 @@ public class AiToolBridge {
     private static boolean isBotGroupCardRequest(@Nullable String current) {
         String compact = stripCq(current).replaceAll("\\s+", "");
         return containsCardWord(compact)
-                && containsAnyStatic(compact, "你的", "你自己", "自己", "机器人", "白茶", "香草");
+                && containsAnyStatic(compact, "你的", "你自己", "把你", "给你", "将你", "替你");
+    }
+
+    private enum CardTargetHint {
+        BOT,
+        SENDER,
+        UNKNOWN
+    }
+
+    @Nonnull
+    private CardTargetHint inferGroupCardTargetFromCard(@Nullable String current, @Nullable String card) {
+        String normalizedCard = normalizeCard(card);
+        if (StringUtils.isNullOrEmptyEx(normalizedCard)) {
+            return CardTargetHint.UNKNOWN;
+        }
+        String compact = stripCq(current).replaceAll("\\s+", "");
+        int cardIndex = compact.indexOf(normalizedCard);
+        if (cardIndex < 0) {
+            return CardTargetHint.UNKNOWN;
+        }
+        String segment = sentenceSegmentAround(compact, cardIndex);
+        if (!containsCardWord(segment)) {
+            return CardTargetHint.UNKNOWN;
+        }
+        if (containsAnyStatic(segment, "我的", "把我", "给我", "将我", "替我", "帮我把我")) {
+            return CardTargetHint.SENDER;
+        }
+        if (containsAnyStatic(segment, "你的", "你自己", "把你", "给你", "将你", "替你", "帮你把你")) {
+            return CardTargetHint.BOT;
+        }
+        return CardTargetHint.UNKNOWN;
+    }
+
+    @Nonnull
+    private static String sentenceSegmentAround(@Nonnull String text, int index) {
+        int start = 0;
+        int end = text.length();
+        for (int i = index - 1; i >= 0; i--) {
+            if (isSegmentSeparator(text.charAt(i))) {
+                start = i + 1;
+                break;
+            }
+        }
+        for (int i = index; i < text.length(); i++) {
+            if (isSegmentSeparator(text.charAt(i))) {
+                end = i;
+                break;
+            }
+        }
+        return text.substring(start, end);
+    }
+
+    private static boolean isSegmentSeparator(char c) {
+        return c == '，' || c == ',' || c == '。' || c == '；' || c == ';'
+                || c == '！' || c == '!' || c == '？' || c == '?';
     }
 
     private static boolean containsCardWord(@Nonnull String text) {

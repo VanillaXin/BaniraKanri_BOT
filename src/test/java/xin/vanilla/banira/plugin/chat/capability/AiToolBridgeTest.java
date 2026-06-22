@@ -503,6 +503,57 @@ class AiToolBridgeTest {
     }
 
     @Test
+    void shouldSetBotCardWhenUserExplicitlySaysYourOwnCardEvenWithMyCardInSameMessage() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        Mockito.when(registry.execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.anyMap()))
+                .thenReturn("设置群名片已执行：测试青茶。");
+        AgentContext ctx = context("[CQ:at,qq=10000] 把你自己的群名片改为测试青茶，把我的群名片改为测试月");
+        AiToolBridge bridge = bridge(registry, ctx);
+
+        String result = bridge.setGroupCard("[CQ:at,qq=10000]", "测试青茶");
+
+        Assertions.assertEquals("设置群名片已执行：测试青茶。", result);
+        Mockito.verify(registry).execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.argThat(map ->
+                "card".equals(map.get("action"))
+                        && "10000 测试青茶".equals(map.get("args"))
+                        && "true".equals(map.get("confirm"))));
+    }
+
+    @Test
+    void shouldSetSenderCardByCardValueWhenYourOwnCardAppearsInSameMessage() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        Mockito.when(registry.execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.anyMap()))
+                .thenReturn("设置群名片已执行：测试月。");
+        AgentContext ctx = context("[CQ:at,qq=10000] 把你自己的群名片改为测试青茶，把我的群名片改为测试月");
+        AiToolBridge bridge = bridge(registry, ctx);
+
+        String result = bridge.setGroupCard("[CQ:at,qq=10000]", "测试月");
+
+        Assertions.assertEquals("设置群名片已执行：测试月。", result);
+        Mockito.verify(registry).execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.argThat(map ->
+                "card".equals(map.get("action"))
+                        && "30000 测试月".equals(map.get("args"))
+                        && "true".equals(map.get("confirm"))));
+    }
+
+    @Test
+    void shouldNormalizeGenericCardActionForBotWhenUserSaysYourOwnCard() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        Mockito.when(registry.execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.anyMap()))
+                .thenReturn("设置群名片已执行：测试青茶。");
+        AgentContext ctx = context("[CQ:at,qq=10000] 把你自己的群名片改为测试青茶，把我的群名片改为测试月");
+        AiToolBridge bridge = bridge(registry, ctx);
+
+        String result = bridge.executeKanriAction("card", "10000 测试青茶", "true");
+
+        Assertions.assertEquals("设置群名片已执行：测试青茶。", result);
+        Mockito.verify(registry).execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.argThat(map ->
+                "card".equals(map.get("action"))
+                        && "10000 测试青茶".equals(map.get("args"))
+                        && "true".equals(map.get("confirm"))));
+    }
+
+    @Test
     void shouldBlockBotGroupCardChangeFromWakeMentionWhenNotExplicitlyBotCard() {
         AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
         AgentContext ctx = context("[CQ:at,qq=10000] 把群名片改成辉小月试试");
