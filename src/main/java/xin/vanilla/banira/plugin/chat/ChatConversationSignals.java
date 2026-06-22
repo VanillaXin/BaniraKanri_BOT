@@ -55,14 +55,14 @@ public final class ChatConversationSignals {
             return false;
         }
         String compact = normalizeComparable(currentMessage);
-        if (compact.length() > 48 && !PendingAiActionStore.isKanriProceedIntent(currentMessage)) {
-            return false;
-        }
-        if (!PendingAiActionStore.isKanriProceedIntent(currentMessage) && !looksLikeShortAffirmation(compact)) {
-            return false;
-        }
         String lastBotSpeech = findLastBotSpeech(records, botId);
-        return awaitsUserReply(lastBotSpeech);
+        if (!awaitsUserReply(lastBotSpeech)) {
+            return false;
+        }
+        if (PendingAiActionStore.isKanriProceedIntent(currentMessage) || looksLikeShortAffirmation(compact)) {
+            return true;
+        }
+        return compact.length() <= 24;
     }
 
     @Nullable

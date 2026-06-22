@@ -3,7 +3,6 @@ package xin.vanilla.banira.plugin.chat;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import xin.vanilla.banira.domain.MessageRecord;
-import xin.vanilla.banira.plugin.chat.capability.PendingAiActionStore;
 
 import java.util.List;
 
@@ -24,7 +23,6 @@ class ChatConversationSignalsTest {
                 .setMsgRecode("吉祥物、我是mjj、假·吉祥物，禁言10分钟，行吗？");
 
         Assertions.assertTrue(ChatConversationSignals.isShortReplyToBotQuestion(
-                List.of(botAsk), BOT_ID, "yes!"));
-        Assertions.assertTrue(PendingAiActionStore.isConfirmationText("yes!"));
+                List.of(botAsk), BOT_ID, "按你刚才说的来"));
     }
 }

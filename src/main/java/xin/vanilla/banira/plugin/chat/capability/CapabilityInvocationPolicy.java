@@ -181,12 +181,13 @@ public final class CapabilityInvocationPolicy {
                 && hasGroupCardValue(actionText) && isDirectlyAddressedToBot(ctx, current)) {
             return Decision.allow();
         }
-        if (isMuteOrLoudAction(action) && confirm && PendingAiActionStore.isKanriProceedIntent(current)) {
+        if ("card".equals(action) && confirm && "true".equalsIgnoreCase(arg(args, "followupResolved"))
+                && hasNumericTargets(actionText) && hasGroupCardValue(actionText)) {
             return Decision.allow();
         }
         if (isMuteOrLoudAction(action) && isWholeGroupTarget(actionText)) {
-            if (confirm && !hasWholeGroupConfirmation(current)) {
-                return Decision.block("全员禁言/解禁需要当前消息明确确认，已阻止直接执行。");
+            if (confirm) {
+                return Decision.block("全员禁言/解禁需要先保存待确认，再由同一用户在下一轮确认执行。");
             }
             return mentionsWholeGroup(current)
                     ? Decision.allow()
@@ -383,14 +384,6 @@ public final class CapabilityInvocationPolicy {
     private static boolean mentionsWholeGroup(@Nonnull String current) {
         return containsAny(current, "全员", "全体", "@全体", "@全员")
                 || current.toLowerCase(Locale.ROOT).contains("@all");
-    }
-
-    private static boolean hasWholeGroupConfirmation(@Nonnull String current) {
-        String normalized = current.replaceAll("\\[CQ:[^]]+]", " ")
-                .replaceAll("[\\p{Punct}！？。。，、~～…·\\s]", "")
-                .trim();
-        return PendingAiActionStore.isConfirmationText(current)
-                || containsAny(normalized, "确定开启", "确认开启", "确定关闭", "确认关闭", "确定全员", "确认全员", "可以开启", "可以关闭");
     }
 
     @Nonnull

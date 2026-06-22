@@ -213,12 +213,35 @@ class AiToolBridgeTest {
         String pending = first.executeRcon("1", "stop", "false");
         Assertions.assertTrue(pending.contains("确认"));
 
-        AiToolBridge second = bridge(registry, context("确认"));
+        AiToolBridge second = bridge(registry, context("按刚才那条处理"));
         String result = second.executeRcon("old", "old", "true");
 
         Assertions.assertEquals("已执行", result);
         Mockito.verify(registry).execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_rcon"), Mockito.argThat(map ->
                 "1".equals(map.get("server")) && "stop".equals(map.get("command")) && "true".equals(map.get("confirm"))));
+    }
+
+    @Test
+    void shouldExecutePendingWholeGroupKanriWhenAgentConfirmsSemantically() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        AiCapability capability = new AiCapability()
+                .name("execute_kanri")
+                .mutating(true)
+                .requireConfirmation(true);
+        Mockito.when(registry.resolve(Mockito.anyLong(), Mockito.eq("execute_kanri"))).thenReturn(capability);
+        Mockito.when(registry.execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.anyMap()))
+                .thenReturn("全员禁言 已执行。");
+
+        AiToolBridge first = bridge(registry, context("开启全员禁言"));
+        String pending = first.muteAllGroup("false");
+        Assertions.assertTrue(pending.contains("确认"));
+
+        AiToolBridge second = bridge(registry, context("照刚才说的来"));
+        String result = second.muteAllGroup("true");
+
+        Assertions.assertEquals("全员禁言 已执行。", result);
+        Mockito.verify(registry).execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.argThat(map ->
+                "mute".equals(map.get("action")) && "all".equals(map.get("args")) && "true".equals(map.get("confirm"))));
     }
 
     @Test
@@ -568,6 +591,92 @@ class AiToolBridgeTest {
                 "card".equals(map.get("action"))
                         && "30000 曦曦曦".equals(map.get("args"))
                         && "true".equals(map.get("confirm"))));
+    }
+
+    @Test
+    void shouldResolveGroupCardTargetAndSuggestedCardFromRecentFollowUp() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        IMessageRecordManager recordManager = Mockito.mock(IMessageRecordManager.class);
+        Mockito.when(registry.execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.anyMap()))
+                .thenReturn("设置群名片已执行：小梦。");
+        Mockito.when(recordManager.getMessageRecordList(Mockito.any()))
+                .thenReturn(java.util.List.of(
+                        new MessageRecord()
+                                .setSenderId(10000L)
+                                .setGroupId(20000L)
+                                .setMsgRecode("我选了个简洁的，小梦"),
+                        new MessageRecord()
+                                .setSenderId(30000L)
+                                .setGroupId(20000L)
+                                .setMsgRecode("[CQ:at,qq=10000] 我就是让你想"),
+                        new MessageRecord()
+                                .setSenderId(30000L)
+                                .setGroupId(20000L)
+                                .setMsgRecode("青茶酱把[CQ:at,qq=123456] 的群名片也改正常一点")
+                ));
+        AgentContext ctx = context("那就按你刚才说的处理");
+        AiToolBridge bridge = new AiToolBridge(
+                ctx,
+                new ChatConfig(),
+                registry,
+                Mockito.mock(MemoryRetriever.class),
+                Mockito.mock(IAiMemoryManager.class),
+                Mockito.mock(ChatQuotaService.class),
+                3,
+                new java.util.ArrayList<>(),
+                null,
+                recordManager
+        );
+
+        String result = bridge.setGroupCard("", "");
+
+        Assertions.assertEquals("设置群名片已执行：小梦。", result);
+        Mockito.verify(registry).execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.argThat(map ->
+                "card".equals(map.get("action"))
+                        && "123456 小梦".equals(map.get("args"))
+                        && "true".equals(map.get("confirm"))
+                        && "true".equals(map.get("followupResolved"))));
+    }
+
+    @Test
+    void shouldResolveGenericGroupCardActionFromRecentFollowUp() {
+        AiCapabilityRegistry registry = Mockito.mock(AiCapabilityRegistry.class);
+        IMessageRecordManager recordManager = Mockito.mock(IMessageRecordManager.class);
+        Mockito.when(registry.execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.anyMap()))
+                .thenReturn("设置群名片已执行：小梦。");
+        Mockito.when(recordManager.getMessageRecordList(Mockito.any()))
+                .thenReturn(java.util.List.of(
+                        new MessageRecord()
+                                .setSenderId(10000L)
+                                .setGroupId(20000L)
+                                .setMsgRecode("我选了个简洁的，小梦"),
+                        new MessageRecord()
+                                .setSenderId(30000L)
+                                .setGroupId(20000L)
+                                .setMsgRecode("青茶酱把[CQ:at,qq=123456] 的群名片也改正常一点")
+                ));
+        AgentContext ctx = context("照你刚才那个来");
+        AiToolBridge bridge = new AiToolBridge(
+                ctx,
+                new ChatConfig(),
+                registry,
+                Mockito.mock(MemoryRetriever.class),
+                Mockito.mock(IAiMemoryManager.class),
+                Mockito.mock(ChatQuotaService.class),
+                3,
+                new java.util.ArrayList<>(),
+                null,
+                recordManager
+        );
+
+        String result = bridge.executeKanriAction("card", "小梦", "true");
+
+        Assertions.assertEquals("设置群名片已执行：小梦。", result);
+        Mockito.verify(registry).execute(Mockito.any(), Mockito.any(), Mockito.eq("execute_kanri"), Mockito.argThat(map ->
+                "card".equals(map.get("action"))
+                        && "123456 小梦".equals(map.get("args"))
+                        && "true".equals(map.get("confirm"))
+                        && "true".equals(map.get("followupResolved"))));
     }
 
     @Test

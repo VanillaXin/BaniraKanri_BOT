@@ -391,18 +391,34 @@ public class AiToolBridge {
     public String setGroupCard(@P("目标 QQ 号或 [CQ:at,qq=...]；明确自改/改你自己时可留空；不要把唤醒你的 @ 当目标；我的=当前发言者，你自己/你的=机器人自己") String target,
                                @P("新群名片，简短正常，不要包含换行") String card) {
         String normalizedCard = normalizeCard(card);
-        String normalizedTarget = resolveGroupCardTarget(target, normalizedCard);
+        String requestedTarget = normalizeTarget(target);
+        boolean missingTarget = StringUtils.isNullOrEmptyEx(requestedTarget);
+        boolean missingCard = StringUtils.isNullOrEmptyEx(normalizedCard);
+        GroupCardFollowUp followUp = (missingTarget || missingCard) ? resolveGroupCardFollowUp(normalizedCard) : null;
+        boolean followUpUsed = false;
+        if (followUp != null && missingCard) {
+            normalizedCard = followUp.card();
+            followUpUsed = true;
+        }
+        String normalizedTarget = followUp != null && missingTarget
+                ? followUp.target()
+                : resolveGroupCardTarget(target, normalizedCard);
+        if (followUp != null && missingTarget) {
+            followUpUsed = true;
+        }
         if (StringUtils.isNullOrEmptyEx(normalizedTarget)) {
             return "缺少要修改群名片的目标。";
         }
         if (StringUtils.isNullOrEmptyEx(normalizedCard)) {
             return "缺少新的群名片。";
         }
-        Map<String, String> args = Map.of(
-                "action", "card",
-                "args", normalizedTarget + " " + normalizedCard,
-                "confirm", "true"
-        );
+        Map<String, String> args = new java.util.LinkedHashMap<>();
+        args.put("action", "card");
+        args.put("args", normalizedTarget + " " + normalizedCard);
+        args.put("confirm", "true");
+        if (followUpUsed) {
+            args.put("followupResolved", "true");
+        }
         return executeWithPolicy("execute_kanri", args, false);
     }
 
@@ -417,18 +433,23 @@ public class AiToolBridge {
                                      @P("是否已明确确认，true/false") String confirm) {
         String normalizedAction = StringUtils.isNotNullOrEmpty(action) ? action.trim() : "";
         String argLine = StringUtils.isNotNullOrEmpty(args) ? args.trim() : "";
+        boolean followUpResolved = false;
         if ("card".equalsIgnoreCase(normalizedAction)) {
-            argLine = normalizeGroupCardActionArgs(argLine);
+            GroupCardActionArgs normalized = normalizeGroupCardActionArgs(argLine);
+            argLine = normalized.args();
+            followUpResolved = normalized.followUpResolved();
             if (StringUtils.isNullOrEmptyEx(argLine)) {
                 return "群名片目标不明确。";
             }
         }
         String confirmed = StringUtils.isNotNullOrEmpty(confirm) ? confirm : "false";
-        Map<String, String> params = Map.of(
-                "action", normalizedAction,
-                "args", argLine,
-                "confirm", confirmed
-        );
+        Map<String, String> params = new java.util.LinkedHashMap<>();
+        params.put("action", normalizedAction);
+        params.put("args", argLine);
+        params.put("confirm", confirmed);
+        if ("card".equalsIgnoreCase(normalizedAction) && followUpResolved) {
+            params.put("followupResolved", "true");
+        }
         return executeWithPolicy("execute_kanri", params, false);
     }
 
@@ -921,7 +942,7 @@ public class AiToolBridge {
 
     @Nonnull
     private String executeWithPolicy(@Nonnull String name, @Nonnull Map<String, String> args, boolean resolveBeforePolicy) {
-        if (PendingAiActionStore.isKanriProceedIntent(ctx.userMessage())) {
+        if ("true".equalsIgnoreCase(StringUtils.nullToEmpty(args.get("confirm")).trim())) {
             PendingAiActionStore.PendingAction pending = PendingAiActionStore.consumeMatching(ctx, name);
             if (pending != null) {
                 Map<String, String> confirmedArgs = new java.util.LinkedHashMap<>(pending.args());
@@ -1338,10 +1359,13 @@ public class AiToolBridge {
     }
 
     @Nonnull
-    private String normalizeGroupCardActionArgs(@Nullable String args) {
+    private GroupCardActionArgs normalizeGroupCardActionArgs(@Nullable String args) {
         String argLine = StringUtils.nullToEmpty(args).trim();
+        GroupCardFollowUp followUp = resolveGroupCardFollowUp(normalizeCard(removeLeadingTarget(argLine)));
         if (StringUtils.isNullOrEmptyEx(argLine)) {
-            return "";
+            return followUp != null
+                    ? new GroupCardActionArgs(followUp.target() + " " + followUp.card(), true)
+                    : new GroupCardActionArgs("", false);
         }
         String current = StringUtils.nullToEmpty(ctx.userMessage());
         String target = normalizeTarget(argLine);
@@ -1349,31 +1373,140 @@ public class AiToolBridge {
         CardTargetHint hint = inferGroupCardTargetFromCard(current, card);
         if (StringUtils.isNullOrEmptyEx(target)) {
             if (hint == CardTargetHint.SENDER && ctx.senderId() != null && ctx.senderId() > 0) {
-                return StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "";
+                return new GroupCardActionArgs(StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "", false);
             }
             if (hint == CardTargetHint.BOT && ctx.bot() != null) {
-                return StringUtils.isNotNullOrEmpty(card) ? ctx.botId() + " " + card : "";
+                return new GroupCardActionArgs(StringUtils.isNotNullOrEmpty(card) ? ctx.botId() + " " + card : "", false);
             }
             if (isSelfGroupCardRequest(current) && ctx.senderId() != null && ctx.senderId() > 0) {
-                return StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "";
+                return new GroupCardActionArgs(StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "", false);
             }
-            return "";
+            if (followUp != null) {
+                String resolvedCard = StringUtils.isNotNullOrEmpty(card) ? card : followUp.card();
+                return new GroupCardActionArgs(followUp.target() + " " + resolvedCard, true);
+            }
+            return new GroupCardActionArgs("", false);
         }
         if (hint == CardTargetHint.SENDER && ctx.senderId() != null && ctx.senderId() > 0) {
-            return StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "";
+            return new GroupCardActionArgs(StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "", false);
         }
         if (hint == CardTargetHint.BOT && ctx.bot() != null) {
-            return StringUtils.isNotNullOrEmpty(card) ? ctx.botId() + " " + card : "";
+            return new GroupCardActionArgs(StringUtils.isNotNullOrEmpty(card) ? ctx.botId() + " " + card : "", false);
         }
         if (isSelfGroupCardRequest(current) && ctx.senderId() != null && ctx.senderId() > 0) {
-            return StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "";
+            return new GroupCardActionArgs(StringUtils.isNotNullOrEmpty(card) ? ctx.senderId() + " " + card : "", false);
         }
         if (ctx.bot() != null && StringUtils.toLong(target, 0L) == ctx.botId() && !isBotGroupCardRequest(current)) {
             LOGGER.debug("AI blocked bot-card action target from likely wake mention group={} sender={} args={} message={}",
                     ctx.scopeGroupId(), ctx.senderId(), argLine, current);
+            return new GroupCardActionArgs("", false);
+        }
+        return new GroupCardActionArgs(StringUtils.isNotNullOrEmpty(card) ? target + " " + card : "", false);
+    }
+
+    @Nullable
+    private GroupCardFollowUp resolveGroupCardFollowUp(@Nullable String preferredCard) {
+        if (messageRecordManager == null
+                || ctx.bot() == null
+                || ctx.scopeGroupId() <= 0) {
+            return null;
+        }
+        try {
+            List<MessageRecord> records = messageRecordManager.getMessageRecordList(baseHistoryParam(20));
+            if (records == null || records.isEmpty()) {
+                return null;
+            }
+            String proposedCard = "";
+            String target = "";
+            for (MessageRecord record : records) {
+                if (record == null || record.recalled()) {
+                    continue;
+                }
+                String text = StringUtils.nullToEmpty(record.getMsgRecode());
+                if (StringUtils.isNullOrEmptyEx(text)) {
+                    continue;
+                }
+                if (StringUtils.isNullOrEmptyEx(proposedCard)
+                        && record.getSenderId() != null
+                        && record.getSenderId() == ctx.botId()) {
+                    proposedCard = extractProposedGroupCard(text);
+                }
+                if (StringUtils.isNullOrEmptyEx(target)
+                        && record.getSenderId() != null
+                        && (ctx.senderId() == null || record.getSenderId().equals(ctx.senderId()))) {
+                    target = extractGroupCardTargetFromRequest(text);
+                }
+                String card = StringUtils.isNotNullOrEmpty(preferredCard) ? normalizeCard(preferredCard) : proposedCard;
+                if (StringUtils.isNotNullOrEmpty(target) && StringUtils.isNotNullOrEmpty(card)) {
+                    LOGGER.debug("AI resolved group-card follow-up group={} sender={} target={} card={}",
+                            ctx.scopeGroupId(), ctx.senderId(), target, card);
+                    return new GroupCardFollowUp(target, card);
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.debug("AI group-card follow-up lookup failed group={} sender={}",
+                    ctx.scopeGroupId(), ctx.senderId(), e);
+        }
+        return null;
+    }
+
+    @Nonnull
+    private String extractGroupCardTargetFromRequest(@Nonnull String text) {
+        String compact = stripCq(text).replaceAll("\\s+", "");
+        if (!containsCardWord(compact) || !containsAnyStatic(compact, "改", "修改", "改成", "改为", "正常")) {
             return "";
         }
-        return StringUtils.isNotNullOrEmpty(card) ? target + " " + card : "";
+        Matcher cqAt = Pattern.compile("\\[CQ:at,qq=(\\d+)]").matcher(text);
+        while (cqAt.find()) {
+            String qq = cqAt.group(1);
+            if (StringUtils.toLong(qq, 0L) != ctx.botId()) {
+                return qq;
+            }
+        }
+        if (isSelfGroupCardRequest(text) && ctx.senderId() != null && ctx.senderId() > 0) {
+            return String.valueOf(ctx.senderId());
+        }
+        if (isBotGroupCardRequest(text) && ctx.botId() > 0) {
+            return String.valueOf(ctx.botId());
+        }
+        return "";
+    }
+
+    @Nonnull
+    private static String extractProposedGroupCard(@Nonnull String text) {
+        String compact = stripCq(text).replaceAll("\\s+", "");
+        if (!containsAnyStatic(compact, "我选", "选了", "叫", "改成", "改为")
+                || !containsAnyStatic(compact, "简洁", "正常", "合适", "名字", "名片", "就")) {
+            return "";
+        }
+        String cleaned = text.replaceAll("\\[CQ:[^]]+]", " ")
+                .replaceAll("[\"“”'‘’`]", "")
+                .trim();
+        String[] parts = cleaned.split("[，,。；;：:\\s]+");
+        for (int i = parts.length - 1; i >= 0; i--) {
+            String card = normalizeCard(parts[i]);
+            if (isPlausibleGroupCard(card)) {
+                return card;
+            }
+        }
+        return "";
+    }
+
+    private static boolean isPlausibleGroupCard(@Nullable String value) {
+        String card = normalizeCard(value);
+        if (card.length() < 1 || card.length() > 12) {
+            return false;
+        }
+        if (!Pattern.compile("[\\p{IsHan}A-Za-z0-9]").matcher(card).find()) {
+            return false;
+        }
+        return !containsAnyStatic(card, "我选了", "简洁", "正常", "合适", "应该", "名片");
+    }
+
+    private record GroupCardFollowUp(@Nonnull String target, @Nonnull String card) {
+    }
+
+    private record GroupCardActionArgs(@Nonnull String args, boolean followUpResolved) {
     }
 
     @Nonnull
@@ -1494,63 +1627,7 @@ public class AiToolBridge {
 
     @Nonnull
     private String wholeGroupConfirmValue(@Nullable String confirm) {
-        if (PendingAiActionStore.isKanriProceedIntent(ctx.userMessage()) && recentlyDiscussedWholeGroupKanri()) {
-            return "true";
-        }
-        if (!"true".equalsIgnoreCase(StringUtils.nullToEmpty(confirm).trim())) {
-            return "false";
-        }
-        return PendingAiActionStore.isConfirmationText(ctx.userMessage()) ? "true" : "false";
-    }
-
-    private boolean recentlyDiscussedWholeGroupKanri() {
-        if (messageRecordManager == null || ctx.bot() == null || ctx.scopeGroupId() <= 0) {
-            return false;
-        }
-        try {
-            List<MessageRecord> records = messageRecordManager.getMessageRecordList(baseHistoryParam(16));
-            for (MessageRecord record : records) {
-                if (record == null) {
-                    continue;
-                }
-                String text = StringUtils.nullToEmpty(record.getMsgRecode());
-                if (StringUtils.isNullOrEmptyEx(text)) {
-                    continue;
-                }
-                if (mentionsWholeGroup(text) && containsKanriMuteVerb(text)) {
-                    return true;
-                }
-                if (record.getSenderId() != null && record.getSenderId() == ctx.botId()
-                        && mentionsWholeGroup(text)
-                        && (text.contains("确定") || text.contains("确认") || text.contains("要开") || text.contains("要关"))) {
-                    return true;
-                }
-            }
-        } catch (Exception e) {
-            LOGGER.debug("AI whole-group kanri history lookup failed group={} user={}",
-                    ctx.scopeGroupId(), ctx.senderId(), e);
-        }
-        return false;
-    }
-
-    private static boolean mentionsWholeGroup(@Nonnull String text) {
-        String lower = text.toLowerCase(java.util.Locale.ROOT);
-        return text.contains("全员")
-                || text.contains("全体")
-                || text.contains("@全员")
-                || text.contains("@全体")
-                || lower.contains("@all");
-    }
-
-    private static boolean containsKanriMuteVerb(@Nonnull String text) {
-        String lower = text.toLowerCase(java.util.Locale.ROOT);
-        return text.contains("禁言")
-                || text.contains("解禁")
-                || text.contains("关闭")
-                || text.contains("开启")
-                || text.contains("打开")
-                || lower.contains("mute")
-                || lower.contains("loud");
+        return "true".equalsIgnoreCase(StringUtils.nullToEmpty(confirm).trim()) ? "true" : "false";
     }
 
     @Nullable
