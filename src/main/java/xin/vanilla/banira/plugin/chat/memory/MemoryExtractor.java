@@ -217,7 +217,7 @@ public class MemoryExtractor {
         return cleaned;
     }
 
-    private static boolean isWorthLowImportanceMemory(@Nonnull String reply) {
+    static boolean isWorthLowImportanceMemory(@Nonnull String reply) {
         if (reply.length() < 6) {
             return false;
         }
@@ -231,7 +231,37 @@ public class MemoryExtractor {
         return !reply.contains("工具执行失败")
                 && !reply.contains("权限不足：")
                 && !reply.contains("The request was rejected")
-                && !reply.contains("处理步骤过多");
+                && !reply.contains("处理步骤过多")
+                && !isCapabilityOrPermissionFailureReply(reply);
+    }
+
+    static boolean isCapabilityOrPermissionFailureReply(@Nonnull String text) {
+        String compact = text.replaceAll("\\[CQ:[^]]+]", " ")
+                .replaceAll("\\s+", "")
+                .toLowerCase(java.util.Locale.ROOT);
+        if (StringUtils.isNullOrEmptyEx(compact)) {
+            return false;
+        }
+        boolean capabilityFailure = containsAny(compact,
+                "没权限", "没有权限", "无权限", "权限不够", "权限不足", "权限不允许",
+                "没法", "无法", "不能", "做不了", "办不到", "执行不了",
+                "改不了", "禁不了", "撤不了", "发不了", "查不了", "看不了", "调不了",
+                "不支持", "失败", "报错", "被拦", "拦住", "卡住",
+                "需要管理员", "需要群主", "不是群管", "没有群管", "缺群管");
+        boolean capabilityContext = containsAny(compact,
+                "工具", "接口", "权限", "群管", "管理员", "群主", "群名片", "禁言",
+                "解禁", "撤回", "搜索", "查询", "发送", "上传", "文件", "配置", "表情包",
+                "mc百科", "mcmod", "服务器", "rcon");
+        return capabilityFailure && capabilityContext;
+    }
+
+    private static boolean containsAny(@Nonnull String text, @Nonnull String... needles) {
+        for (String needle : needles) {
+            if (text.contains(needle)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     boolean trySaveOwnerBehaviorInstruction(@Nonnull IAiMemoryManager aiMemoryManager

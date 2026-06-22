@@ -63,7 +63,8 @@ public class MemoryRetriever {
                 appendMatches(ctx, token, scored, scores);
             }
         }
-        if (asksAboutBotSaid(query) && cfg.memory().lowImportanceMemoryEnabled()) {
+        boolean asksAboutBotSaid = asksAboutBotSaid(query);
+        if (asksAboutBotSaid && cfg.memory().lowImportanceMemoryEnabled()) {
             appendRecentLowImportance(ctx, scored, scores, cfg.memory().lowImportanceRetrieveLimit());
         }
         if (scored.isEmpty()) {
@@ -72,6 +73,7 @@ public class MemoryRetriever {
             return Collections.emptyList();
         }
         List<AiMemory> result = scored.values().stream()
+                .filter(memory -> shouldUseForCurrentQuery(memory, asksAboutBotSaid))
                 .sorted(Comparator
                         .comparingInt((AiMemory m) -> scores.getOrDefault(m.getId(), 0)).reversed()
                         .thenComparing((AiMemory m) -> m.getLastUsedAt() != null ? m.getLastUsedAt() : 0L,
@@ -158,7 +160,9 @@ public class MemoryRetriever {
         for (String token : tokenize(keyword)) {
             appendMatches(ctx, token, scored, scores);
         }
+        boolean asksAboutBotSaid = asksAboutBotSaid(keyword);
         List<AiMemory> memories = scored.values().stream()
+                .filter(memory -> shouldUseForCurrentQuery(memory, asksAboutBotSaid))
                 .sorted(Comparator
                         .comparingInt((AiMemory m) -> scores.getOrDefault(m.getId(), 0)).reversed()
                         .thenComparing((AiMemory m) -> m.getLastUsedAt() != null ? m.getLastUsedAt() : 0L,
@@ -294,6 +298,13 @@ public class MemoryRetriever {
     private static boolean isLowImportance(@Nonnull AiMemory memory) {
         String tags = StringUtils.nullToEmpty(memory.getTags()).toLowerCase(Locale.ROOT);
         return tags.contains(LOW_IMPORTANCE_TAG) || tags.contains("type:episodic");
+    }
+
+    private static boolean shouldUseForCurrentQuery(@Nonnull AiMemory memory, boolean asksAboutBotSaid) {
+        if (!isLowImportance(memory) || asksAboutBotSaid) {
+            return true;
+        }
+        return !MemoryExtractor.isCapabilityOrPermissionFailureReply(StringUtils.nullToEmpty(memory.getContent()));
     }
 
     private static boolean asksAboutBotSaid(@Nonnull String query) {

@@ -615,7 +615,7 @@ public class AiToolBridge {
         return stickerService().updateStickerUsage(ctx, keyword, description, scene);
     }
 
-    @Tool("从 zip 压缩包导入表情包。只有有权限的触发人可以用；source 可填 zip 链接或本地路径，留空时会尝试读取当前消息/引用消息里的文件链接。会自动跳过过大图片和不像表情包的图片。")
+    @Tool("从 zip 压缩包导入表情包。只有有权限的触发人可以用；source 可填 zip 链接或本地路径，留空时会尝试读取当前消息、引用消息或当前群最近文件消息里的文件链接。会自动跳过过大图片和不像表情包的图片。")
     public String collectStickerArchive(@P("zip 压缩包链接、本地路径或 file: URI；可空") String source,
                                         @P("导入表情包的统一描述，可空") String description,
                                         @P("导入表情包的使用场景，可空") String scene) {

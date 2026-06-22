@@ -107,6 +107,26 @@ class MemoryRetrieverTest {
         Assertions.assertTrue(formatted.contains("不是长期设定"));
     }
 
+    @Test
+    void shouldNotInjectCapabilityFailureLowMemoryForCurrentTask() {
+        MemoryRetriever retriever = new MemoryRetriever();
+        IAiMemoryManager memoryManager = Mockito.mock(IAiMemoryManager.class);
+        ReflectionTestUtils.setField(retriever, "aiMemoryManager", memoryManager);
+
+        AiMemory staleFailure = new AiMemory()
+                .setId(1L)
+                .setUserId(0L)
+                .setContent("你曾在本群回复过：「改我自己群名片这个操作好像确实没权限」")
+                .setTags("type:episodic,importance:low,source:auto_reply,bot_said")
+                .setLastUsedAt(1L);
+        Mockito.when(memoryManager.getMemoryList(Mockito.any())).thenReturn(List.of(staleFailure));
+
+        List<AiMemory> result = retriever.retrieve(context(), new ChatConfig(), "把你自己的群名片改成青茶酱");
+
+        Assertions.assertTrue(result.isEmpty());
+        Mockito.verify(memoryManager, Mockito.never()).touchMemory(Mockito.eq(1L), Mockito.anyLong());
+    }
+
     private static AgentContext context() {
         BaniraBot bot = Mockito.mock(BaniraBot.class);
         Mockito.when(bot.getSelfId()).thenReturn(100L);

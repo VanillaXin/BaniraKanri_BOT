@@ -1,6 +1,7 @@
 package xin.vanilla.banira.plugin.chat;
 
 import com.google.gson.JsonObject;
+import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.common.utils.MsgUtils;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.enums.MsgTypeEnum;
@@ -11,13 +12,16 @@ import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import xin.vanilla.banira.domain.AiMemory;
+import xin.vanilla.banira.domain.MessageRecord;
 import xin.vanilla.banira.enums.EnumCacheFileType;
 import xin.vanilla.banira.enums.EnumMessageType;
 import xin.vanilla.banira.mapper.param.AiMemoryQueryParam;
+import xin.vanilla.banira.mapper.param.MessageRecordQueryParam;
 import xin.vanilla.banira.plugin.chat.agent.AgentContext;
 import xin.vanilla.banira.plugin.chat.capability.AiDirectResult;
 import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.service.IAiMemoryManager;
+import xin.vanilla.banira.service.IMessageRecordManager;
 import xin.vanilla.banira.util.*;
 
 import javax.imageio.ImageIO;
@@ -43,8 +47,8 @@ public class ChatStickerService {
     public static final String STICKER_TAG = "type:sticker";
     private static final int MAX_STICKER_CQ_LENGTH = 1200;
     private static final int MAX_STICKER_BYTES = 5 * 1024 * 1024;
-    private static final int MAX_ARCHIVE_BYTES = 50 * 1024 * 1024;
-    private static final int MAX_ARCHIVE_ENTRIES = 120;
+    private static final int MAX_ARCHIVE_BYTES = 256 * 1024 * 1024;
+    private static final int MAX_ARCHIVE_ENTRIES = 2000;
     private static final int MAX_AUTO_IMAGE_SIDE = 320;
     private static final int MAX_AUTO_IMAGE_PIXELS = 320 * 320;
     private static final int MAX_EXPLICIT_IMAGE_SIDE = 900;
@@ -53,6 +57,8 @@ public class ChatStickerService {
 
     @Resource
     private IAiMemoryManager aiMemoryManager;
+    @Resource
+    private IMessageRecordManager messageRecordManager;
 
     public void collectFromMessage(@Nonnull BaniraBot bot, @Nonnull AnyMessageEvent event) {
         if (event.getUserId() == bot.getSelfId()
@@ -109,7 +115,7 @@ public class ChatStickerService {
         if (!BaniraUtils.hasKanriOperatorAccess(ctx.bot(), ctx.scopeGroupId(), ctx.senderId())) {
             return ownerOnlyText("表情包压缩包导入");
         }
-        String resolved = resolveArchiveSource(ctx, source);
+        String resolved = resolveArchiveSource(ctx, source, messageRecordManager);
         if (StringUtils.isNullOrEmptyEx(resolved)) {
             return "没有找到可下载的压缩包链接。请直接发 zip 链接，或回复包含文件链接的消息再让我导入。";
         }
@@ -612,7 +618,9 @@ public class ChatStickerService {
     }
 
     @Nonnull
-    private static String resolveArchiveSource(@Nonnull AgentContext ctx, @Nullable String source) {
+    static String resolveArchiveSource(@Nonnull AgentContext ctx,
+                                       @Nullable String source,
+                                       @Nullable IMessageRecordManager messageRecordManager) {
         String explicit = firstDownloadableSource(StringUtils.nullToEmpty(source));
         if (StringUtils.isNotNullOrEmpty(explicit)) {
             return explicit;
@@ -626,6 +634,10 @@ public class ChatStickerService {
             if (StringUtils.isNotNullOrEmpty(fromCurrent)) {
                 return fromCurrent;
             }
+            String fromQuotedRecord = firstQuotedArchiveSource(ctx, messageRecordManager);
+            if (StringUtils.isNotNullOrEmpty(fromQuotedRecord)) {
+                return fromQuotedRecord;
+            }
             try {
                 List<ArrayMsg> replyContent = ctx.bot().getReplyContent(ctx.messageContext().originalMsg());
                 String fromReply = firstDownloadableSource(replyContent);
@@ -635,14 +647,89 @@ public class ChatStickerService {
             } catch (Exception ignored) {
             }
         }
+        String recent = firstRecentArchiveSource(ctx, messageRecordManager);
+        if (StringUtils.isNotNullOrEmpty(recent)) {
+            return recent;
+        }
         return "";
+    }
+
+    @Nonnull
+    private static String firstQuotedArchiveSource(@Nonnull AgentContext ctx,
+                                                   @Nullable IMessageRecordManager messageRecordManager) {
+        if (messageRecordManager == null
+                || ctx.messageContext() == null
+                || CollectionUtils.isNullOrEmpty(ctx.messageContext().originalMsg())) {
+            return "";
+        }
+        Long replyId = BaniraUtils.getReplyId(ctx.messageContext().originalMsg());
+        if (replyId == null || replyId <= 0 || replyId > Integer.MAX_VALUE) {
+            return "";
+        }
+        MessageRecord record = null;
+        try {
+            if (ctx.msgType() == EnumMessageType.GROUP && ctx.scopeGroupId() > 0) {
+                record = messageRecordManager.getGroupMessageRecord(ctx.scopeGroupId(), replyId.intValue());
+            } else if (ctx.senderId() != null && ctx.senderId() > 0) {
+                record = messageRecordManager.getPrivateMessageRecord(ctx.senderId(), replyId.intValue());
+            }
+        } catch (Exception ignored) {
+        }
+        return firstDownloadableSource(record);
+    }
+
+    @Nonnull
+    private static String firstRecentArchiveSource(@Nonnull AgentContext ctx,
+                                                   @Nullable IMessageRecordManager messageRecordManager) {
+        if (messageRecordManager == null || ctx.msgType() != EnumMessageType.GROUP || ctx.scopeGroupId() <= 0) {
+            return "";
+        }
+        try {
+            MessageRecordQueryParam param = new MessageRecordQueryParam(true, 1, 12)
+                    .setBotId(ctx.botId())
+                    .setGroupId(ctx.scopeGroupId())
+                    .setMsgType(EnumMessageType.GROUP.name())
+                    .setRecalled(false);
+            param.addOrderBy(MessageRecordQueryParam.ORDER_ID, false);
+            for (MessageRecord record : messageRecordManager.getMessageRecordList(param)) {
+                if (record == null || Objects.equals(record.getMsgId(), ctx.msgId())) {
+                    continue;
+                }
+                String resolved = firstDownloadableSource(record);
+                if (StringUtils.isNotNullOrEmpty(resolved) && isArchiveSource(resolved)) {
+                    return resolved;
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return "";
+    }
+
+    @Nonnull
+    private static String firstDownloadableSource(@Nullable MessageRecord record) {
+        if (record == null || record.recalled()) {
+            return "";
+        }
+        String fromRecode = firstDownloadableSource(record.getMsgRecode());
+        if (StringUtils.isNotNullOrEmpty(fromRecode)) {
+            return fromRecode;
+        }
+        String fromRawText = firstDownloadableSource(record.getMsgRaw());
+        if (StringUtils.isNotNullOrEmpty(fromRawText)) {
+            return fromRawText;
+        }
+        String fromRecodeArray = firstDownloadableSource(safeStringToArray(record.getMsgRecode()));
+        if (StringUtils.isNotNullOrEmpty(fromRecodeArray)) {
+            return fromRecodeArray;
+        }
+        return firstDownloadableSource(safeStringToArray(record.getMsgRaw()));
     }
 
     @Nonnull
     private static String firstDownloadableSource(@Nullable String text) {
         String value = StringUtils.nullToEmpty(text);
         java.util.regex.Matcher matcher = java.util.regex.Pattern
-                .compile("(?i)(https?://\\S+|file:/\\S+|[A-Za-z]:[/\\\\][^\\s\\]]+)")
+                .compile("(?i)(https?://[^\\s,，)）\\]]+|file:/[^\\s,，)）\\]]+|[A-Za-z]:[/\\\\][^\\s\\]]+)")
                 .matcher(value);
         return matcher.find() ? trimSource(matcher.group(1)) : "";
     }
@@ -664,8 +751,31 @@ public class ChatStickerService {
             if (StringUtils.isNotNullOrEmpty(file)) {
                 return trimSource(file);
             }
+            String fileId = msg.getStringData("file_id");
+            if (StringUtils.isNotNullOrEmpty(fileId) && isArchiveSource(fileId)) {
+                return trimSource(fileId);
+            }
+            String name = msg.getStringData("name");
+            if (StringUtils.isNotNullOrEmpty(name) && isArchiveSource(name)) {
+                String fallback = firstDownloadableSource(msg.toCQCode());
+                if (StringUtils.isNotNullOrEmpty(fallback)) {
+                    return fallback;
+                }
+            }
         }
         return "";
+    }
+
+    @Nonnull
+    private static List<ArrayMsg> safeStringToArray(@Nullable String source) {
+        if (StringUtils.isNullOrEmptyEx(source)) {
+            return Collections.emptyList();
+        }
+        try {
+            return MessageConverser.stringToArray(source);
+        } catch (Exception ignored) {
+            return Collections.emptyList();
+        }
     }
 
     @Nonnull
