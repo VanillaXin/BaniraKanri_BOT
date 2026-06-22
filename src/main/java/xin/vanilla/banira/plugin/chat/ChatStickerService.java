@@ -3,6 +3,8 @@ package xin.vanilla.banira.plugin.chat;
 import com.google.gson.JsonObject;
 import com.mikuac.shiro.common.utils.MessageConverser;
 import com.mikuac.shiro.common.utils.MsgUtils;
+import com.mikuac.shiro.dto.action.common.ActionData;
+import com.mikuac.shiro.dto.action.response.*;
 import com.mikuac.shiro.dto.event.message.AnyMessageEvent;
 import com.mikuac.shiro.enums.MsgTypeEnum;
 import com.mikuac.shiro.model.ArrayMsg;
@@ -64,6 +66,9 @@ public class ChatStickerService {
     private static final int QUERY_LIMIT = 40;
     private static final int MAX_METADATA_TEXT = 160;
     private static final int MAX_KEYWORD_COUNT = 12;
+    private static final int MAX_COLLECT_IMAGES_PER_REQUEST = 60;
+    private static final int MAX_FORWARD_DEPTH = 3;
+    private static final int MAX_FORWARD_NODES = 80;
     private static final Pattern JSON_OBJECT_PATTERN = Pattern.compile("\\{.*}", Pattern.DOTALL);
 
     @Resource
@@ -81,42 +86,50 @@ public class ChatStickerService {
         if (StringUtils.isNullOrEmptyEx(message) || message.length() > MAX_STICKER_CQ_LENGTH) {
             return;
         }
-        StickerSource source = firstStickerSource(event.getArrayMsg(), message);
-        if (source == null || StringUtils.isNullOrEmptyEx(source.url())) {
-            return;
-        }
-        if (!isDownloadableImageSource(source.url())) {
-            return;
-        }
         long groupId = BaniraUtils.isGroupIdValid(event.getGroupId()) ? event.getGroupId() : 0L;
-        if (stickerExists(bot.getSelfId(), groupId, source.url())) {
-            return;
-        }
-        byte[] bytes = downloadStickerBytes(source.url(), MAX_STICKER_BYTES);
-        if (bytes == null || bytes.length == 0 || bytes.length > MAX_STICKER_BYTES) {
-            LOGGER.debug("AI ignored sticker group={} user={} msgId={} bytes={}",
-                    groupId, event.getUserId(), event.getMessageId(), bytes != null ? bytes.length : -1);
-            return;
-        }
-        if (!looksLikeAutoCollectStickerImage(event.getArrayMsg(), bytes)) {
-            LOGGER.debug("AI ignored non-sticker image group={} user={} msgId={} sourceType={} bytes={}",
-                    groupId, event.getUserId(), event.getMessageId(), source.type(), bytes.length);
-            return;
-        }
         String plainText = plainText(event.getArrayMsg());
-        StickerMetadata metadata = fallbackStickerMetadata(
-                StringUtils.isNotNullOrEmpty(plainText) ? plainText : source.url(),
-                imageInfo(bytes),
-                StringUtils.isNotNullOrEmpty(plainText) ? "带文字说明的表情包：" + plainText : "",
-                StringUtils.isNotNullOrEmpty(plainText) ? "适合回应类似“" + AiTextLimits.truncate(plainText, 40) + "”的语境" : ""
-        );
-        if (!saveStickerMemory(bot.getSelfId(), groupId, event.getUserId(), event.getMessageId(),
-                source.url(), message, bytes, metadata.description(), metadata.scene(), metadata.keywords(),
-                "source:auto_collect," + metadata.tagCsv())) {
-            return;
+        List<StickerImageCandidate> candidates = collectImageCandidates(bot, groupId, event.getArrayMsg(),
+                event.getMessageId(), 0, true, MAX_COLLECT_IMAGES_PER_REQUEST);
+        int saved = 0;
+        int skipped = 0;
+        for (StickerImageCandidate candidate : candidates) {
+            if (candidate == null || StringUtils.isNullOrEmptyEx(candidate.sourceUrl())
+                    || !isDownloadableImageSource(candidate.sourceUrl())
+                    || stickerExists(bot.getSelfId(), groupId, candidate.sourceUrl())) {
+                skipped++;
+                continue;
+            }
+            byte[] bytes = downloadStickerBytes(candidate.sourceUrl(), MAX_STICKER_BYTES);
+            if (bytes == null || bytes.length == 0 || bytes.length > MAX_STICKER_BYTES) {
+                skipped++;
+                LOGGER.debug("AI ignored sticker group={} user={} msgId={} bytes={}",
+                        groupId, event.getUserId(), event.getMessageId(), bytes != null ? bytes.length : -1);
+                continue;
+            }
+            if (!looksLikeAutoCollectStickerImage(event.getArrayMsg(), bytes)) {
+                skipped++;
+                LOGGER.debug("AI ignored non-sticker image group={} user={} msgId={} sourceType={} bytes={}",
+                        groupId, event.getUserId(), event.getMessageId(), candidate.sourceType(), bytes.length);
+                continue;
+            }
+            StickerMetadata metadata = fallbackStickerMetadata(
+                    StringUtils.isNotNullOrEmpty(plainText) ? plainText : candidate.name(),
+                    imageInfo(bytes),
+                    StringUtils.isNotNullOrEmpty(plainText) ? "带文字说明的表情包：" + plainText : "",
+                    StringUtils.isNotNullOrEmpty(plainText) ? "适合回应类似“" + AiTextLimits.truncate(plainText, 40) + "”的语境" : ""
+            );
+            if (saveStickerMemory(bot.getSelfId(), groupId, event.getUserId(), event.getMessageId(),
+                    candidate.sourceUrl(), candidate.originalCq(), bytes, metadata.description(), metadata.scene(), metadata.keywords(),
+                    "source:auto_collect," + metadata.tagCsv())) {
+                saved++;
+            } else {
+                skipped++;
+            }
         }
-        LOGGER.debug("AI collected sticker group={} user={} msgId={} chars={}",
-                groupId, event.getUserId(), event.getMessageId(), message.length());
+        if (saved > 0) {
+            LOGGER.debug("AI collected stickers group={} user={} msgId={} saved={} skipped={} chars={}",
+                    groupId, event.getUserId(), event.getMessageId(), saved, skipped, message.length());
+        }
     }
 
     @Nonnull
@@ -136,14 +149,15 @@ public class ChatStickerService {
         if (!BaniraUtils.hasKanriOperatorAccess(ctx.bot(), ctx.scopeGroupId(), ctx.senderId())) {
             return ownerOnlyText("表情包压缩包导入");
         }
-        String resolved = resolveArchiveSource(ctx, source, messageRecordManager);
-        if (StringUtils.isNullOrEmptyEx(resolved)) {
+        ArchiveSource archiveSource = resolveArchiveCandidate(ctx, source, messageRecordManager);
+        if (archiveSource == null || StringUtils.isNullOrEmptyEx(archiveSource.downloadSource())) {
             return "没有找到可下载的压缩包链接。请直接发 zip 链接，或回复包含文件链接的消息再让我导入。";
         }
+        String resolved = archiveSource.downloadSource();
         if (!isArchiveSource(resolved)) {
             return "只支持 zip 压缩包。";
         }
-        byte[] archive = downloadStickerBytes(resolved, MAX_ARCHIVE_BYTES);
+        byte[] archive = downloadArchiveBytes(ctx, archiveSource, MAX_ARCHIVE_BYTES);
         if (archive == null || archive.length == 0) {
             return "压缩包下载失败。";
         }
@@ -202,6 +216,61 @@ public class ChatStickerService {
         return saved > 0
                 ? "已导入 " + saved + " 个表情包，跳过 " + skipped + " 个，已写入逐图描述和标签。"
                 : "没有导入到合适的表情包。";
+    }
+
+    @Nonnull
+    public String collectStickerImage(@Nonnull AgentContext ctx,
+                                      @Nullable String source,
+                                      @Nullable String description,
+                                      @Nullable String scene,
+                                      @Nullable ChatConfig chatConfig) {
+        List<StickerImageCandidate> candidates = resolveStickerImageSources(ctx, source, messageRecordManager);
+        if (candidates.isEmpty()) {
+            return "没找到能收藏的表情。请直接发图、引用图片/合并转发，或在刚发过图片后再说让我收藏。";
+        }
+        long groupId = ctx.scopeGroupId();
+        StickerVisionAnalyzer analyzer = StickerVisionAnalyzer.create(chatConfig);
+        int saved = 0;
+        int duplicated = 0;
+        int skipped = 0;
+        for (StickerImageCandidate candidate : candidates) {
+            if (candidate == null || StringUtils.isNullOrEmptyEx(candidate.sourceUrl()) || !isDownloadableImageSource(candidate.sourceUrl())) {
+                skipped++;
+                continue;
+            }
+            byte[] bytes = downloadStickerBytes(candidate.sourceUrl(), MAX_STICKER_BYTES);
+            ImageInfo info = bytes != null ? imageInfo(bytes) : ImageInfo.invalid();
+            if (bytes == null || bytes.length == 0 || bytes.length > MAX_STICKER_BYTES
+                    || !info.valid()
+                    || !looksLikeExplicitStickerInfo(info)) {
+                skipped++;
+                continue;
+            }
+            String sourceUrl = candidate.sourceUrl() + (candidate.sourceMsgId() > 0 ? "#msg=" + candidate.sourceMsgId() : "");
+            if (stickerExists(ctx.botId(), groupId, sourceUrl)) {
+                duplicated++;
+                continue;
+            }
+            StickerMetadata metadata = analyzeStickerMetadata(candidate.name(), bytes, info, description, scene, analyzer);
+            boolean ok = saveStickerMemory(ctx.botId(), groupId, ctx.senderId() != null ? ctx.senderId() : 0L,
+                    candidate.sourceMsgId(), sourceUrl, candidate.originalCq(), bytes,
+                    metadata.description(), metadata.scene(), metadata.keywords(),
+                    "source:requested," + metadata.tagCsv());
+            if (ok) {
+                saved++;
+            } else {
+                skipped++;
+            }
+        }
+        LOGGER.debug("AI collected requested stickers group={} user={} candidates={} saved={} duplicated={} skipped={}",
+                groupId, ctx.senderId(), candidates.size(), saved, duplicated, skipped);
+        if (saved > 0) {
+            return "收好了，新增 " + saved + " 张，已补描述和标签。";
+        }
+        if (duplicated > 0 && skipped == 0) {
+            return "这些已经在收藏里了。";
+        }
+        return "没收进新的表情，可能是重复、太大，或不像表情包。";
     }
 
     @Nonnull
@@ -537,6 +606,106 @@ public class ChatStickerService {
         } catch (Exception ignored) {
         }
         return HttpUtils.downloadBytes(trimmed);
+    }
+
+    @Nullable
+    private static byte[] downloadArchiveBytes(@Nonnull AgentContext ctx,
+                                               @Nonnull ArchiveSource source,
+                                               int maxBytes) {
+        if (StringUtils.isNotNullOrEmpty(source.fileId()) && ctx.bot() != null && ctx.scopeGroupId() > 0) {
+            byte[] fromFile = downloadGroupFileBytes(ctx.bot(), ctx.scopeGroupId(), source.fileId(), source.busId(), maxBytes);
+            if (fromFile != null && fromFile.length > 0) {
+                return fromFile;
+            }
+        }
+        byte[] direct = downloadStickerBytes(source.downloadSource(), maxBytes);
+        if (direct != null && direct.length > 0) {
+            return direct;
+        }
+        return direct;
+    }
+
+    @Nullable
+    private static byte[] downloadGroupFileBytes(@Nonnull BaniraBot bot,
+                                                 long groupId,
+                                                 @Nonnull String fileId,
+                                                 int busId,
+                                                 int maxBytes) {
+        try {
+            ActionData<GroupFilesResp> file = bot.getFile(groupId, fileId, busId);
+            byte[] bytes = bytesFromGroupFileResp(file, maxBytes);
+            if (bytes != null && bytes.length > 0) {
+                return bytes;
+            }
+        } catch (Exception e) {
+            LOGGER.debug("AI sticker archive getFile failed group={} fileId={} busId={}", groupId, fileId, busId, e);
+        }
+        String url = "";
+        try {
+            ActionData<UrlResp> urlResp = bot.getGroupFileUrl(groupId, fileId, busId);
+            if (bot.isActionDataNotEmpty(urlResp) && urlResp.getData() != null) {
+                url = StringUtils.nullToEmpty(urlResp.getData().getUrl()).trim();
+            }
+        } catch (Exception e) {
+            LOGGER.debug("AI sticker archive getGroupFileUrl failed group={} fileId={} busId={}", groupId, fileId, busId, e);
+        }
+        if (StringUtils.isNullOrEmptyEx(url)) {
+            return null;
+        }
+        try {
+            ActionData<DownloadFileResp> local = bot.downloadFile(url);
+            if (bot.isActionDataNotEmpty(local) && local.getData() != null) {
+                byte[] bytes = bytesFromLocalPath(local.getData().getFile(), maxBytes);
+                if (bytes != null && bytes.length > 0) {
+                    return bytes;
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.debug("AI sticker archive downloadFile failed group={} fileId={} url={}", groupId, fileId, url, e);
+        }
+        return downloadStickerBytes(url, maxBytes);
+    }
+
+    @Nullable
+    private static byte[] bytesFromGroupFileResp(@Nullable ActionData<GroupFilesResp> resp, int maxBytes) {
+        if (resp == null || resp.getData() == null) {
+            return null;
+        }
+        GroupFilesResp data = resp.getData();
+        byte[] bytes = bytesFromLocalPath(data.getFile(), maxBytes);
+        if (bytes != null && bytes.length > 0) {
+            return bytes;
+        }
+        String base64 = StringUtils.nullToEmpty(data.getBase64()).trim();
+        if (StringUtils.isNotNullOrEmpty(base64)) {
+            try {
+                bytes = Base64.getDecoder().decode(base64);
+                return bytes.length <= maxBytes ? bytes : null;
+            } catch (Exception ignored) {
+            }
+        }
+        String file = StringUtils.nullToEmpty(data.getFile()).trim();
+        if (StringUtils.isNotNullOrEmpty(file) && (file.startsWith("http://") || file.startsWith("https://") || file.startsWith("file:"))) {
+            return downloadStickerBytes(file, maxBytes);
+        }
+        return null;
+    }
+
+    @Nullable
+    private static byte[] bytesFromLocalPath(@Nullable String pathText, int maxBytes) {
+        if (StringUtils.isNullOrEmptyEx(pathText)) {
+            return null;
+        }
+        try {
+            Path path = pathText.trim().toLowerCase(Locale.ROOT).startsWith("file:")
+                    ? Path.of(URI.create(pathText.trim()))
+                    : Path.of(pathText.trim());
+            if (Files.isRegularFile(path) && Files.size(path) <= maxBytes) {
+                return Files.readAllBytes(path);
+            }
+        } catch (Exception ignored) {
+        }
+        return null;
     }
 
     private static boolean isDownloadableImageSource(@Nonnull String url) {
@@ -930,50 +1099,61 @@ public class ChatStickerService {
     static String resolveArchiveSource(@Nonnull AgentContext ctx,
                                        @Nullable String source,
                                        @Nullable IMessageRecordManager messageRecordManager) {
-        String explicit = firstDownloadableSource(StringUtils.nullToEmpty(source));
-        if (StringUtils.isNotNullOrEmpty(explicit)) {
-            return explicit;
-        }
-        String current = firstDownloadableSource(ctx.userMessage());
-        if (StringUtils.isNotNullOrEmpty(current)) {
-            return current;
-        }
-        if (ctx.messageContext() != null && CollectionUtils.isNotNullOrEmpty(ctx.messageContext().originalMsg())) {
-            String fromCurrent = firstDownloadableSource(ctx.messageContext().originalMsg());
-            if (StringUtils.isNotNullOrEmpty(fromCurrent)) {
-                return fromCurrent;
-            }
-            String fromQuotedRecord = firstQuotedArchiveSource(ctx, messageRecordManager);
-            if (StringUtils.isNotNullOrEmpty(fromQuotedRecord)) {
-                return fromQuotedRecord;
-            }
-            try {
-                List<ArrayMsg> replyContent = ctx.bot().getReplyContent(ctx.messageContext().originalMsg());
-                String fromReply = firstDownloadableSource(replyContent);
-                if (StringUtils.isNotNullOrEmpty(fromReply)) {
-                    return fromReply;
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        String recent = firstRecentArchiveSource(ctx, messageRecordManager);
-        if (StringUtils.isNotNullOrEmpty(recent)) {
-            return recent;
-        }
-        return "";
+        ArchiveSource candidate = resolveArchiveCandidate(ctx, source, messageRecordManager);
+        return candidate != null ? candidate.downloadSource() : "";
+    }
+
+    @Nullable
+    static StickerImageCandidate resolveStickerImageSource(@Nonnull AgentContext ctx,
+                                                           @Nullable String source,
+                                                           @Nullable IMessageRecordManager messageRecordManager) {
+        List<StickerImageCandidate> candidates = resolveStickerImageSources(ctx, source, messageRecordManager);
+        return candidates.isEmpty() ? null : candidates.getFirst();
     }
 
     @Nonnull
-    private static String firstQuotedArchiveSource(@Nonnull AgentContext ctx,
-                                                   @Nullable IMessageRecordManager messageRecordManager) {
+    static List<StickerImageCandidate> resolveStickerImageSources(@Nonnull AgentContext ctx,
+                                                                  @Nullable String source,
+                                                                  @Nullable IMessageRecordManager messageRecordManager) {
+        LinkedHashMap<String, StickerImageCandidate> result = new LinkedHashMap<>();
+        String explicit = firstDownloadableSource(StringUtils.nullToEmpty(source));
+        if (StringUtils.isNotNullOrEmpty(explicit) && isImageSource(explicit)) {
+            addImageCandidate(result, new StickerImageCandidate(explicit, explicit, "", 0L, MsgTypeEnum.image));
+            return new ArrayList<>(result.values());
+        }
+        collectImageCandidates(ctx.bot(), ctx.scopeGroupId(), ctx.userMessage(), StringUtils.toLong(ctx.msgId(), 0L),
+                true, MAX_COLLECT_IMAGES_PER_REQUEST).forEach(candidate -> addImageCandidate(result, candidate));
+        if (ctx.messageContext() != null && CollectionUtils.isNotNullOrEmpty(ctx.messageContext().originalMsg())) {
+            collectImageCandidates(ctx.bot(), ctx.scopeGroupId(), ctx.messageContext().originalMsg(),
+                    StringUtils.toLong(ctx.msgId(), 0L), 0, true, MAX_COLLECT_IMAGES_PER_REQUEST)
+                    .forEach(candidate -> addImageCandidate(result, candidate));
+            firstQuotedImageSources(ctx, messageRecordManager)
+                    .forEach(candidate -> addImageCandidate(result, candidate));
+            try {
+                List<ArrayMsg> replyContent = ctx.bot().getReplyContent(ctx.messageContext().originalMsg());
+                collectImageCandidates(ctx.bot(), ctx.scopeGroupId(), replyContent, StringUtils.toLong(ctx.msgId(), 0L),
+                        0, true, MAX_COLLECT_IMAGES_PER_REQUEST - result.size())
+                        .forEach(candidate -> addImageCandidate(result, candidate));
+            } catch (Exception ignored) {
+            }
+        }
+        if (result.isEmpty()) {
+            firstRecentImageSources(ctx, messageRecordManager).forEach(candidate -> addImageCandidate(result, candidate));
+        }
+        return new ArrayList<>(result.values());
+    }
+
+    @Nonnull
+    private static List<StickerImageCandidate> firstQuotedImageSources(@Nonnull AgentContext ctx,
+                                                                       @Nullable IMessageRecordManager messageRecordManager) {
         if (messageRecordManager == null
                 || ctx.messageContext() == null
                 || CollectionUtils.isNullOrEmpty(ctx.messageContext().originalMsg())) {
-            return "";
+            return List.of();
         }
         Long replyId = BaniraUtils.getReplyId(ctx.messageContext().originalMsg());
         if (replyId == null || replyId <= 0 || replyId > Integer.MAX_VALUE) {
-            return "";
+            return List.of();
         }
         MessageRecord record = null;
         try {
@@ -984,14 +1164,115 @@ public class ChatStickerService {
             }
         } catch (Exception ignored) {
         }
-        return firstDownloadableSource(record);
+        return imageCandidates(record, ctx.bot(), ctx.scopeGroupId());
+    }
+
+    @Nonnull
+    private static List<StickerImageCandidate> firstRecentImageSources(@Nonnull AgentContext ctx,
+                                                                       @Nullable IMessageRecordManager messageRecordManager) {
+        if (messageRecordManager == null || ctx.msgType() != EnumMessageType.GROUP || ctx.scopeGroupId() <= 0) {
+            return List.of();
+        }
+        LinkedHashMap<String, StickerImageCandidate> result = new LinkedHashMap<>();
+        try {
+            MessageRecordQueryParam param = new MessageRecordQueryParam(true, 1, 16)
+                    .setBotId(ctx.botId())
+                    .setGroupId(ctx.scopeGroupId())
+                    .setMsgType(EnumMessageType.GROUP.name())
+                    .setRecalled(false);
+            param.addOrderBy(MessageRecordQueryParam.ORDER_ID, false);
+            for (MessageRecord record : messageRecordManager.getMessageRecordList(param)) {
+                if (record == null || Objects.equals(record.getMsgId(), ctx.msgId())) {
+                    continue;
+                }
+                for (StickerImageCandidate candidate : imageCandidates(record, ctx.bot(), ctx.scopeGroupId())) {
+                    addImageCandidate(result, candidate);
+                    if (result.size() >= MAX_COLLECT_IMAGES_PER_REQUEST) {
+                        return new ArrayList<>(result.values());
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return new ArrayList<>(result.values());
+    }
+
+    @Nonnull
+    private static String firstQuotedArchiveSource(@Nonnull AgentContext ctx,
+                                                   @Nullable IMessageRecordManager messageRecordManager) {
+        ArchiveSource source = firstQuotedArchiveCandidate(ctx, messageRecordManager);
+        return source != null ? source.downloadSource() : "";
     }
 
     @Nonnull
     private static String firstRecentArchiveSource(@Nonnull AgentContext ctx,
                                                    @Nullable IMessageRecordManager messageRecordManager) {
+        ArchiveSource source = firstRecentArchiveCandidate(ctx, messageRecordManager);
+        return source != null ? source.downloadSource() : "";
+    }
+
+    @Nullable
+    private static ArchiveSource resolveArchiveCandidate(@Nonnull AgentContext ctx,
+                                                         @Nullable String source,
+                                                         @Nullable IMessageRecordManager messageRecordManager) {
+        ArchiveSource explicit = firstArchiveCandidate(StringUtils.nullToEmpty(source), 0L);
+        if (explicit != null) {
+            return explicit;
+        }
+        ArchiveSource current = firstArchiveCandidate(ctx.userMessage(), StringUtils.toLong(ctx.msgId(), 0L));
+        if (current != null) {
+            return current;
+        }
+        if (ctx.messageContext() != null && CollectionUtils.isNotNullOrEmpty(ctx.messageContext().originalMsg())) {
+            ArchiveSource fromCurrent = firstArchiveCandidate(ctx.messageContext().originalMsg(), StringUtils.toLong(ctx.msgId(), 0L));
+            if (fromCurrent != null) {
+                return fromCurrent;
+            }
+            ArchiveSource fromQuotedRecord = firstQuotedArchiveCandidate(ctx, messageRecordManager);
+            if (fromQuotedRecord != null) {
+                return fromQuotedRecord;
+            }
+            try {
+                List<ArrayMsg> replyContent = ctx.bot().getReplyContent(ctx.messageContext().originalMsg());
+                ArchiveSource fromReply = firstArchiveCandidate(replyContent, StringUtils.toLong(ctx.msgId(), 0L));
+                if (fromReply != null) {
+                    return fromReply;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return firstRecentArchiveCandidate(ctx, messageRecordManager);
+    }
+
+    @Nullable
+    private static ArchiveSource firstQuotedArchiveCandidate(@Nonnull AgentContext ctx,
+                                                             @Nullable IMessageRecordManager messageRecordManager) {
+        if (messageRecordManager == null
+                || ctx.messageContext() == null
+                || CollectionUtils.isNullOrEmpty(ctx.messageContext().originalMsg())) {
+            return null;
+        }
+        Long replyId = BaniraUtils.getReplyId(ctx.messageContext().originalMsg());
+        if (replyId == null || replyId <= 0 || replyId > Integer.MAX_VALUE) {
+            return null;
+        }
+        MessageRecord record = null;
+        try {
+            if (ctx.msgType() == EnumMessageType.GROUP && ctx.scopeGroupId() > 0) {
+                record = messageRecordManager.getGroupMessageRecord(ctx.scopeGroupId(), replyId.intValue());
+            } else if (ctx.senderId() != null && ctx.senderId() > 0) {
+                record = messageRecordManager.getPrivateMessageRecord(ctx.senderId(), replyId.intValue());
+            }
+        } catch (Exception ignored) {
+        }
+        return firstArchiveCandidate(record);
+    }
+
+    @Nullable
+    private static ArchiveSource firstRecentArchiveCandidate(@Nonnull AgentContext ctx,
+                                                             @Nullable IMessageRecordManager messageRecordManager) {
         if (messageRecordManager == null || ctx.msgType() != EnumMessageType.GROUP || ctx.scopeGroupId() <= 0) {
-            return "";
+            return null;
         }
         try {
             MessageRecordQueryParam param = new MessageRecordQueryParam(true, 1, 12)
@@ -1004,14 +1285,73 @@ public class ChatStickerService {
                 if (record == null || Objects.equals(record.getMsgId(), ctx.msgId())) {
                     continue;
                 }
-                String resolved = firstDownloadableSource(record);
-                if (StringUtils.isNotNullOrEmpty(resolved) && isArchiveSource(resolved)) {
+                ArchiveSource resolved = firstArchiveCandidate(record);
+                if (resolved != null) {
                     return resolved;
                 }
             }
         } catch (Exception ignored) {
         }
-        return "";
+        return null;
+    }
+
+    @Nullable
+    private static ArchiveSource firstArchiveCandidate(@Nullable MessageRecord record) {
+        if (record == null || record.recalled()) {
+            return null;
+        }
+        long sourceMsgId = StringUtils.toLong(record.getMsgId(), 0L);
+        ArchiveSource fromRecode = firstArchiveCandidate(record.getMsgRecode(), sourceMsgId);
+        if (fromRecode != null) {
+            return fromRecode;
+        }
+        return firstArchiveCandidate(record.getMsgRaw(), sourceMsgId);
+    }
+
+    @Nullable
+    private static ArchiveSource firstArchiveCandidate(@Nullable String text, long sourceMsgId) {
+        String value = StringUtils.nullToEmpty(text);
+        ArchiveSource fromArray = firstArchiveCandidate(safeStringToArray(value), sourceMsgId);
+        if (fromArray != null) {
+            return fromArray;
+        }
+        String source = firstDownloadableSource(value);
+        return StringUtils.isNotNullOrEmpty(source) && isArchiveSource(source)
+                ? ArchiveSource.downloadable(source, safeArchiveEntryName(source), sourceMsgId)
+                : null;
+    }
+
+    @Nullable
+    private static ArchiveSource firstArchiveCandidate(@Nullable List<ArrayMsg> msgs, long sourceMsgId) {
+        if (CollectionUtils.isNullOrEmpty(msgs)) {
+            return null;
+        }
+        for (ArrayMsg msg : msgs) {
+            if (msg == null) {
+                continue;
+            }
+            String file = msg.getStringData("file");
+            String name = msg.getStringData("name");
+            String fileId = msg.getStringData("file_id");
+            int busId = (int) msg.getLongData("busid");
+            if (StringUtils.isNullOrEmptyEx(name)) {
+                name = file;
+            }
+            if (StringUtils.isNotNullOrEmpty(name) && isArchiveSource(name) && StringUtils.isNotNullOrEmpty(fileId)) {
+                return ArchiveSource.groupFile(fileId, busId, name, sourceMsgId);
+            }
+            String url = msg.getStringData("url");
+            if (StringUtils.isNotNullOrEmpty(url) && isArchiveSource(url)) {
+                return ArchiveSource.downloadable(trimSource(url), safeArchiveEntryName(url), sourceMsgId);
+            }
+            if (StringUtils.isNotNullOrEmpty(file) && isArchiveSource(file)) {
+                if (StringUtils.isNotNullOrEmpty(fileId)) {
+                    return ArchiveSource.groupFile(fileId, busId, file, sourceMsgId);
+                }
+                return ArchiveSource.downloadable(trimSource(file), safeArchiveEntryName(file), sourceMsgId);
+            }
+        }
+        return null;
     }
 
     @Nonnull
@@ -1032,6 +1372,155 @@ public class ChatStickerService {
             return fromRecodeArray;
         }
         return firstDownloadableSource(safeStringToArray(record.getMsgRaw()));
+    }
+
+    @Nullable
+    private static StickerImageCandidate firstImageCandidate(@Nullable MessageRecord record) {
+        List<StickerImageCandidate> candidates = imageCandidates(record, null, 0L);
+        return candidates.isEmpty() ? null : candidates.getFirst();
+    }
+
+    @Nullable
+    private static StickerImageCandidate firstImageCandidate(@Nullable String text, long sourceMsgId) {
+        List<StickerImageCandidate> candidates = collectImageCandidates(null, 0L, text, sourceMsgId, false, MAX_COLLECT_IMAGES_PER_REQUEST);
+        return candidates.isEmpty() ? null : candidates.getFirst();
+    }
+
+    @Nullable
+    private static StickerImageCandidate firstImageCandidate(@Nullable List<ArrayMsg> msgs, long sourceMsgId) {
+        List<StickerImageCandidate> candidates = collectImageCandidates(null, 0L, msgs, sourceMsgId, 0, false, MAX_COLLECT_IMAGES_PER_REQUEST);
+        return candidates.isEmpty() ? null : candidates.getFirst();
+    }
+
+    @Nonnull
+    private static List<StickerImageCandidate> imageCandidates(@Nullable MessageRecord record,
+                                                               @Nullable BaniraBot bot,
+                                                               long groupId) {
+        if (record == null || record.recalled()) {
+            return List.of();
+        }
+        long sourceMsgId = StringUtils.toLong(record.getMsgId(), 0L);
+        LinkedHashMap<String, StickerImageCandidate> result = new LinkedHashMap<>();
+        collectImageCandidates(bot, groupId, record.getMsgRecode(), sourceMsgId, true, MAX_COLLECT_IMAGES_PER_REQUEST)
+                .forEach(candidate -> addImageCandidate(result, candidate));
+        collectImageCandidates(bot, groupId, record.getMsgRaw(), sourceMsgId, true, MAX_COLLECT_IMAGES_PER_REQUEST - result.size())
+                .forEach(candidate -> addImageCandidate(result, candidate));
+        return new ArrayList<>(result.values());
+    }
+
+    @Nonnull
+    private static List<StickerImageCandidate> collectImageCandidates(@Nullable BaniraBot bot,
+                                                                      long groupId,
+                                                                      @Nullable String text,
+                                                                      long sourceMsgId,
+                                                                      boolean includeForward,
+                                                                      int limit) {
+        String value = StringUtils.nullToEmpty(text);
+        LinkedHashMap<String, StickerImageCandidate> result = new LinkedHashMap<>();
+        collectImageCandidates(bot, groupId, safeStringToArray(value), sourceMsgId, 0, includeForward, limit)
+                .forEach(candidate -> addImageCandidate(result, candidate));
+        String source = firstDownloadableSource(value);
+        if (result.isEmpty() && StringUtils.isNotNullOrEmpty(source) && isImageSource(source)) {
+            addImageCandidate(result, new StickerImageCandidate(source, safeArchiveEntryName(source), value, sourceMsgId, MsgTypeEnum.image));
+        }
+        return new ArrayList<>(result.values());
+    }
+
+    @Nonnull
+    private static List<StickerImageCandidate> collectImageCandidates(@Nullable BaniraBot bot,
+                                                                      long groupId,
+                                                                      @Nullable List<ArrayMsg> msgs,
+                                                                      long sourceMsgId,
+                                                                      int depth,
+                                                                      boolean includeForward,
+                                                                      int limit) {
+        if (limit <= 0 || CollectionUtils.isNullOrEmpty(msgs) || depth > MAX_FORWARD_DEPTH) {
+            return List.of();
+        }
+        LinkedHashMap<String, StickerImageCandidate> result = new LinkedHashMap<>();
+        for (ArrayMsg msg : msgs) {
+            if (msg == null || msg.getType() == null || result.size() >= limit) {
+                continue;
+            }
+            MsgTypeEnum type = msg.getType();
+            if (type == MsgTypeEnum.image || type == MsgTypeEnum.mface || type == MsgTypeEnum.marketface) {
+                StickerImageCandidate candidate = imageCandidateFromMsg(msg, sourceMsgId);
+                if (candidate != null) {
+                    addImageCandidate(result, candidate);
+                }
+                continue;
+            }
+            if (includeForward && type == MsgTypeEnum.forward && bot != null) {
+                for (MsgResp node : resolveForwardNodes(bot, msg)) {
+                    if (node == null || result.size() >= limit) {
+                        continue;
+                    }
+                    List<ArrayMsg> nodeMsgs = nodeArrayMsg(node);
+                    collectImageCandidates(bot, groupId, nodeMsgs, sourceMsgId, depth + 1, true, limit - result.size())
+                            .forEach(candidate -> addImageCandidate(result, candidate));
+                }
+            }
+        }
+        return new ArrayList<>(result.values());
+    }
+
+    @Nullable
+    private static StickerImageCandidate imageCandidateFromMsg(@Nonnull ArrayMsg msg, long sourceMsgId) {
+        String url = msg.getStringData("url");
+        if (StringUtils.isNullOrEmptyEx(url)) {
+            url = msg.getStringData("file");
+        }
+        if (StringUtils.isNullOrEmptyEx(url) || !isImageSource(url)) {
+            return null;
+        }
+        String name = msg.getStringData("summary");
+        if (StringUtils.isNullOrEmptyEx(name)) {
+            name = msg.getStringData("file");
+        }
+        if (StringUtils.isNullOrEmptyEx(name)) {
+            name = safeArchiveEntryName(url);
+        }
+        return new StickerImageCandidate(trimSource(url), name, msg.toCQCode(), sourceMsgId, msg.getType());
+    }
+
+    private static void addImageCandidate(@Nonnull LinkedHashMap<String, StickerImageCandidate> candidates,
+                                          @Nullable StickerImageCandidate candidate) {
+        if (candidate == null || StringUtils.isNullOrEmptyEx(candidate.sourceUrl())) {
+            return;
+        }
+        candidates.putIfAbsent(candidate.sourceUrl() + "#" + candidate.sourceMsgId(), candidate);
+    }
+
+    @Nonnull
+    private static List<MsgResp> resolveForwardNodes(@Nonnull BaniraBot bot, @Nonnull ArrayMsg arrayMsg) {
+        List<MsgResp> nodes = BaniraUtils.getForwardContentFirst(arrayMsg);
+        if (!nodes.isEmpty()) {
+            return nodes.size() > MAX_FORWARD_NODES ? nodes.subList(0, MAX_FORWARD_NODES) : nodes;
+        }
+        long forwardId = arrayMsg.getLongData("id");
+        if (forwardId <= 0 || forwardId > Integer.MAX_VALUE) {
+            return List.of();
+        }
+        try {
+            ActionData<GetForwardMsgResp> resp = bot.getForwardMsg((int) forwardId);
+            if (bot.isActionDataNotEmpty(resp) && resp.getData() != null && resp.getData().getMessages() != null) {
+                List<MsgResp> messages = resp.getData().getMessages();
+                return messages.size() > MAX_FORWARD_NODES ? messages.subList(0, MAX_FORWARD_NODES) : messages;
+            }
+        } catch (Exception ignored) {
+        }
+        return List.of();
+    }
+
+    @Nonnull
+    private static List<ArrayMsg> nodeArrayMsg(@Nonnull MsgResp node) {
+        if (node.getArrayMsg() != null && !node.getArrayMsg().isEmpty()) {
+            return node.getArrayMsg();
+        }
+        if (StringUtils.isNotNullOrEmpty(node.getMessage())) {
+            return MessageConverser.stringToArray(node.getMessage());
+        }
+        return List.of();
     }
 
     @Nonnull
@@ -1094,6 +1583,16 @@ public class ChatStickerService {
 
     private static boolean isArchiveSource(@Nonnull String source) {
         return source.toLowerCase(java.util.Locale.ROOT).split("[?#]", 2)[0].endsWith(".zip");
+    }
+
+    private static boolean isImageSource(@Nonnull String source) {
+        String lower = source.toLowerCase(java.util.Locale.ROOT).split("[?#]", 2)[0];
+        return lower.startsWith("data:image/")
+                || lower.endsWith(".png")
+                || lower.endsWith(".jpg")
+                || lower.endsWith(".jpeg")
+                || lower.endsWith(".gif")
+                || lower.endsWith(".webp");
     }
 
     private static boolean isImageFileName(@Nonnull String name) {
@@ -1238,6 +1737,27 @@ public class ChatStickerService {
     }
 
     private record StickerSource(String url, String originalCq, MsgTypeEnum type) {
+    }
+
+    record StickerImageCandidate(String sourceUrl,
+                                 String name,
+                                 String originalCq,
+                                 long sourceMsgId,
+                                 MsgTypeEnum sourceType) {
+    }
+
+    private record ArchiveSource(String downloadSource,
+                                 String fileId,
+                                 int busId,
+                                 String name,
+                                 long sourceMsgId) {
+        static ArchiveSource downloadable(@Nonnull String source, @Nonnull String name, long sourceMsgId) {
+            return new ArchiveSource(source, "", 0, name, sourceMsgId);
+        }
+
+        static ArchiveSource groupFile(@Nonnull String fileId, int busId, @Nonnull String name, long sourceMsgId) {
+            return new ArchiveSource(name, fileId, busId, name, sourceMsgId);
+        }
     }
 
     private record ImageInfo(int width, int height) {

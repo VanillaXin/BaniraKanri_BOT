@@ -64,6 +64,51 @@ class ChatStickerServiceTest {
         Assertions.assertEquals("https://example.test/recent-pack.zip", resolved);
     }
 
+    @Test
+    void shouldPreferGroupFileIdWhenArchiveMessageHasAuthenticatedUrl() {
+        AgentContext ctx = context("[CQ:unknown,file=stickers.zip,name=stickers.zip,file_id=file-123,busid=102,url=https://auth.example.test/tmp.zip]");
+
+        String resolved = ChatStickerService.resolveArchiveSource(ctx, "", null);
+
+        Assertions.assertEquals("stickers.zip", resolved);
+    }
+
+    @Test
+    void shouldResolveMultipleImagesFromCurrentMessage() {
+        AgentContext ctx = context("[CQ:at,qq=10000] 收一下 [CQ:image,file=a.jpg,url=https://example.test/a.jpg][CQ:image,file=b.jpg,url=https://example.test/b.jpg]");
+
+        List<ChatStickerService.StickerImageCandidate> candidates = ChatStickerService.resolveStickerImageSources(ctx, "", null);
+
+        Assertions.assertEquals(2, candidates.size());
+        Assertions.assertEquals("https://example.test/a.jpg", candidates.get(0).sourceUrl());
+        Assertions.assertEquals("https://example.test/b.jpg", candidates.get(1).sourceUrl());
+    }
+
+    @Test
+    void shouldResolveSingleStickerFromRecentImageWhenUserSaysCollectThis() {
+        IMessageRecordManager manager = Mockito.mock(IMessageRecordManager.class);
+        Mockito.when(manager.getMessageRecordList(Mockito.any()))
+                .thenReturn(List.of(
+                        new MessageRecord()
+                                .setMsgId("42")
+                                .setGroupId(20000L)
+                                .setSenderId(10000L)
+                                .setMsgRecode("[CQ:image,file=cat.jpg,url=https://example.test/cat-question.jpg]"),
+                        new MessageRecord()
+                                .setMsgId("41")
+                                .setGroupId(20000L)
+                                .setSenderId(40000L)
+                                .setMsgRecode("普通聊天")
+                ));
+        AgentContext ctx = context("[CQ:at,qq=10000] 可以把这个纳入收藏");
+
+        ChatStickerService.StickerImageCandidate candidate = ChatStickerService.resolveStickerImageSource(ctx, "", manager);
+
+        Assertions.assertNotNull(candidate);
+        Assertions.assertEquals("https://example.test/cat-question.jpg", candidate.sourceUrl());
+        Assertions.assertEquals(42L, candidate.sourceMsgId());
+    }
+
     private static AgentContext context(String currentMessage) {
         BaniraBot bot = Mockito.mock(BaniraBot.class);
         Mockito.when(bot.getSelfId()).thenReturn(10000L);

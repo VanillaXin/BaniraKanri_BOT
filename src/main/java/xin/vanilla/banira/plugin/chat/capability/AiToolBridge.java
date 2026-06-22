@@ -603,6 +603,13 @@ public class AiToolBridge {
         return "已加入 " + stickers.size() + " 个表情包到合并转发。最终回复只用一句短话说明即可。";
     }
 
+    @Tool("收藏表情包图片。用户说“把这个纳入收藏/收下这张/这个也收了”时使用；source 可空，留空会尝试当前消息、引用消息、最近图片消息、合并转发和嵌套合并转发。")
+    public String collectStickerImage(@P("图片链接、本地路径或 file: URI；可空") String source,
+                                      @P("这张表情的描述，可空") String description,
+                                      @P("这张表情的使用场景，可空") String scene) {
+        return stickerService().collectStickerImage(ctx, source, description, scene, chatConfig);
+    }
+
     @Tool("按主人要求丢弃已自动收集的表情包。keyword 可填关键词；填 全部/all/* 表示清理当前群可见的所有已收集表情包。")
     public String discardSticker(@P("要丢弃的表情包关键词，或 全部/all/*") String keyword) {
         return stickerService().discardStickers(ctx, keyword);
