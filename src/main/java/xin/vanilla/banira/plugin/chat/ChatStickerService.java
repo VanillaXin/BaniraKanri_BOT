@@ -99,7 +99,7 @@ public class ChatStickerService {
                 skipped++;
                 continue;
             }
-            byte[] bytes = downloadStickerBytes(candidate.sourceUrl(), MAX_STICKER_BYTES);
+            byte[] bytes = downloadStickerBytes(bot, candidate.sourceUrl(), MAX_STICKER_BYTES);
             if (bytes == null || bytes.length == 0 || bytes.length > MAX_STICKER_BYTES) {
                 skipped++;
                 LOGGER.debug("AI ignored sticker group={} user={} msgId={} bytes={}",
@@ -238,7 +238,7 @@ public class ChatStickerService {
                 skipped++;
                 continue;
             }
-            byte[] bytes = downloadStickerBytes(candidate.sourceUrl(), MAX_STICKER_BYTES);
+            byte[] bytes = downloadStickerBytes(ctx.bot(), candidate.sourceUrl(), MAX_STICKER_BYTES);
             ImageInfo info = bytes != null ? imageInfo(bytes) : ImageInfo.invalid();
             if (bytes == null || bytes.length == 0 || bytes.length > MAX_STICKER_BYTES
                     || !info.valid()
@@ -618,7 +618,7 @@ public class ChatStickerService {
                 return fromFile;
             }
         }
-        byte[] direct = downloadStickerBytes(source.downloadSource(), maxBytes);
+        byte[] direct = downloadStickerBytes(ctx.bot(), source.downloadSource(), maxBytes);
         if (direct != null && direct.length > 0) {
             return direct;
         }
@@ -706,6 +706,34 @@ public class ChatStickerService {
         } catch (Exception ignored) {
         }
         return null;
+    }
+
+    @Nullable
+    private static byte[] downloadStickerBytes(@Nullable BaniraBot bot, @Nonnull String url, int maxBytes) {
+        byte[] bytes = downloadStickerBytes(url, maxBytes);
+        if (bytes != null && bytes.length > 0) {
+            return bytes;
+        }
+        if (bot == null) {
+            return bytes;
+        }
+        String trimmed = url.trim();
+        String lower = trimmed.toLowerCase(Locale.ROOT);
+        if (!(lower.startsWith("http://") || lower.startsWith("https://"))) {
+            return bytes;
+        }
+        try {
+            ActionData<DownloadFileResp> downloaded = bot.downloadFile(trimmed);
+            if (bot.isActionDataNotEmpty(downloaded) && downloaded.getData() != null) {
+                byte[] localBytes = bytesFromLocalPath(downloaded.getData().getFile(), maxBytes);
+                if (localBytes != null && localBytes.length > 0) {
+                    return localBytes;
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.debug("AI sticker bot downloadFile failed url={}", trimmed, e);
+        }
+        return bytes;
     }
 
     private static boolean isDownloadableImageSource(@Nonnull String url) {
@@ -1470,7 +1498,7 @@ public class ChatStickerService {
         if (StringUtils.isNullOrEmptyEx(url)) {
             url = msg.getStringData("file");
         }
-        if (StringUtils.isNullOrEmptyEx(url) || !isImageSource(url)) {
+        if (StringUtils.isNullOrEmptyEx(url) || !isDownloadableImageSource(url)) {
             return null;
         }
         String name = msg.getStringData("summary");

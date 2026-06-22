@@ -85,6 +85,16 @@ class ChatStickerServiceTest {
     }
 
     @Test
+    void shouldResolveImageCqUrlWithoutFileExtension() {
+        AgentContext ctx = context("[CQ:image,file=qq-image.image,url=https://gchat.qpic.cn/gchatpic_new/123/456-789-ABCDEF/0?term=3]");
+
+        List<ChatStickerService.StickerImageCandidate> candidates = ChatStickerService.resolveStickerImageSources(ctx, "", null);
+
+        Assertions.assertEquals(1, candidates.size());
+        Assertions.assertEquals("https://gchat.qpic.cn/gchatpic_new/123/456-789-ABCDEF/0?term=3", candidates.getFirst().sourceUrl());
+    }
+
+    @Test
     void shouldResolveSingleStickerFromRecentImageWhenUserSaysCollectThis() {
         IMessageRecordManager manager = Mockito.mock(IMessageRecordManager.class);
         Mockito.when(manager.getMessageRecordList(Mockito.any()))
