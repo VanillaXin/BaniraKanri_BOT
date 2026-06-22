@@ -28,7 +28,9 @@ import xin.vanilla.banira.util.StringUtils;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -613,6 +615,13 @@ public class AiToolBridge {
         return stickerService().updateStickerUsage(ctx, keyword, description, scene);
     }
 
+    @Tool("从 zip 压缩包导入表情包。只有有权限的触发人可以用；source 可填 zip 链接或本地路径，留空时会尝试读取当前消息/引用消息里的文件链接。会自动跳过过大图片和不像表情包的图片。")
+    public String collectStickerArchive(@P("zip 压缩包链接、本地路径或 file: URI；可空") String source,
+                                        @P("导入表情包的统一描述，可空") String description,
+                                        @P("导入表情包的使用场景，可空") String scene) {
+        return stickerService().collectStickerArchive(ctx, source, description, scene);
+    }
+
     @Tool("按主人要求忘记匹配关键词的记忆。用于修正你的习惯、忘记错误偏好或丢弃不该记住的信息；keyword 必须明确。")
     public String forgetMemory(@P("要忘记的记忆关键词") String keyword) {
         return stickerService().forgetMemories(ctx, keyword);
@@ -650,6 +659,99 @@ public class AiToolBridge {
         LOGGER.debug("AI saved owner instruction group={} user={} chars={}",
                 ctx.scopeGroupId(), ctx.senderId(), normalized.length());
         return "已记住这条习惯修正。";
+    }
+
+    @Tool("列出可由你读取和精确替换的 config 配置文件。用户只说要改某个插件配置但没给文件路径时，先用这个找路径。")
+    public String listConfigFiles(@P("可选关键词，例如 wife、aichat、global、ins、mcquery") String keyword) {
+        if (!BaniraUtils.isGlobalAdmin(ctx.senderId())) {
+            return "配置读取不听你的。";
+        }
+        Path root = Path.of("config").toAbsolutePath().normalize();
+        String normalized = StringUtils.nullToEmpty(keyword).trim().toLowerCase(java.util.Locale.ROOT);
+        try (var stream = Files.walk(root, 4)) {
+            List<String> files = stream
+                    .filter(Files::isRegularFile)
+                    .map(path -> root.relativize(path).toString().replace("\\", "/"))
+                    .filter(path -> path.endsWith(".yml") || path.endsWith(".yaml") || path.endsWith(".json")
+                            || path.endsWith(".properties") || path.endsWith(".txt"))
+                    .filter(path -> StringUtils.isNullOrEmptyEx(normalized)
+                            || path.toLowerCase(java.util.Locale.ROOT).contains(normalized))
+                    .sorted()
+                    .limit(80)
+                    .toList();
+            if (files.isEmpty()) {
+                return "没有找到匹配的配置文件。";
+            }
+            return String.join("\n", files);
+        } catch (Exception e) {
+            LOGGER.warn("AI list config files failed keyword={}", keyword, e);
+            return "配置文件列表读取失败。";
+        }
+    }
+
+    @Tool("读取 config 目录下的非敏感配置文件片段。用于用户要求你帮忙修改配置前先查看当前内容；会自动遮蔽 key/token/password/cookie 等敏感行。")
+    public String readConfigFile(@P("config 下的相对路径，例如 group/wife-group-config.yml 或 global-config.yml") String path,
+                                 @P("可选关键词；不为空时只返回附近片段") String keyword) {
+        if (!BaniraUtils.isGlobalAdmin(ctx.senderId())) {
+            return "配置读取不听你的。";
+        }
+        Path target = resolveConfigPath(path);
+        if (target == null || !Files.isRegularFile(target)) {
+            return "没有找到这个配置文件。";
+        }
+        try {
+            String content = Files.readString(target, StandardCharsets.UTF_8);
+            content = redactSensitiveConfigLines(content);
+            String normalizedKeyword = StringUtils.nullToEmpty(keyword).trim();
+            if (StringUtils.isNotNullOrEmpty(normalizedKeyword)) {
+                content = configSnippet(content, normalizedKeyword, 8);
+            }
+            return AiTextLimits.truncate(content, 6000);
+        } catch (Exception e) {
+            LOGGER.warn("AI read config failed path={}", path, e);
+            return "配置读取失败。";
+        }
+    }
+
+    @Tool("精确替换 config 目录下配置文件的一段文本并保存。必须先读取配置，oldText 必须与文件中现有片段完全一致；会自动备份。禁止修改 key/token/password/cookie 等敏感行。")
+    public String replaceConfigText(@P("config 下的相对路径，例如 group/wife-group-config.yml") String path,
+                                    @P("要被替换的原始文本，必须完整来自 readConfigFile 返回内容") String oldText,
+                                    @P("新的配置文本") String newText,
+                                    @P("是否已由有权限的用户明确确认，true/false") String confirm) {
+        if (!BaniraUtils.isGlobalAdmin(ctx.senderId())) {
+            return "配置修改不听你的。";
+        }
+        if (!"true".equalsIgnoreCase(StringUtils.nullToEmpty(confirm).trim())) {
+            return "配置修改需要先向有权限的人确认，确认后再带 confirm=true 调用。";
+        }
+        Path target = resolveConfigPath(path);
+        if (target == null || !Files.isRegularFile(target)) {
+            return "没有找到这个配置文件。";
+        }
+        String before = StringUtils.nullToEmpty(oldText);
+        String after = StringUtils.nullToEmpty(newText);
+        if (before.isBlank() || after.isBlank()) {
+            return "配置替换内容不能为空。";
+        }
+        if (touchesSensitiveConfig(before) || touchesSensitiveConfig(after)) {
+            return "这段配置涉及敏感字段，不能由聊天工具修改。";
+        }
+        try {
+            String content = Files.readString(target, StandardCharsets.UTF_8);
+            if (!content.contains(before)) {
+                return "没有找到完全匹配的原始配置片段，先重新读取配置再改。";
+            }
+            String updated = content.replace(before, after);
+            validateConfigText(target, updated);
+            Path backup = target.resolveSibling(target.getFileName() + ".ai-bak-" + System.currentTimeMillis());
+            Files.copy(target, backup, StandardCopyOption.COPY_ATTRIBUTES);
+            Files.writeString(target, updated, StandardCharsets.UTF_8);
+            LOGGER.info("AI replaced config text path={} user={} backup={}", target, ctx.senderId(), backup);
+            return "配置已保存，备份：" + backup.getFileName();
+        } catch (Exception e) {
+            LOGGER.warn("AI replace config failed path={}", path, e);
+            return "配置保存失败：" + e.getMessage();
+        }
     }
 
     @Tool("搜索记忆，keyword 为关键词；包括重要长期记忆和轻量会话记忆。用户问你之前说过什么时优先使用。")
@@ -1433,6 +1535,103 @@ public class AiToolBridge {
                 || text.contains("打开")
                 || lower.contains("mute")
                 || lower.contains("loud");
+    }
+
+    @Nullable
+    private static Path resolveConfigPath(@Nullable String path) {
+        String raw = StringUtils.nullToEmpty(path).trim().replace("\\", "/");
+        if (StringUtils.isNullOrEmptyEx(raw)) {
+            return null;
+        }
+        while (raw.startsWith("/")) {
+            raw = raw.substring(1);
+        }
+        if (raw.startsWith("config/")) {
+            raw = raw.substring("config/".length());
+        }
+        Path root = Path.of("config").toAbsolutePath().normalize();
+        Path target = root.resolve(raw).normalize();
+        if (!target.startsWith(root)) {
+            return null;
+        }
+        String lower = target.getFileName() != null
+                ? target.getFileName().toString().toLowerCase(java.util.Locale.ROOT)
+                : "";
+        if (!(lower.endsWith(".yml") || lower.endsWith(".yaml") || lower.endsWith(".json")
+                || lower.endsWith(".properties") || lower.endsWith(".txt"))) {
+            return null;
+        }
+        return target;
+    }
+
+    @Nonnull
+    private static String redactSensitiveConfigLines(@Nonnull String content) {
+        StringBuilder out = new StringBuilder();
+        String[] lines = content.split("\\R", -1);
+        for (String line : lines) {
+            if (isSensitiveConfigLine(line)) {
+                int idx = line.indexOf(':');
+                out.append(idx >= 0 ? line.substring(0, idx + 1) + " \"***\"" : "***");
+            } else {
+                out.append(line);
+            }
+            out.append('\n');
+        }
+        return out.toString();
+    }
+
+    private static boolean touchesSensitiveConfig(@Nonnull String text) {
+        return Arrays.stream(text.split("\\R"))
+                .anyMatch(AiToolBridge::isSensitiveConfigLine);
+    }
+
+    private static boolean isSensitiveConfigLine(@Nonnull String line) {
+        String lower = line.toLowerCase(java.util.Locale.ROOT);
+        return lower.matches(".*(^|[\\s_-])(api[-_ ]?key|apikey|key|token|secret|password|passwd|cookie|authorization|access[-_ ]?token)([\\s_-]|:).*");
+    }
+
+    @Nonnull
+    private static String configSnippet(@Nonnull String content, @Nonnull String keyword, int radius) {
+        String[] lines = content.split("\\R", -1);
+        List<Integer> hits = new ArrayList<>();
+        for (int i = 0; i < lines.length; i++) {
+            if (lines[i].contains(keyword)) {
+                hits.add(i);
+            }
+        }
+        if (hits.isEmpty()) {
+            return "未找到关键词：" + keyword;
+        }
+        StringBuilder out = new StringBuilder();
+        int lastEnd = -1;
+        for (Integer hit : hits) {
+            int start = Math.max(0, hit - radius);
+            int end = Math.min(lines.length - 1, hit + radius);
+            if (start <= lastEnd) {
+                start = lastEnd + 1;
+            }
+            if (!out.isEmpty()) {
+                out.append("\n...\n");
+            }
+            for (int i = start; i <= end; i++) {
+                out.append(lines[i]).append('\n');
+            }
+            lastEnd = end;
+            if (out.length() > 5000) {
+                break;
+            }
+        }
+        return out.toString();
+    }
+
+    private static void validateConfigText(@Nonnull Path target, @Nonnull String text) throws Exception {
+        String lower = target.getFileName().toString().toLowerCase(java.util.Locale.ROOT);
+        if (lower.endsWith(".yml") || lower.endsWith(".yaml")) {
+            new com.fasterxml.jackson.databind.ObjectMapper(new com.fasterxml.jackson.dataformat.yaml.YAMLFactory())
+                    .readTree(text);
+        } else if (lower.endsWith(".json")) {
+            new com.fasterxml.jackson.databind.ObjectMapper().readTree(text);
+        }
     }
 
     @Nonnull

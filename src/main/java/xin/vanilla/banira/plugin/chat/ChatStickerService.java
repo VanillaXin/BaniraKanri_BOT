@@ -20,11 +20,17 @@ import xin.vanilla.banira.plugin.common.BaniraBot;
 import xin.vanilla.banira.service.IAiMemoryManager;
 import xin.vanilla.banira.util.*;
 
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 
 /**
  * 用轻量记忆保存可复用表情包 CQ 码。
@@ -37,6 +43,10 @@ public class ChatStickerService {
     public static final String STICKER_TAG = "type:sticker";
     private static final int MAX_STICKER_CQ_LENGTH = 1200;
     private static final int MAX_STICKER_BYTES = 5 * 1024 * 1024;
+    private static final int MAX_ARCHIVE_BYTES = 50 * 1024 * 1024;
+    private static final int MAX_ARCHIVE_ENTRIES = 120;
+    private static final int MAX_AUTO_IMAGE_SIDE = 640;
+    private static final int MAX_AUTO_IMAGE_PIXELS = 640 * 640;
     private static final int QUERY_LIMIT = 40;
 
     @Resource
@@ -63,14 +73,15 @@ public class ChatStickerService {
         if (stickerExists(bot.getSelfId(), groupId, source.url())) {
             return;
         }
-        byte[] bytes = downloadStickerBytes(source.url());
+        byte[] bytes = downloadStickerBytes(source.url(), MAX_STICKER_BYTES);
         if (bytes == null || bytes.length == 0 || bytes.length > MAX_STICKER_BYTES) {
             LOGGER.debug("AI ignored sticker group={} user={} msgId={} bytes={}",
                     groupId, event.getUserId(), event.getMessageId(), bytes != null ? bytes.length : -1);
             return;
         }
-        String cachePath = BaniraUtils.saveFileToCachePath(bytes, EnumCacheFileType.image);
-        if (StringUtils.isNullOrEmptyEx(cachePath)) {
+        if (!looksLikeStickerImage(source.type(), event.getArrayMsg(), bytes)) {
+            LOGGER.debug("AI ignored non-sticker image group={} user={} msgId={} sourceType={} bytes={}",
+                    groupId, event.getUserId(), event.getMessageId(), source.type(), bytes.length);
             return;
         }
         String plainText = plainText(event.getArrayMsg());
@@ -80,30 +91,87 @@ public class ChatStickerService {
         String scene = StringUtils.isNotNullOrEmpty(plainText)
                 ? "适合回应类似“" + AiTextLimits.truncate(plainText, 40) + "”的语境"
                 : "适合需要用表情包简单回应的语境";
-        String content = STICKER_PREFIX + JsonUtils.toJsonString(Map.of(
-                "path", cachePath,
-                "originalCq", message,
-                "sourceUrl", source.url(),
-                "description", description,
-                "scene", scene,
-                "sourceSender", event.getUserId(),
-                "sourceGroup", groupId,
-                "sourceMsgId", event.getMessageId(),
-                "size", bytes.length
-        ));
-        long now = DateUtils.getTimestamp(new Date());
-        AiMemory memory = new AiMemory()
-                .setBotId(bot.getSelfId())
-                .setGroupId(groupId)
-                .setUserId(0L)
-                .setContent(content)
-                .setTags(STICKER_TAG + ",source:auto_collect")
-                .setSourceMsgId(String.valueOf(event.getMessageId()))
-                .setCreatedAt(now)
-                .setLastUsedAt(now);
-        aiMemoryManager.addMemory(memory);
+        if (!saveStickerMemory(bot.getSelfId(), groupId, event.getUserId(), event.getMessageId(),
+                source.url(), message, bytes, description, scene, "source:auto_collect")) {
+            return;
+        }
         LOGGER.debug("AI collected sticker group={} user={} msgId={} chars={}",
                 groupId, event.getUserId(), event.getMessageId(), message.length());
+    }
+
+    @Nonnull
+    public String collectStickerArchive(@Nonnull AgentContext ctx,
+                                        @Nullable String source,
+                                        @Nullable String description,
+                                        @Nullable String scene) {
+        if (!BaniraUtils.hasKanriOperatorAccess(ctx.bot(), ctx.scopeGroupId(), ctx.senderId())) {
+            return ownerOnlyText("表情包压缩包导入");
+        }
+        String resolved = resolveArchiveSource(ctx, source);
+        if (StringUtils.isNullOrEmptyEx(resolved)) {
+            return "没有找到可下载的压缩包链接。请直接发 zip 链接，或回复包含文件链接的消息再让我导入。";
+        }
+        if (!isArchiveSource(resolved)) {
+            return "只支持 zip 压缩包。";
+        }
+        byte[] archive = downloadStickerBytes(resolved, MAX_ARCHIVE_BYTES);
+        if (archive == null || archive.length == 0) {
+            return "压缩包下载失败。";
+        }
+        if (archive.length > MAX_ARCHIVE_BYTES) {
+            return "压缩包太大，已跳过。";
+        }
+        int scanned = 0;
+        int saved = 0;
+        int skipped = 0;
+        long sourceMsgId = StringUtils.toLong(ctx.msgId(), 0L);
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(archive))) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null && scanned < MAX_ARCHIVE_ENTRIES) {
+                if (entry.isDirectory()) {
+                    continue;
+                }
+                scanned++;
+                String name = StringUtils.nullToEmpty(entry.getName());
+                if (!isImageFileName(name)) {
+                    skipped++;
+                    continue;
+                }
+                byte[] bytes = readZipEntry(zip, MAX_STICKER_BYTES + 1);
+                if (bytes.length == 0 || bytes.length > MAX_STICKER_BYTES
+                        || !looksLikeStickerImage(MsgTypeEnum.image, List.of(), bytes)) {
+                    skipped++;
+                    continue;
+                }
+                String desc = StringUtils.isNotNullOrEmpty(description)
+                        ? description.trim()
+                        : "从压缩包导入的表情包：" + safeArchiveEntryName(name);
+                String useScene = StringUtils.isNotNullOrEmpty(scene)
+                        ? scene.trim()
+                        : "适合轻松接梗或简短回应时使用";
+                String sourceUrl = resolved + "#" + name;
+                if (stickerExists(ctx.botId(), ctx.scopeGroupId(), sourceUrl)) {
+                    skipped++;
+                    continue;
+                }
+                boolean ok = saveStickerMemory(ctx.botId(), ctx.scopeGroupId(), ctx.senderId(),
+                        sourceMsgId, sourceUrl, "", bytes, desc, useScene, "source:archive");
+                if (ok) {
+                    saved++;
+                } else {
+                    skipped++;
+                }
+            }
+        } catch (Exception e) {
+            LOGGER.warn("AI collect sticker archive failed group={} user={} source={}",
+                    ctx.scopeGroupId(), ctx.senderId(), resolved, e);
+            return "压缩包解压失败。";
+        }
+        LOGGER.debug("AI collected sticker archive group={} user={} scanned={} saved={} skipped={} source={}",
+                ctx.scopeGroupId(), ctx.senderId(), scanned, saved, skipped, resolved);
+        return saved > 0
+                ? "已导入 " + saved + " 个表情包，跳过 " + skipped + " 个。"
+                : "没有导入到合适的表情包。";
     }
 
     @Nonnull
@@ -368,7 +436,7 @@ public class ChatStickerService {
                     url = msg.getStringData("file");
                 }
                 if (StringUtils.isNotNullOrEmpty(url)) {
-                    return new StickerSource(url, originalCq);
+                    return new StickerSource(url, originalCq, type);
                 }
             }
         }
@@ -393,7 +461,7 @@ public class ChatStickerService {
     }
 
     @Nullable
-    private static byte[] downloadStickerBytes(@Nonnull String url) {
+    private static byte[] downloadStickerBytes(@Nonnull String url, int maxBytes) {
         String trimmed = url.trim();
         String lower = trimmed.toLowerCase(java.util.Locale.ROOT);
         try {
@@ -406,12 +474,12 @@ public class ChatStickerService {
             }
             if (lower.startsWith("file:")) {
                 Path path = Path.of(URI.create(trimmed));
-                if (Files.isRegularFile(path) && Files.size(path) <= MAX_STICKER_BYTES) {
+                if (Files.isRegularFile(path) && Files.size(path) <= maxBytes) {
                     return Files.readAllBytes(path);
                 }
                 return null;
             }
-            if (Files.isRegularFile(Path.of(trimmed)) && Files.size(Path.of(trimmed)) <= MAX_STICKER_BYTES) {
+            if (Files.isRegularFile(Path.of(trimmed)) && Files.size(Path.of(trimmed)) <= maxBytes) {
                 return Files.readAllBytes(Path.of(trimmed));
             }
         } catch (Exception ignored) {
@@ -446,7 +514,209 @@ public class ChatStickerService {
         return action + "只听 " + display + " 的。";
     }
 
-    private record StickerSource(String url, String originalCq) {
+    private boolean saveStickerMemory(long botId,
+                                      long groupId,
+                                      long senderId,
+                                      long sourceMsgId,
+                                      @Nonnull String sourceUrl,
+                                      @Nonnull String originalCq,
+                                      @Nonnull byte[] bytes,
+                                      @Nonnull String description,
+                                      @Nonnull String scene,
+                                      @Nonnull String extraTag) {
+        String cachePath = BaniraUtils.saveFileToCachePath(bytes, EnumCacheFileType.image);
+        if (StringUtils.isNullOrEmptyEx(cachePath)) {
+            return false;
+        }
+        String content = STICKER_PREFIX + JsonUtils.toJsonString(Map.of(
+                "path", cachePath,
+                "originalCq", originalCq,
+                "sourceUrl", sourceUrl,
+                "description", description,
+                "scene", scene,
+                "sourceSender", senderId,
+                "sourceGroup", groupId,
+                "sourceMsgId", sourceMsgId,
+                "size", bytes.length
+        ));
+        long now = DateUtils.getTimestamp(new Date());
+        AiMemory memory = new AiMemory()
+                .setBotId(botId)
+                .setGroupId(groupId)
+                .setUserId(0L)
+                .setContent(content)
+                .setTags(STICKER_TAG + "," + extraTag)
+                .setSourceMsgId(String.valueOf(sourceMsgId))
+                .setCreatedAt(now)
+                .setLastUsedAt(now);
+        aiMemoryManager.addMemory(memory);
+        return true;
+    }
+
+    private static boolean looksLikeStickerImage(@Nonnull MsgTypeEnum type, @Nonnull List<ArrayMsg> msgs, @Nonnull byte[] bytes) {
+        if (type == MsgTypeEnum.mface || type == MsgTypeEnum.marketface) {
+            return true;
+        }
+        ImageInfo info = imageInfo(bytes);
+        if (!info.valid()) {
+            return false;
+        }
+        if (info.width() <= MAX_AUTO_IMAGE_SIDE
+                && info.height() <= MAX_AUTO_IMAGE_SIDE
+                && (long) info.width() * info.height() <= MAX_AUTO_IMAGE_PIXELS
+                && info.aspectRatio() >= 0.45
+                && info.aspectRatio() <= 2.2) {
+            return true;
+        }
+        String text = plainText(msgs).replaceAll("\\s+", "");
+        return text.length() <= 12
+                && containsStickerCue(text)
+                && info.width() <= 900
+                && info.height() <= 900
+                && info.aspectRatio() >= 0.35
+                && info.aspectRatio() <= 2.8;
+    }
+
+    @Nonnull
+    private static ImageInfo imageInfo(@Nonnull byte[] bytes) {
+        try {
+            BufferedImage image = ImageIO.read(new ByteArrayInputStream(bytes));
+            if (image == null) {
+                return ImageInfo.invalid();
+            }
+            return new ImageInfo(image.getWidth(), image.getHeight());
+        } catch (Exception e) {
+            return ImageInfo.invalid();
+        }
+    }
+
+    private static boolean containsStickerCue(@Nonnull String text) {
+        return StringUtils.isNotNullOrEmpty(text)
+                && (text.contains("表情")
+                || text.contains("贴纸")
+                || text.contains("收藏")
+                || text.contains("收下")
+                || text.contains("拿去")
+                || text.contains("用这个")
+                || text.contains("发这个"));
+    }
+
+    @Nonnull
+    private static String resolveArchiveSource(@Nonnull AgentContext ctx, @Nullable String source) {
+        String explicit = firstDownloadableSource(StringUtils.nullToEmpty(source));
+        if (StringUtils.isNotNullOrEmpty(explicit)) {
+            return explicit;
+        }
+        String current = firstDownloadableSource(ctx.userMessage());
+        if (StringUtils.isNotNullOrEmpty(current)) {
+            return current;
+        }
+        if (ctx.messageContext() != null && CollectionUtils.isNotNullOrEmpty(ctx.messageContext().originalMsg())) {
+            String fromCurrent = firstDownloadableSource(ctx.messageContext().originalMsg());
+            if (StringUtils.isNotNullOrEmpty(fromCurrent)) {
+                return fromCurrent;
+            }
+            try {
+                List<ArrayMsg> replyContent = ctx.bot().getReplyContent(ctx.messageContext().originalMsg());
+                String fromReply = firstDownloadableSource(replyContent);
+                if (StringUtils.isNotNullOrEmpty(fromReply)) {
+                    return fromReply;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return "";
+    }
+
+    @Nonnull
+    private static String firstDownloadableSource(@Nullable String text) {
+        String value = StringUtils.nullToEmpty(text);
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("(?i)(https?://\\S+|file:/\\S+|[A-Za-z]:[/\\\\][^\\s\\]]+)")
+                .matcher(value);
+        return matcher.find() ? trimSource(matcher.group(1)) : "";
+    }
+
+    @Nonnull
+    private static String firstDownloadableSource(@Nullable List<ArrayMsg> msgs) {
+        if (CollectionUtils.isNullOrEmpty(msgs)) {
+            return "";
+        }
+        for (ArrayMsg msg : msgs) {
+            if (msg == null) {
+                continue;
+            }
+            String url = msg.getStringData("url");
+            if (StringUtils.isNotNullOrEmpty(url)) {
+                return trimSource(url);
+            }
+            String file = msg.getStringData("file");
+            if (StringUtils.isNotNullOrEmpty(file)) {
+                return trimSource(file);
+            }
+        }
+        return "";
+    }
+
+    @Nonnull
+    private static String trimSource(@Nonnull String source) {
+        return source.trim().replaceAll("[,，。)）\\]]+$", "");
+    }
+
+    private static boolean isArchiveSource(@Nonnull String source) {
+        return source.toLowerCase(java.util.Locale.ROOT).split("[?#]", 2)[0].endsWith(".zip");
+    }
+
+    private static boolean isImageFileName(@Nonnull String name) {
+        String lower = name.toLowerCase(java.util.Locale.ROOT);
+        return lower.endsWith(".png")
+                || lower.endsWith(".jpg")
+                || lower.endsWith(".jpeg")
+                || lower.endsWith(".gif")
+                || lower.endsWith(".webp");
+    }
+
+    @Nonnull
+    private static byte[] readZipEntry(@Nonnull ZipInputStream zip, int maxBytes) throws java.io.IOException {
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        byte[] buffer = new byte[8192];
+        int total = 0;
+        int read;
+        while ((read = zip.read(buffer)) >= 0) {
+            total += read;
+            if (total > maxBytes) {
+                break;
+            }
+            out.write(buffer, 0, read);
+        }
+        return out.toByteArray();
+    }
+
+    @Nonnull
+    private static String safeArchiveEntryName(@Nonnull String name) {
+        String normalized = name.replace("\\", "/");
+        int slash = normalized.lastIndexOf('/');
+        if (slash >= 0) {
+            normalized = normalized.substring(slash + 1);
+        }
+        return AiTextLimits.truncate(normalized, 40);
+    }
+
+    private record StickerSource(String url, String originalCq, MsgTypeEnum type) {
+    }
+
+    private record ImageInfo(int width, int height) {
+        static ImageInfo invalid() {
+            return new ImageInfo(0, 0);
+        }
+
+        boolean valid() {
+            return width > 0 && height > 0;
+        }
+
+        double aspectRatio() {
+            return height == 0 ? 0 : width / (double) height;
+        }
     }
 
     private record StickerEntry(String path,
