@@ -78,11 +78,17 @@ public interface KanriHandler {
 
     @Nonnull
     default Set<Long> getUserIdsWithoutReply(@Nonnull KanriContext context, @Nonnull String[] args) {
+        if (context.aiInvoked()) {
+            return BaniraUtils.getUserIds(args);
+        }
         return BaniraUtils.getUserIdsWithoutReply(context.event().getArrayMsg(), args);
     }
 
     @Nonnull
     default Set<Long> getUserIdsWithReply(@Nonnull KanriContext context, @Nonnull String[] args) {
+        if (context.aiInvoked()) {
+            return BaniraUtils.getUserIds(args);
+        }
         return BaniraUtils.getUserIdsWithReply(context.bot(), context.group(), context.event().getArrayMsg(), args);
     }
 

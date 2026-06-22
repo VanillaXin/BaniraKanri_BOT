@@ -253,6 +253,23 @@ class CapabilityInvocationPolicyTest {
     }
 
     @Test
+    void shouldAllowDirectGroupCardActionWithResolvedTargetAndCardValue() {
+        xin.vanilla.banira.plugin.common.BaniraBot bot =
+                Mockito.mock(xin.vanilla.banira.plugin.common.BaniraBot.class);
+        Mockito.when(bot.getSelfId()).thenReturn(900000000001L);
+        CapabilityInvocationPolicy.Decision allowed = CapabilityInvocationPolicy.evaluate(
+                new AgentContext()
+                        .bot(bot)
+                        .userMessage("[CQ:at,qq=900000000001] 你随便想一个正常一点的就行"),
+                new AiCapability().name("execute_kanri").mutating(true),
+                "execute_kanri",
+                Map.of("action", "card", "args", "900000000003 洛裘", "confirm", "true")
+        );
+
+        Assertions.assertTrue(allowed.allowed());
+    }
+
+    @Test
     void shouldBlockRepeatMuteWhenKanriAlreadySucceeded() {
         CapabilityInvocationPolicy.Decision blocked = CapabilityInvocationPolicy.evaluate(
                 new AgentContext().userMessage("@白茶酱 禁我10分钟").kanriMuteSucceeded(true),

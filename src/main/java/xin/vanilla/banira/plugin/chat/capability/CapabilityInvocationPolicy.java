@@ -174,6 +174,10 @@ public final class CapabilityInvocationPolicy {
         if ("card".equals(action) && isSelfGroupCardRequest(current)) {
             return allowsCurrentSenderCardTarget(ctx, actionText);
         }
+        if ("card".equals(action) && confirm && hasNumericTargets(actionText)
+                && hasGroupCardValue(actionText) && isDirectlyAddressedToBot(ctx, current)) {
+            return Decision.allow();
+        }
         if (isMuteOrLoudAction(action) && confirm && PendingAiActionStore.isKanriProceedIntent(current)) {
             return Decision.allow();
         }
@@ -234,6 +238,18 @@ public final class CapabilityInvocationPolicy {
             return false;
         }
         return actionText.matches(".*\\d{5,}.*");
+    }
+
+    private static boolean hasGroupCardValue(@Nullable String actionText) {
+        if (StringUtils.isNullOrEmptyEx(actionText)) {
+            return false;
+        }
+        String[] parts = actionText.trim().split("\\s+");
+        return parts.length >= 2 && StringUtils.isNotNullOrEmpty(parts[parts.length - 1]);
+    }
+
+    private static boolean isDirectlyAddressedToBot(@Nonnull AgentContext ctx, @Nonnull String current) {
+        return ctx.bot() != null && current.contains("[CQ:at,qq=" + ctx.botId() + "]");
     }
 
     private static boolean isWholeGroupTarget(@Nullable String actionText) {
